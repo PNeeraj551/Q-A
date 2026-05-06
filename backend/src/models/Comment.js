@@ -37,9 +37,11 @@ const commentSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    like_count: {
-      type: Number,
-      default: 0,
+    liked_by: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    parent_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Comment',
+      default: null,
     },
     created_at: {
       type: Date,

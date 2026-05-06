@@ -20,6 +20,7 @@ const userSchema = new mongoose.Schema(
     password: { type: String, required: true },
     role: { type: String, enum: ['admin', 'participant'], required: true },
     is_active: { type: Boolean, default: true },
+    must_change_password: { type: Boolean, default: false },
     created_at: { type: Date, default: Date.now },
   },
   { timestamps: false, versionKey: false }
@@ -28,10 +29,10 @@ const userSchema = new mongoose.Schema(
 const User = mongoose.models.User || mongoose.model('User', userSchema);
 
 const SEED_USERS = [
-  { name: 'Admin User', email: 'neeraj@athivatech.com', password: 'Admin@1243', role: 'admin' },
-  { name: 'Alice Smith', email: 'participant1@company.com', password: 'pass123', role: 'participant' },
-  { name: 'Bob Johnson', email: 'participant2@company.com', password: 'pass123', role: 'participant' },
-  { name: 'Carol White', email: 'participant3@company.com', password: 'pass123', role: 'participant' },
+  { name: 'Admin', email: 'admin@companyname.com', password: 'Admin@123', role: 'admin' },
+  { name: 'Arun', email: 'arun@companyname.com', password: 'User@123', role: 'participant' },
+  { name: 'Divya', email: 'divya@companyname.com', password: 'User@123', role: 'participant' },
+  { name: 'Kiran', email: 'kiran@companyname.com', password: 'User@123', role: 'participant' },
 ];
 
 const SALT_ROUNDS = 10;

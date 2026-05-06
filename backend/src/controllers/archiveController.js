@@ -172,6 +172,7 @@ const getArchivedComments = async (req, res) => {
 
     const total = await Comment.countDocuments(filter);
     const comments = await Comment.find(filter)
+      .populate('liked_by', 'name')
       .sort({ created_at: -1 })
       .skip(skip)
       .limit(limit)

@@ -1,8 +1,16 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import LoginPage from './pages/LoginPage'
+import ChangePasswordPage from './pages/ChangePasswordPage'
 import ProtectedRoute from './components/ProtectedRoute'
 import AdminRoute from './components/AdminRoute'
+import SessionDashboard from './pages/admin/SessionDashboard'
+import SessionCreatePage from './pages/admin/SessionCreatePage'
+import LiveSessionFeed from './pages/admin/LiveSessionFeed'
+import ArchivedSessionsPage from './pages/admin/ArchivedSessionsPage'
+import ArchivedSessionDetails from './pages/admin/ArchivedSessionDetails'
+import AvailableSessionsList from './pages/participant/AvailableSessionsList'
+import SessionFeedPage from './pages/participant/SessionFeedPage'
 
 export default function App() {
   return (
@@ -12,26 +20,74 @@ export default function App() {
           <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="/login" element={<LoginPage />} />
 
-          {/* Phase 2+ placeholder: admin routes */}
+          {/* Admin routes */}
           <Route
-            path="/admin/*"
+            path="/admin/sessions"
             element={
               <AdminRoute>
-                <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                  <p className="text-gray-500 text-sm">Admin area — coming in next phases</p>
-                </div>
+                <SessionDashboard />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/sessions/create"
+            element={
+              <AdminRoute>
+                <SessionCreatePage />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/sessions/:id/feed"
+            element={
+              <AdminRoute>
+                <LiveSessionFeed />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/archive"
+            element={
+              <AdminRoute>
+                <ArchivedSessionsPage />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/archive/:id"
+            element={
+              <AdminRoute>
+                <ArchivedSessionDetails />
               </AdminRoute>
             }
           />
 
-          {/* Phase 2+ placeholder: participant routes */}
+          {/* Participant routes */}
           <Route
-            path="/sessions/*"
+            path="/participant/sessions"
             element={
               <ProtectedRoute>
-                <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                  <p className="text-gray-500 text-sm">Participant area — coming in next phases</p>
-                </div>
+                <AvailableSessionsList />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/sessions"
+            element={<Navigate to="/participant/sessions" replace />}
+          />
+          <Route
+            path="/sessions/:id"
+            element={
+              <ProtectedRoute>
+                <SessionFeedPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/change-password"
+            element={
+              <ProtectedRoute>
+                <ChangePasswordPage />
               </ProtectedRoute>
             }
           />

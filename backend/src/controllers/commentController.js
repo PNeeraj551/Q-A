@@ -52,7 +52,7 @@ const createComment = async (req, res) => {
     const session = req.session;
     const isAdmin = req.user.role === 'admin';
 
-    const { comment_text } = req.body;
+    const { comment_text, parent_id } = req.body;
 
     if (!comment_text || typeof comment_text !== 'string' || comment_text.trim().length === 0) {
       return error(res, 'comment_text is required', 400);
@@ -72,6 +72,22 @@ const createComment = async (req, res) => {
       }
     }
 
+    let resolvedParentId = null;
+    if (parent_id) {
+      if (!mongoose.Types.ObjectId.isValid(parent_id)) {
+        return error(res, 'Invalid parent_id format', 400);
+      }
+      const parentComment = await Comment.findOne({
+        _id: parent_id,
+        session_id,
+        is_deleted: false,
+      }).lean();
+      if (!parentComment) {
+        return error(res, 'Parent comment not found', 404);
+      }
+      resolvedParentId = parent_id;
+    }
+
     const user = await User.findById(req.user.user_id).select('name').lean();
     const participant_name = user && user.name ? user.name : req.user.email;
 
@@ -81,6 +97,7 @@ const createComment = async (req, res) => {
       participant_name,
       comment_text: comment_text.trim(),
       is_admin_comment: isAdmin,
+      parent_id: resolvedParentId,
     });
 
     try {

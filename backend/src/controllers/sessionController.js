@@ -428,7 +428,7 @@ const updateSessionStatus = async (req, res) => {
       message: `Session status updated to ${newStatus}`,
     });
   } catch (err) {
-    return error(res, 'Failed to update session status', 500);
+    return error(res, err.message || 'Failed to update session status', 500);
   }
 };
 

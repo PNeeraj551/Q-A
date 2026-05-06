@@ -27,6 +27,10 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    must_change_password: {
+      type: Boolean,
+      default: false,
+    },
     created_at: {
       type: Date,
       default: Date.now,
