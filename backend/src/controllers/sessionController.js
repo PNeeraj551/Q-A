@@ -32,22 +32,16 @@ const getSessions = async (req, res) => {
       return success(res, { sessions });
     }
 
+    const sessions = await Session.find({}).sort({ planned_start_time: -1 }).lean();
+    
     const participantId = req.user.user_id;
+    const transformed = sessions.map(s => ({
+      ...s,
+      is_assigned: s.access_type === 'PUBLIC' || (s.assigned_participants || []).some(id => id.toString() === participantId),
+      assigned_participants: undefined // Hide the full list
+    }));
 
-    const sessions = await Session.find({
-      $or: [
-        { access_type: 'PUBLIC', session_status: { $ne: 'CLOSED' } },
-        {
-          access_type: 'PRIVATE',
-          assigned_participants: participantId,
-          session_status: { $ne: 'CLOSED' },
-        },
-      ],
-    })
-      .select('-assigned_participants')
-      .lean();
-
-    return success(res, { sessions });
+    return success(res, { sessions: transformed });
   } catch (err) {
     return error(res, 'Failed to fetch sessions', 500);
   }
@@ -163,6 +157,11 @@ const createSession = async (req, res) => {
       assigned_participants: participantIds,
       created_by: req.user.user_id,
     });
+
+    try {
+      const { getIO } = require('../sockets/io');
+      getIO().emit('session:created', { session: session.toObject() });
+    } catch (_) {}
 
     return success(res, session.toObject(), 201);
   } catch (err) {
@@ -325,6 +324,15 @@ const updateSession = async (req, res) => {
       { $set: updates },
       { new: true, runValidators: true }
     );
+
+    // Emit socket event for session update
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('session:updated', {
+        id: updatedSession._id,
+        updates: updates
+      });
+    }
 
     return success(res, { session: updatedSession.toObject() });
   } catch (err) {
@@ -498,13 +506,23 @@ const addParticipant = async (req, res) => {
       return error(res, 'User is already assigned to this session', 400);
     }
 
-    await Session.findByIdAndUpdate(
+    const updatedSession = await Session.findByIdAndUpdate(
       id,
       {
         $addToSet: { assigned_participants: user_id },
         $set: { updated_at: new Date() },
-      }
+      },
+      { new: true }
     );
+
+    // Create notification for the invited user
+    const { sendNotification } = require('../utils/notificationService');
+    await sendNotification({
+      recipientId: user_id,
+      message: `You have been invited to the private session: "${updatedSession.session_title}"`,
+      sessionId: updatedSession._id,
+      type: 'INVITE'
+    }).catch(err => console.error('[InviteNotification] Failed:', err.message));
 
     return success(res, {
       message: 'Participant added',
@@ -566,6 +584,87 @@ const removeParticipant = async (req, res) => {
   }
 };
 
+// POST /api/sessions/:id/live-invite
+const liveInvite = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { user_id } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return error(res, 'Invalid session ID format', 400);
+    }
+    if (!user_id || !mongoose.Types.ObjectId.isValid(user_id)) {
+      return error(res, 'Valid user_id is required', 400);
+    }
+
+    const session = await Session.findById(id).lean();
+    if (!session) return error(res, 'Session not found', 404);
+
+    if (session.access_type === 'PUBLIC') {
+      return error(res, 'Cannot assign participants to a PUBLIC session', 400);
+    }
+    if (!['PRE_SESSION', 'ACTIVE_SESSION'].includes(session.session_status)) {
+      return error(res, 'Session is not active or in pre-session state', 400);
+    }
+
+    const user = await User.findOne({ _id: user_id, role: 'participant', is_active: true })
+      .select('_id name email').lean();
+    if (!user) return error(res, 'Active participant not found', 404);
+
+    await Session.findByIdAndUpdate(id, {
+      $addToSet: { assigned_participants: user_id },
+      $set: { updated_at: new Date() },
+    });
+
+    try {
+      const { getIO } = require('../sockets/io');
+      getIO().to(`user_${user_id}`).emit('session:invited', {
+        session_id: id,
+        session_title: session.session_title,
+        session_status: session.session_status,
+      });
+    } catch (_) {}
+
+    return success(res, { message: 'Participant invited' });
+  } catch (err) {
+    return error(res, 'Failed to invite participant', 500);
+  }
+};
+
+// DELETE /api/sessions/:id/live-remove/:participantId
+const liveRemove = async (req, res) => {
+  try {
+    const { id, participantId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return error(res, 'Invalid session ID format', 400);
+    }
+    if (!mongoose.Types.ObjectId.isValid(participantId)) {
+      return error(res, 'Invalid participant ID format', 400);
+    }
+
+    const session = await Session.findById(id).lean();
+    if (!session) return error(res, 'Session not found', 404);
+
+    await Session.findByIdAndUpdate(id, {
+      $pull: { assigned_participants: new mongoose.Types.ObjectId(participantId) },
+      $set: { updated_at: new Date() },
+    });
+
+    try {
+      const { getIO } = require('../sockets/io');
+      getIO().to(`user_${participantId}`).emit('participant:revoked', {
+        session_id: id,
+        user_id: participantId,
+      });
+    } catch (_) {}
+
+    return success(res, { message: 'Participant removed' });
+  } catch (err) {
+    return error(res, 'Failed to remove participant', 500);
+  }
+};
+
 module.exports = {
   getSessions,
   createSession,
@@ -576,4 +675,6 @@ module.exports = {
   getParticipants,
   addParticipant,
   removeParticipant,
+  liveInvite,
+  liveRemove,
 };

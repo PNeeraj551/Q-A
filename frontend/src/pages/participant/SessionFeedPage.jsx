@@ -2,7 +2,10 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { io } from 'socket.io-client'
 import { getSessionById } from '../../api/sessions'
-import { getComments, createComment, likeComment } from '../../api/comments'
+import { getComments, createComment, likeComment, editComment, removeComment } from '../../api/comments'
+import ParticipantsDirectoryModal from '../../components/ParticipantsDirectoryModal'
+import CollaborationPanel from '../../components/CollaborationPanel'
+import AdminDMModal from '../../components/AdminDMModal'
 
 export default function SessionFeedPage() {
   const { id } = useParams()
@@ -28,6 +31,14 @@ export default function SessionFeedPage() {
   const [replyInputs, setReplyInputs] = useState({})
   const [replyLoading, setReplyLoading] = useState({})
 
+  const [directoryOpen, setDirectoryOpen] = useState(false)
+  const [collabPanelOpen, setCollabPanelOpen] = useState(false)
+  const [presenceParticipants, setPresenceParticipants] = useState([])
+  const [adminDMOpen, setAdminDMOpen] = useState(false)
+  const [adminDMNotif, setAdminDMNotif] = useState(false)
+  const [editingId, setEditingId] = useState(null)
+  const [editText, setEditText] = useState('')
+
   const socketRef = useRef(null)
   const bottomRef = useRef(null)
   const seenIdsRef = useRef(new Set())
@@ -49,22 +60,20 @@ export default function SessionFeedPage() {
     try {
       const res = await getSessionById(id)
       setSession(res.data.session)
-    } catch {
-      setSessionError('Failed to load session.')
+    } catch (err) {
+      setSessionError(err.response?.data?.message || 'Failed to load session.')
     } finally {
       setSessionLoading(false)
     }
   }, [id])
 
-  // Fetch initial comments — participants never see is_hidden=true (backend filters server-side)
-  // Build threaded structure; filter hidden replies on client as defence layer
   const fetchComments = useCallback(async () => {
     setCommentsLoading(true)
     setCommentsError('')
     try {
       const res = await getComments(id, { limit: 50 })
       const fetched = res.data.comments
-      const flat = [...fetched].reverse().filter((c) => !c.is_hidden) // chronological, no hidden
+      const flat = [...fetched].reverse().filter((c) => !c.is_hidden)
       const topLevel = flat.filter(c => !c.parent_id).map(c => ({ ...c, replies: [] }))
       const replies = flat.filter(c => c.parent_id)
       replies.forEach(reply => {
@@ -73,8 +82,8 @@ export default function SessionFeedPage() {
       })
       setComments(topLevel)
       flat.forEach((c) => seenIdsRef.current.add(c._id))
-    } catch {
-      setCommentsError('Failed to load comments.')
+    } catch (err) {
+      setCommentsError(err.response?.data?.message || 'Failed to load comments.')
     } finally {
       setCommentsLoading(false)
     }
@@ -85,25 +94,29 @@ export default function SessionFeedPage() {
     fetchComments()
   }, [fetchSession, fetchComments])
 
-  // Handle session closing
+  const initialStatusRef = useRef(null)
   useEffect(() => {
-    if (session?.session_status === 'CLOSED') {
+    if (session && initialStatusRef.current === null) {
+      initialStatusRef.current = session.session_status
+    }
+  }, [session])
+
+  useEffect(() => {
+    if (session?.session_status === 'CLOSED' && initialStatusRef.current && initialStatusRef.current !== 'CLOSED') {
       setShowClosedOverlay(true)
       const timer = setTimeout(() => {
-        navigate('/sessions', { replace: true })
+        navigate('/participant/sessions', { replace: true })
       }, 3000)
       return () => clearTimeout(timer)
     }
   }, [session?.session_status, navigate])
 
-  // Scroll to bottom when new comments arrive
   useEffect(() => {
     if (bottomRef.current) {
       bottomRef.current.scrollIntoView({ behavior: 'smooth' })
     }
   }, [comments])
 
-  // Socket setup
   useEffect(() => {
     const token = localStorage.getItem('jwt')
     const socket = io('/', {
@@ -122,10 +135,7 @@ export default function SessionFeedPage() {
     })
 
     socket.on('comment:new', ({ comment }) => {
-      if (!comment) return
-      // Filter hidden comments for participants
-      if (comment.is_hidden) return
-      if (seenIdsRef.current.has(comment._id)) return
+      if (!comment || comment.is_hidden || seenIdsRef.current.has(comment._id)) return
       seenIdsRef.current.add(comment._id)
       if (comment.parent_id) {
         setComments(prev => prev.map(c =>
@@ -148,24 +158,72 @@ export default function SessionFeedPage() {
       }))
     })
 
+    socket.on('comment:hidden', ({ comment_id, is_hidden }) => {
+      if (is_hidden) {
+        setComments(prev => prev
+          .filter(c => c._id !== comment_id)
+          .map(c => ({
+            ...c,
+            replies: (c.replies || []).filter(r => r._id !== comment_id)
+          }))
+        )
+      }
+    })
+
+    socket.on('comment:deleted', ({ comment_id }) => {
+      setComments(prev => prev
+        .filter(c => c._id !== comment_id)
+        .map(c => ({
+          ...c,
+          replies: (c.replies || []).filter(r => r._id !== comment_id)
+        }))
+      )
+    })
+
+    socket.on('comment:edited', ({ comment_id, comment_text, updated_at }) => {
+      setComments(prev => prev.map(c => {
+        if (c._id === comment_id) return { ...c, comment_text, updated_at }
+        const updatedReplies = (c.replies || []).map(r =>
+          r._id === comment_id ? { ...r, comment_text, updated_at } : r
+        )
+        return { ...c, replies: updatedReplies }
+      }))
+    })
+
+    socket.on('comment:removed', ({ comment_id }) => {
+      setComments(prev => prev
+        .filter(c => c._id !== comment_id)
+        .map(c => ({
+          ...c,
+          replies: (c.replies || []).filter(r => r._id !== comment_id),
+        }))
+      )
+    })
+
+    socket.on('session:invited', () => {
+      fetchSession()
+    })
+
     socket.on('session:state_changed', ({ new_status }) => {
       setSession((prev) => prev ? { ...prev, session_status: new_status } : prev)
     })
 
     socket.on('participant:revoked', ({ user_id }) => {
-      const currentUserId = (() => {
-        try {
-          const token = localStorage.getItem('jwt')
-          if (!token) return null
-          const payload = JSON.parse(atob(token.split('.')[1]))
-          return payload.user_id
-        } catch {
-          return null
-        }
-      })()
       if (currentUserId && user_id === currentUserId) {
         navigate('/sessions', { replace: true })
       }
+    })
+
+    socket.on('peer:presence_update', ({ participants }) => {
+      setPresenceParticipants(participants || [])
+    })
+
+    socket.on('private:received', () => {
+      setAdminDMNotif(true)
+    })
+
+    socket.on('private:message', () => {
+      setAdminDMNotif(true)
     })
 
     socket.connect()
@@ -174,15 +232,12 @@ export default function SessionFeedPage() {
       socket.emit('session:leave', { session_id: id })
       socket.disconnect()
     }
-  }, [id, navigate])
+  }, [id, navigate, currentUserId])
 
   async function handleSubmitComment(e) {
     e.preventDefault()
     const text = commentText.trim()
-    if (!text) return
-
-    const sessionStatus = session?.session_status
-    if (sessionStatus === 'CLOSED') return
+    if (!text || session?.session_status === 'CLOSED') return
 
     setSubmitLoading(true)
     setSubmitError('')
@@ -190,8 +245,7 @@ export default function SessionFeedPage() {
       await createComment(id, text)
       setCommentText('')
     } catch (err) {
-      const msg = err.response?.data?.message || 'Failed to post comment.'
-      setSubmitError(msg)
+      setSubmitError(err.response?.data?.message || 'Failed to post comment.')
     } finally {
       setSubmitLoading(false)
     }
@@ -234,21 +288,35 @@ export default function SessionFeedPage() {
     }
   }
 
+  async function handleRemove(commentId) {
+    try { await removeComment(commentId) } catch {}
+  }
+
+  async function handleEditSave(commentId) {
+    const text = editText.trim()
+    if (!text) return
+    try {
+      await editComment(commentId, text)
+      setEditingId(null)
+      setEditText('')
+    } catch {}
+  }
+
   const isClosed = session?.session_status === 'CLOSED'
   const canComment = session?.session_status === 'ACTIVE_SESSION'
 
   if (sessionLoading) {
     return (
-      <div className="h-screen bg-white flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+      <div className="h-screen bg-slate-50 flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
       </div>
     )
   }
 
   if (sessionError) {
     return (
-      <div className="h-screen bg-white flex items-center justify-center px-4">
-        <div className="bg-red-50 border border-red-200 rounded-lg px-5 py-4 text-sm text-red-600">
+      <div className="h-screen bg-slate-50 flex items-center justify-center px-4">
+        <div className="bg-red-50 border border-red-200 rounded-2xl px-5 py-4 text-sm text-red-600">
           {sessionError}
         </div>
       </div>
@@ -256,86 +324,148 @@ export default function SessionFeedPage() {
   }
 
   return (
-    <div className="h-screen bg-white flex flex-col overflow-hidden">
+    <div className="h-screen bg-slate-50 flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-3 flex items-center gap-3 shrink-0">
-        <button
-          onClick={() => navigate('/sessions')}
-          className="text-gray-500 hover:text-gray-700 transition shrink-0"
-          aria-label="Back"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
-        <div className="flex-1 min-w-0">
-          <h1 className="text-base font-semibold text-gray-900 truncate">
-            {session?.session_title}
-          </h1>
-          <div className="flex items-center gap-2 mt-0.5">
-            {isClosed ? (
-              <span className="text-xs text-red-400 font-medium">Session ended</span>
-            ) : (
-              <>
-                <span
-                  className={`inline-block w-2 h-2 rounded-full ${
-                    socketConnected ? 'bg-green-500' : 'bg-gray-300'
-                  }`}
-                />
-                <span className="text-xs text-gray-400">
-                  {socketConnected ? 'Live' : 'Connecting...'}
-                </span>
-              </>
-            )}
+      <header className="bg-white border-b border-slate-200 px-4 sm:px-8 py-4 flex items-center justify-between gap-4 shrink-0 shadow-sm z-10">
+        <div className="flex items-center gap-4 min-w-0">
+          <button
+            onClick={() => navigate('/sessions')}
+            className="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
+            aria-label="Back"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <div className="min-w-0">
+            <h1 className="text-lg font-bold text-slate-900 truncate leading-tight">
+              {session?.session_title}
+            </h1>
+            <div className="flex items-center gap-2 mt-0.5">
+              <span className={`w-2 h-2 rounded-full ${socketConnected ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} />
+              <span className="text-xs font-medium text-slate-500">
+                {isClosed ? 'Session ended' : socketConnected ? 'Live Connection' : 'Connecting...'}
+              </span>
+            </div>
           </div>
         </div>
-      </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {!isClosed && (
+            <button
+              onClick={() => setDirectoryOpen(true)}
+              className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors"
+            >
+              <svg className="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              Participants
+            </button>
+          )}
+          {!isClosed && (
+            <button
+              onClick={() => setCollabPanelOpen(true)}
+              className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-xl border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
+              </svg>
+              Collaborate
+            </button>
+          )}
+        </div>
+      </header>
+
+      <ParticipantsDirectoryModal
+        sessionId={id}
+        isOpen={directoryOpen}
+        onClose={() => setDirectoryOpen(false)}
+        socket={socketRef.current}
+        currentUserId={currentUserId}
+        userRole="participant"
+        onCoordinate={() => { setDirectoryOpen(false); setCollabPanelOpen(true) }}
+      />
+
+      {collabPanelOpen && (
+        <CollaborationPanel
+          sessionId={id}
+          socket={socketRef.current}
+          currentUserId={currentUserId}
+          sessionStatus={session?.session_status}
+          presenceParticipants={presenceParticipants}
+          onClose={() => setCollabPanelOpen(false)}
+        />
+      )}
+
+      {adminDMOpen && (
+        <AdminDMModal
+          sessionId={id}
+          socket={socketRef.current}
+          onClose={() => { setAdminDMOpen(false); setAdminDMNotif(false) }}
+        />
+      )}
+
+      {!isClosed && !adminDMOpen && (
+        <button
+          onClick={() => { setAdminDMOpen(true); setAdminDMNotif(false) }}
+          className="fixed bottom-24 right-4 flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl bg-white border border-slate-200 shadow-md hover:bg-slate-50 transition-colors z-30"
+        >
+          <svg className="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+          </svg>
+          Host
+          {adminDMNotif && (
+            <span className="w-2 h-2 rounded-full bg-red-500 shrink-0" />
+          )}
+        </button>
+      )}
 
       {/* Session closed overlay */}
       {showClosedOverlay && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center px-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center transform scale-100 animate-in fade-in zoom-in duration-200">
-            <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center px-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-8 text-center transform animate-in fade-in zoom-in duration-300">
+            <div className="w-20 h-20 bg-amber-50 rounded-full flex items-center justify-center mx-auto mb-6">
+              <svg className="w-10 h-10 text-amber-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10" /><path strokeLinecap="round" d="M12 8v4m0 4h.01" />
               </svg>
             </div>
-            <h2 className="text-xl font-bold text-gray-900 mb-2">Session Closed</h2>
-            <p className="text-sm text-gray-500 mb-6">
-              The host has ended this session. You will be redirected to the homepage momentarily.
+            <h2 className="text-2xl font-bold text-slate-900 mb-2">Session Ended</h2>
+            <p className="text-slate-500 mb-8 leading-relaxed">
+              This session has been closed by the host. You'll be redirected shortly.
             </p>
-            <div className="w-6 h-6 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin mx-auto" />
+            <div className="flex justify-center">
+              <div className="w-8 h-8 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+            </div>
           </div>
         </div>
       )}
 
-      {/* Session closed banner */}
-      {isClosed && (
-        <div className="bg-red-50 border-b border-red-100 px-6 py-2 text-center text-xs text-red-500">
-          This session has been closed. No further questions can be submitted.
-        </div>
-      )}
-
-      {/* Comments feed — fills remaining height, scrollable */}
-      <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-3">
+      {/* Comments feed */}
+      <div className="flex-1 overflow-y-auto px-4 sm:px-8 py-6 space-y-4 bg-slate-50/50">
         {commentsLoading && (
-          <div className="flex justify-center py-8">
-            <div className="w-6 h-6 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+          <div className="flex justify-center py-12">
+            <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
           </div>
         )}
 
         {!commentsLoading && commentsError && (
-          <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-600">
+          <div className="bg-red-50 border border-red-100 rounded-2xl px-5 py-4 text-sm text-red-600">
             {commentsError}
           </div>
         )}
 
         {!commentsLoading && !commentsError && comments.length === 0 && (
-          <div className="text-center py-12 text-gray-400 text-sm">
-            No questions yet. Ask the first one!
+          <div className="text-center py-20">
+            <div className="w-20 h-20 bg-slate-100 rounded-3xl flex items-center justify-center mx-auto mb-4 opacity-50">
+              <svg className="w-10 h-10 text-slate-400" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+            </div>
+            <p className="text-slate-500 font-medium">No questions yet</p>
+            <p className="text-slate-400 text-sm mt-1">Be the first to ask something!</p>
           </div>
         )}
 
+        {/* Pinned comments first or mixed? Usually pins are highlighted. */}
         {!commentsLoading && comments.map((comment) => {
           const likedByMe = (comment.liked_by || []).includes(currentUserId)
           const likeCount = (comment.liked_by || []).length
@@ -345,97 +475,137 @@ export default function SessionFeedPage() {
           return (
             <div
               key={comment._id}
-              className="flex gap-3 px-4 sm:px-6 py-3 hover:bg-gray-50 transition-colors"
+              className="group flex gap-4 p-4 rounded-2xl transition-all duration-200 bg-white border border-slate-200 hover:border-slate-300 hover:shadow-sm"
             >
               {/* Avatar */}
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5 select-none ${comment.is_admin_comment ? 'bg-blue-100 text-blue-700' : 'bg-gray-200 text-gray-600'}`}>
+              <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-sm font-bold shrink-0 mt-0.5 select-none shadow-sm ${
+                comment.is_admin_comment 
+                  ? 'bg-indigo-600 text-white' 
+                  : 'bg-slate-100 text-slate-600'
+              }`}>
                 {comment.participant_name?.[0]?.toUpperCase() || '?'}
               </div>
 
               {/* Content */}
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="text-sm font-semibold text-gray-900">{comment.participant_name}</span>
+                <div className="flex items-center gap-2 flex-wrap mb-1">
+                  <span className="text-sm font-bold text-slate-900">{comment.participant_name}</span>
                   {comment.is_admin_comment && (
-                    <span className="text-xs bg-blue-600 text-white px-1.5 py-0.5 rounded font-medium">Host</span>
+                    <span className="text-[10px] uppercase tracking-wider bg-indigo-600 text-white px-2 py-0.5 rounded-full font-bold">Host</span>
                   )}
-                  <span className="text-xs text-gray-400">
+                  <span className="text-xs text-slate-400 font-medium">
                     {new Date(comment.created_at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
 
-                <p className="text-sm text-gray-800 mt-0.5 whitespace-pre-wrap break-words leading-relaxed">
-                  {comment.comment_text}
-                </p>
+                {editingId === comment._id ? (
+                  <div className="mt-1 flex gap-2">
+                    <textarea
+                      value={editText}
+                      onChange={e => setEditText(e.target.value)}
+                      rows={2}
+                      maxLength={1000}
+                      className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                      autoFocus
+                    />
+                    <div className="flex flex-col gap-1">
+                      <button onClick={() => handleEditSave(comment._id)} className="text-xs px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-semibold">Save</button>
+                      <button onClick={() => setEditingId(null)} className="text-xs px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200">Cancel</button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-700 whitespace-pre-wrap break-words leading-relaxed">
+                    {comment.comment_text}
+                  </p>
+                )}
 
                 {/* Action bar */}
-                <div className="flex items-center gap-0.5 mt-2 flex-wrap">
+                <div className="flex items-center gap-2 mt-3">
                   <button
                     onClick={() => handleLike(comment._id)}
-                    className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded transition font-medium ${
+                    className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl transition-all font-semibold ${
                       likedByMe
-                        ? 'text-blue-600 bg-blue-50 hover:bg-blue-100'
-                        : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                        ? 'text-indigo-600 bg-indigo-50 shadow-sm'
+                        : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'
                     }`}
                   >
-                    <svg className="w-3.5 h-3.5" fill={likedByMe ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4" fill={likedByMe ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
                     </svg>
                     {likeCount > 0 ? likeCount : 'Like'}
                   </button>
-                  {canComment ? (
-                    <button
-                      onClick={() => toggleReplies(comment._id)}
-                      className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition font-medium"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
-                      </svg>
-                      {replyCount > 0 ? `${replyCount} ${replyCount === 1 ? 'Reply' : 'Replies'}` : 'Reply'}
-                    </button>
-                  ) : (replyCount > 0 || isExpanded) && (
-                    <button
-                      onClick={() => toggleReplies(comment._id)}
-                      className="text-xs text-blue-500 hover:text-blue-700 font-medium transition px-2 py-1"
-                    >
-                      {isExpanded ? 'Hide replies' : `${replyCount} ${replyCount === 1 ? 'reply' : 'replies'}`}
-                    </button>
+
+                  <button
+                    onClick={() => toggleReplies(comment._id)}
+                    className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl transition-all font-semibold ${
+                      isExpanded
+                        ? 'text-indigo-600 bg-indigo-50'
+                        : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                    </svg>
+                    {replyCount > 0 ? `${replyCount} ${replyCount === 1 ? 'Reply' : 'Replies'}` : 'Reply'}
+                  </button>
+
+                  {comment.participant_id === currentUserId && !comment.is_admin_comment && (
+                    <>
+                      <button
+                        onClick={() => { setEditingId(comment._id); setEditText(comment.comment_text) }}
+                        className="p-1.5 text-slate-300 hover:text-indigo-500 hover:bg-indigo-50 rounded-lg transition"
+                        title="Edit"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => handleRemove(comment._id)}
+                        className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition"
+                        title="Remove"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </>
                   )}
                 </div>
 
                 {/* Thread section */}
                 {isExpanded && (
-                  <div className="mt-3 border-l-2 border-gray-100 pl-3 space-y-3">
+                  <div className="mt-4 border-l-2 border-slate-100 pl-4 space-y-4">
                     {(comment.replies || []).map(reply => {
                       const rLikedByMe = (reply.liked_by || []).includes(currentUserId)
                       const rLikeCount = (reply.liked_by || []).length
                       return (
-                        <div key={reply._id} className="flex gap-2">
-                          <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5 select-none ${reply.is_admin_comment ? 'bg-blue-100 text-blue-700' : 'bg-gray-200 text-gray-600'}`}>
+                        <div key={reply._id} className="flex gap-3">
+                          <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold shrink-0 mt-0.5 shadow-sm ${
+                            reply.is_admin_comment ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500'
+                          }`}>
                             {reply.participant_name?.[0]?.toUpperCase() || '?'}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="text-xs font-semibold text-gray-800">{reply.participant_name}</span>
-                              {reply.is_admin_comment && <span className="text-xs bg-blue-600 text-white px-1 py-0.5 rounded">Host</span>}
-                              <span className="text-xs text-gray-400">
+                            <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                              <span className="text-xs font-bold text-slate-900">{reply.participant_name}</span>
+                              {reply.is_admin_comment && <span className="text-[9px] uppercase tracking-wider bg-indigo-600 text-white px-1.5 py-0.5 rounded-full font-bold">Host</span>}
+                              <span className="text-[10px] text-slate-400 font-medium">
                                 {new Date(reply.created_at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
                               </span>
                             </div>
-                            <p className="text-xs text-gray-700 mt-0.5 whitespace-pre-wrap break-words">{reply.comment_text}</p>
-                            <div className="flex items-center gap-0.5 mt-1">
-                              <button
-                                onClick={() => handleLike(reply._id)}
-                                className={`inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded transition ${
-                                  rLikedByMe ? 'text-blue-600 bg-blue-50 hover:bg-blue-100' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
-                                }`}
-                              >
-                                <svg className="w-3 h-3" fill={rLikedByMe ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
-                                </svg>
-                                {rLikeCount > 0 ? rLikeCount : 'Like'}
-                              </button>
-                            </div>
+                            <p className="text-xs text-slate-600 leading-relaxed">{reply.comment_text}</p>
+                            <button
+                              onClick={() => handleLike(reply._id)}
+                              className={`mt-1 inline-flex items-center gap-1 text-[10px] font-bold transition-colors ${
+                                rLikedByMe ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'
+                              }`}
+                            >
+                              <svg className="w-3 h-3" fill={rLikedByMe ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
+                              </svg>
+                              {rLikeCount > 0 ? rLikeCount : 'Like'}
+                            </button>
                           </div>
                         </div>
                       )
@@ -448,61 +618,67 @@ export default function SessionFeedPage() {
                           value={replyInputs[comment._id] || ''}
                           onChange={(e) => setReplyInputs(prev => ({ ...prev, [comment._id]: e.target.value }))}
                           maxLength={1000}
-                          placeholder="Reply..."
-                          className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 focus:bg-white transition"
+                          placeholder="Write a reply..."
+                          className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all shadow-inner"
                         />
                         <button
                           type="submit"
                           disabled={replyLoading[comment._id] || !(replyInputs[comment._id] || '').trim()}
-                          className="bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white text-xs px-3 py-1.5 rounded-lg font-medium transition"
+                          className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white text-xs px-4 py-2 rounded-xl font-bold transition-all shadow-sm"
                         >
-                          {replyLoading[comment._id] ? '...' : 'Send'}
+                          {replyLoading[comment._id] ? '...' : 'Reply'}
                         </button>
                       </form>
                     )}
                   </div>
                 )}
               </div>
-
             </div>
           )
         })}
 
-        <div ref={bottomRef} />
+        <div ref={bottomRef} className="h-4" />
       </div>
 
-      {/* Comment input */}
-      <div className="bg-white border-t border-gray-200 px-4 sm:px-6 py-4 shrink-0">
+      {/* Comment input area */}
+      <div className="bg-white border-t border-slate-200 px-4 sm:px-8 py-5 shrink-0 shadow-[0_-4px_12px_rgba(0,0,0,0.02)]">
         {submitError && (
-          <p className="text-xs text-red-500 mb-2">{submitError}</p>
+          <p className="text-xs text-red-500 mb-3 font-medium bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+            {submitError}
+          </p>
         )}
+        
         {!canComment ? (
-          <div className="text-center text-sm text-gray-400 py-1">
-            {isClosed
-              ? 'This session has ended.'
-              : 'Waiting for the session to start...'}
+          <div className="text-center bg-slate-50 border border-slate-100 rounded-2xl py-3 text-sm text-slate-400 font-medium italic">
+            {isClosed ? 'This session has ended.' : 'Waiting for the session to start...'}
           </div>
         ) : (
-          <form onSubmit={handleSubmitComment} className="flex gap-2">
-            <input
-              type="text"
-              value={commentText}
-              onChange={(e) => {
-                setCommentText(e.target.value)
-                setSubmitError('')
-              }}
-              maxLength={1000}
-              disabled={submitLoading}
-              placeholder="Ask a question..."
-              className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-            />
+          <form onSubmit={handleSubmitComment} className="flex gap-3 max-w-5xl mx-auto">
+            <div className="flex-1 relative">
+              <input
+                type="text"
+                value={commentText}
+                onChange={(e) => {
+                  setCommentText(e.target.value)
+                  setSubmitError('')
+                }}
+                maxLength={1000}
+                disabled={submitLoading}
+                placeholder="Ask a question to the host..."
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all shadow-inner"
+              />
+            </div>
             <button
               type="submit"
               disabled={submitLoading || !commentText.trim()}
-              className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg transition flex items-center gap-1.5"
+              className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-sm font-bold px-8 py-3.5 rounded-2xl transition-all shadow-md flex items-center gap-2 active:scale-95"
             >
-              {submitLoading && (
-                <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              {submitLoading ? (
+                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+                </svg>
               )}
               Send
             </button>

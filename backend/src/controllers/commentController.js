@@ -105,6 +105,13 @@ const createComment = async (req, res) => {
       getIO().to(`session_${session_id}`).emit('comment:new', { comment });
     } catch (_) {}
 
+    try {
+      const { updateLastActivity } = require('../sockets/socketHandler');
+      const SessionActivity = require('../models/SessionActivity');
+      updateLastActivity(session_id, req.user.user_id);
+      SessionActivity.create({ session_id, timestamp: new Date(), event_type: 'comment' }).catch(() => {});
+    } catch (_) {}
+
     return success(res, { comment }, 201);
   } catch (err) {
     if (err.name === 'ValidationError') {

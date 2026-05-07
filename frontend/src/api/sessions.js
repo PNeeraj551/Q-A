@@ -35,3 +35,11 @@ export function addSessionParticipant(id, user_id) {
 export function removeSessionParticipant(id, userId) {
   return axiosInstance.delete(`/sessions/${id}/participants/${userId}`)
 }
+
+export function liveInviteParticipant(sessionId, user_id) {
+  return axiosInstance.post(`/sessions/${sessionId}/live-invite`, { user_id })
+}
+
+export function liveRemoveParticipant(sessionId, participantId) {
+  return axiosInstance.delete(`/sessions/${sessionId}/live-remove/${participantId}`)
+}

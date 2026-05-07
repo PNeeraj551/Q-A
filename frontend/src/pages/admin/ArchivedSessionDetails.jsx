@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getArchivedSessionById, getArchivedSessionComments } from '../../api/archive';
+import PostSessionAnalyticsPanel from '../../components/PostSessionAnalyticsPanel';
 
 export default function ArchivedSessionDetails() {
   const { id } = useParams();
@@ -24,9 +25,9 @@ export default function ArchivedSessionDetails() {
     try {
       const [sessionRes, commentsRes] = await Promise.all([
         getArchivedSessionById(id),
-        getArchivedSessionComments(id, { page: pagination.page, limit: pagination.limit })
+        getArchivedSessionComments(id, { page: pagination.page, limit: pagination.limit }),
       ]);
-      
+
       setSession(sessionRes.data.session);
       setComments(commentsRes.data.comments || []);
       setPagination(prev => ({
@@ -85,7 +86,15 @@ export default function ArchivedSessionDetails() {
         </span>
       </div>
       <p className="text-sm text-gray-700 whitespace-pre-wrap">{comment.comment_text}</p>
-      
+      {comment.is_coordinated_submission && (
+        <span className="mt-1.5 inline-flex items-center gap-1 text-[10px] bg-indigo-50 text-indigo-600 border border-indigo-200 px-2 py-0.5 rounded-full font-medium">
+          <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          Coordinated Submission
+        </span>
+      )}
+
       <div className="mt-3 flex items-center gap-3">
         <span 
           className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-500 bg-white px-2.5 py-1.5 rounded-md border border-gray-100 cursor-help hover:bg-gray-50 transition"
@@ -106,23 +115,23 @@ export default function ArchivedSessionDetails() {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <div className="bg-white border-b border-gray-100 px-6 py-4 shrink-0">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
+    <div className="min-h-screen bg-background flex flex-col">
+      <div className="bg-card border-b border-border px-6 py-4 shrink-0 shadow-sm sticky top-0 z-10">
+        <div className="max-w-5xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-4">
             <button
               onClick={() => navigate('/admin/archive')}
-              className="p-1.5 text-gray-400 hover:text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-lg transition"
+              className="p-2 text-muted-foreground hover:text-foreground bg-muted/50 hover:bg-muted rounded-xl transition-all active:scale-95"
               title="Back to Archives"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
               </svg>
             </button>
             <div>
-              <h1 className="text-xl font-bold text-gray-900">Session Archive Details</h1>
-              <p className="text-xs text-gray-400 mt-0.5">
-                {session ? session.session_title : 'Loading...'}
+              <h1 className="text-xl font-bold text-foreground">Session Archive</h1>
+              <p className="text-xs text-muted-foreground mt-0.5 font-medium">
+                Reviewing completed session data
               </p>
             </div>
           </div>
@@ -148,58 +157,60 @@ export default function ArchivedSessionDetails() {
         {!loading && session && (
           <div className="space-y-6">
             {/* Session Info Card */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+            <div className="bg-card rounded-2xl border border-border shadow-sm p-6">
               <div className="flex items-start justify-between gap-4 mb-4">
                 <div>
-                  <h2 className="text-lg font-bold text-gray-900">{session.session_title}</h2>
+                  <h2 className="text-xl font-bold text-foreground">{session.session_title}</h2>
                   {session.session_description && (
-                    <p className="text-sm text-gray-600 mt-1">{session.session_description}</p>
+                    <p className="text-sm text-muted-foreground mt-2 leading-relaxed">{session.session_description}</p>
                   )}
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 ring-1 ring-gray-200">
-                    <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-muted text-muted-foreground ring-1 ring-border uppercase">
+                    <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/40" />
                     Closed
                   </span>
-                  <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ring-1 ${session.access_type === 'PRIVATE' ? 'bg-purple-50 text-purple-700 ring-purple-200' : 'bg-sky-50 text-sky-700 ring-sky-200'}`}>
-                    {session.access_type === 'PRIVATE' ? 'Private' : 'Public'}
+                  <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold ring-1 uppercase ${session.access_type === 'PRIVATE' ? 'bg-indigo-50 text-indigo-700 ring-indigo-200' : 'bg-sky-50 text-sky-700 ring-sky-200'}`}>
+                    {session.access_type}
                   </span>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-6 border-t border-gray-100">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 mt-8 pt-6 border-t border-border">
                 <div>
-                  <p className="text-xs font-medium text-gray-500 mb-1">Planned Date</p>
-                  <p className="text-sm font-medium text-gray-900">
-                    {new Date(session.planned_date).toLocaleDateString()}
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Planned Date</p>
+                  <p className="text-sm font-semibold text-foreground">
+                    {new Date(session.planned_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-gray-500 mb-1">Time</p>
-                  <p className="text-sm font-medium text-gray-900">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Time</p>
+                  <p className="text-sm font-semibold text-foreground">
                     {new Date(session.planned_start_time).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-gray-500 mb-1">Closed At</p>
-                  <p className="text-sm font-medium text-gray-900">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Closed At</p>
+                  <p className="text-sm font-semibold text-foreground">
                     {session.closed_at ? new Date(session.closed_at).toLocaleDateString() : 'N/A'}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-gray-500 mb-1">Participants</p>
-                  <p className="text-sm font-medium text-gray-900">
-                    {session.assigned_participants ? session.assigned_participants.length : 0}
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Participants</p>
+                  <p className="text-sm font-semibold text-foreground">
+                    {session.assigned_participants ? session.assigned_participants.length : 0} Members
                   </p>
                 </div>
               </div>
             </div>
 
+            <PostSessionAnalyticsPanel sessionId={id} sessionStatus="CLOSED" />
+
             {/* Questions / Comments List */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col">
-              <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
-                <h3 className="text-base font-bold text-gray-900">Questions & Comments</h3>
-                <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2.5 py-1 rounded-full">
+            <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden flex flex-col">
+              <div className="px-6 py-4 border-b border-border bg-muted/20 flex justify-between items-center">
+                <h3 className="text-base font-bold text-foreground">Questions & Comments</h3>
+                <span className="text-[10px] font-bold text-primary bg-primary/10 px-2.5 py-1 rounded-full uppercase">
                   {pagination.total} total
                 </span>
               </div>

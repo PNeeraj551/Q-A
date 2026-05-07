@@ -7,11 +7,15 @@ import {
 import { searchUsers } from '../../api/users'
 import { adminResetPassword, getResetRequests } from '../../api/auth'
 import DashboardLayout from '../../components/DashboardLayout'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 
 const STATUS_META = {
   SCHEDULED:      { label: 'Scheduled',  dot: 'bg-amber-400',  badge: 'bg-amber-50 text-amber-700 ring-amber-200',  bar: 'bg-amber-400' },
   ACTIVE_SESSION: { label: 'Live',        dot: 'bg-emerald-500 animate-pulse', badge: 'bg-emerald-50 text-emerald-700 ring-emerald-200', bar: 'bg-emerald-500' },
-  CLOSED:         { label: 'Closed',      dot: 'bg-slate-300',   badge: 'bg-slate-100 text-slate-500 ring-slate-200',  bar: 'bg-slate-300' },
+  CLOSED:         { label: 'Closed',      dot: 'bg-muted-foreground/30', badge: 'bg-muted text-muted-foreground ring-border', bar: 'bg-muted-foreground/10' },
 }
 
 const FILTERS = ['ALL', 'SCHEDULED', 'ACTIVE_SESSION', 'CLOSED']
@@ -28,13 +32,13 @@ function useDebounce(value, delay) {
 
 function StatCard({ label, value, color, icon }) {
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex items-center gap-4">
+    <div className="bg-card rounded-2xl border border-border shadow-sm p-5 flex items-center gap-4 transition-all hover:shadow-md">
       <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${color}`}>
         {icon}
       </div>
       <div>
-        <p className="text-2xl font-bold text-slate-900">{value}</p>
-        <p className="text-xs text-slate-500 mt-0.5">{label}</p>
+        <p className="text-2xl font-bold text-foreground">{value}</p>
+        <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
       </div>
     </div>
   )
@@ -332,15 +336,15 @@ export default function SessionDashboard() {
   const pagedSessions = filteredSessions.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   const layoutActions = (
-    <button
+    <Button
+      id="new-session-btn"
       onClick={() => navigate('/admin/sessions/create')}
-      className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors shadow-sm"
     >
       <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
       </svg>
       New Session
-    </button>
+    </Button>
   )
 
   return (
@@ -386,9 +390,9 @@ export default function SessionDashboard() {
         <StatCard
           label="Closed"
           value={counts.CLOSED || 0}
-          color="bg-slate-100"
+          color="bg-muted"
           icon={
-            <svg className="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
             </svg>
@@ -397,23 +401,23 @@ export default function SessionDashboard() {
       </div>
 
       {/* Filter + Search */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm mb-5 overflow-hidden">
+      <div className="bg-card rounded-2xl border border-border shadow-sm mb-5 overflow-hidden">
         {/* Filter tabs */}
-        <div className="px-4 pt-4 pb-3 border-b border-slate-100">
-          <div className="flex gap-1 bg-slate-100 rounded-xl p-1 w-fit">
+        <div className="px-4 py-3 border-b border-border bg-muted/30">
+          <div className="flex gap-1 bg-muted rounded-xl p-1 w-fit">
             {FILTERS.map(f => (
               <button
                 key={f}
                 onClick={() => { setActiveFilter(f); setPage(1) }}
                 className={`px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 ${
                   activeFilter === f
-                    ? 'bg-white text-slate-900 shadow-sm font-semibold'
-                    : 'text-slate-500 hover:text-slate-700'
+                    ? 'bg-card text-foreground shadow-sm font-semibold'
+                    : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 {FILTER_LABELS[f]}
                 {f !== 'ALL' && counts[f] ? (
-                  <span className={`ml-1.5 text-xs ${activeFilter === f ? 'text-slate-600' : 'text-slate-400'}`}>
+                  <span className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full ${activeFilter === f ? 'bg-primary text-primary-foreground' : 'bg-muted-foreground/10 text-muted-foreground'}`}>
                     {counts[f]}
                   </span>
                 ) : null}
@@ -425,20 +429,21 @@ export default function SessionDashboard() {
         {/* Search + date */}
         <div className="px-4 py-3 flex gap-2">
           <div className="relative flex-1">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <circle cx="11" cy="11" r="8" /><path strokeLinecap="round" d="M21 21l-4.35-4.35" />
             </svg>
-            <input
+            <Input
+              id="session-search"
               type="text"
               value={sessionSearch}
               onChange={e => { setSessionSearch(e.target.value); setPage(1) }}
               placeholder="Search sessions..."
-              className="w-full pl-8 pr-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-slate-50 focus:bg-white transition"
+              className="pl-8 h-9"
             />
             {sessionSearch && (
               <button
                 onClick={() => setSessionSearch('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5"
               >
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -493,12 +498,12 @@ export default function SessionDashboard() {
           </div>
           <p className="text-slate-700 text-sm font-semibold">No sessions found</p>
           <p className="text-slate-400 text-xs mt-1 mb-5">Create your first Q&A session to get started</p>
-          <button
+          <Button
+            id="create-first-session-btn"
             onClick={() => navigate('/admin/sessions/create')}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors"
           >
             Create Session
-          </button>
+          </Button>
         </div>
       )}
 
@@ -514,49 +519,52 @@ export default function SessionDashboard() {
             return (
               <div
                 key={session._id}
-                className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex hover:shadow-md hover:border-slate-300 hover:-translate-y-px transition-all duration-200"
+                className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden flex hover:shadow-md hover:border-primary/20 hover:-translate-y-px transition-all duration-200"
               >
                 <div className={`w-1 shrink-0 ${meta.bar}`} />
 
                 <div className="flex-1 px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap mb-1">
-                      <span className="font-semibold text-slate-900 text-sm">{session.session_title}</span>
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ring-1 ${meta.badge}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${meta.dot}`} />
-                        {meta.label}
+                      <span className="font-semibold text-foreground text-sm">{session.session_title}</span>
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ring-1 ${meta.badge}`}>
+                        <span className={`w-1 h-1 rounded-full ${meta.dot}`} />
+                        {meta.label.toUpperCase()}
                       </span>
                       {isPrivate ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-700 ring-1 ring-purple-200">
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200 uppercase">
+                          <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                             <rect x="3" y="11" width="18" height="11" rx="2" /><path strokeLinecap="round" d="M7 11V7a5 5 0 0110 0v4" />
                           </svg>
-                          Private
+                          PRIVATE
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-sky-50 text-sky-700 ring-1 ring-sky-200">
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-50 text-sky-700 ring-1 ring-sky-200 uppercase">
+                          <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                             <circle cx="12" cy="12" r="10" /><path strokeLinecap="round" d="M2 12h20M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20" />
                           </svg>
-                          Public
+                          PUBLIC
                         </span>
                       )}
                     </div>
 
                     {session.session_description && (
-                      <p className="text-xs text-slate-500 truncate mb-1">{session.session_description}</p>
+                      <p className="text-xs text-muted-foreground truncate mb-2">{session.session_description}</p>
                     )}
 
-                    <div className="flex items-center gap-1 text-xs text-slate-400">
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      <span>{date}</span>
-                      <span className="mx-1">·</span>
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                        <circle cx="12" cy="12" r="10" /><path strokeLinecap="round" d="M12 6v6l4 2" />
-                      </svg>
-                      <span>{startTime}</span>
+                    <div className="flex items-center gap-3 text-[11px] text-muted-foreground/70">
+                      <div className="flex items-center gap-1">
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <span>{date}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                          <circle cx="12" cy="12" r="10" /><path strokeLinecap="round" d="M12 6v6l4 2" />
+                        </svg>
+                        <span>{startTime}</span>
+                      </div>
                     </div>
                   </div>
 
@@ -565,7 +573,7 @@ export default function SessionDashboard() {
                     {isPrivate && session.session_status !== 'CLOSED' && (
                       <button
                         onClick={() => openParticipants(session)}
-                        className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border border-purple-200 text-purple-700 bg-purple-50 hover:bg-purple-100 transition-colors"
+                        className="inline-flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-lg border border-indigo-200 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 transition-all uppercase active:scale-95"
                       >
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                           <path strokeLinecap="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -578,10 +586,10 @@ export default function SessionDashboard() {
                       <button
                         key={ns}
                         onClick={() => { setStatusTarget({ session, newStatus: ns }); setStatusError('') }}
-                        className={`text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors ${
+                        className={`text-[11px] font-bold px-3 py-1.5 rounded-lg border transition-all uppercase active:scale-95 ${
                           ns === 'ACTIVE_SESSION'
                             ? 'border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100'
-                            : 'border-slate-200 text-slate-600 bg-white hover:bg-slate-50'
+                            : 'border-border text-muted-foreground bg-card hover:bg-muted'
                         }`}
                       >
                         {ns === 'ACTIVE_SESSION' ? 'Go Live' : 'Close'}
@@ -591,25 +599,13 @@ export default function SessionDashboard() {
                     {session.session_status === 'ACTIVE_SESSION' && (
                       <button
                         onClick={() => navigate(`/admin/sessions/${session._id}/feed`)}
-                        className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-colors shadow-sm"
+                        className="inline-flex items-center gap-1.5 text-[11px] font-bold px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-all shadow-sm active:scale-95 uppercase"
                       >
                         <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
                         Open Feed
                       </button>
                     )}
 
-                    {session.session_status === 'CLOSED' && (
-                      <button
-                        onClick={() => navigate(`/admin/archive/${session._id}`)}
-                        className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
-                      >
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                        </svg>
-                        View Archive
-                      </button>
-                    )}
 
                     {session.session_status !== 'CLOSED' && (
                       <button
@@ -921,22 +917,23 @@ export default function SessionDashboard() {
               </div>
 
               <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex gap-2">
-                <button
+                <Button
                   type="button"
+                  variant="outline"
                   onClick={() => setEditTarget(null)}
                   disabled={editLoading}
-                  className="flex-1 py-2.5 text-sm text-slate-700 border border-slate-200 rounded-xl hover:bg-slate-100 transition-colors"
+                  className="flex-1"
                 >
                   Cancel
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
                   disabled={editLoading}
-                  className="flex-1 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 rounded-xl transition-colors flex items-center justify-center gap-2"
+                  className="flex-1"
                 >
-                  {editLoading && <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+                  {editLoading && <span className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />}
                   {editLoading ? 'Saving...' : 'Save Changes'}
-                </button>
+                </Button>
               </div>
             </form>
           </div>
@@ -958,21 +955,23 @@ export default function SessionDashboard() {
             </p>
             {deleteError && <p className="text-xs text-red-500 mb-3">{deleteError}</p>}
             <div className="flex gap-2">
-              <button
+              <Button
+                variant="outline"
                 onClick={() => { setDeleteTarget(null); setDeleteError('') }}
                 disabled={deleteLoading}
-                className="flex-1 py-2.5 text-sm text-slate-700 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors"
+                className="flex-1"
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="destructive"
                 onClick={handleDelete}
                 disabled={deleteLoading}
-                className="flex-1 py-2.5 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 rounded-xl transition-colors flex items-center justify-center gap-2"
+                className="flex-1"
               >
-                {deleteLoading && <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+                {deleteLoading && <span className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />}
                 {deleteLoading ? 'Deleting...' : 'Delete'}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -1005,25 +1004,26 @@ export default function SessionDashboard() {
             </p>
             {statusError && <p className="text-xs text-red-500 mb-3">{statusError}</p>}
             <div className="flex gap-2">
-              <button
+              <Button
+                variant="outline"
                 onClick={() => { setStatusTarget(null); setStatusError('') }}
                 disabled={statusLoading}
-                className="flex-1 py-2.5 text-sm text-slate-700 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors"
+                className="flex-1"
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={confirmStatusChange}
                 disabled={statusLoading}
-                className={`flex-1 py-2.5 text-sm font-semibold text-white disabled:opacity-50 rounded-xl transition-colors flex items-center justify-center gap-2 ${
+                className={`flex-1 ${
                   statusTarget.newStatus === 'ACTIVE_SESSION'
                     ? 'bg-emerald-600 hover:bg-emerald-700'
                     : 'bg-slate-800 hover:bg-slate-900'
                 }`}
               >
-                {statusLoading && <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+                {statusLoading && <span className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />}
                 {statusLoading ? 'Updating...' : statusTarget.newStatus === 'ACTIVE_SESSION' ? 'Go Live' : 'Close'}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -1110,12 +1110,13 @@ export default function SessionDashboard() {
             </div>
 
             <div className="px-6 py-4 border-t border-slate-100 bg-slate-50">
-              <button
+              <Button
+                variant="ghost"
                 onClick={() => { setResetPanelOpen(false); setResetPanelError(''); setResetReveal({}) }}
-                className="w-full text-sm font-medium text-slate-700 hover:text-slate-900 py-2 rounded-xl hover:bg-slate-100 transition-colors"
+                className="w-full"
               >
                 Done
-              </button>
+              </Button>
             </div>
           </div>
         </div>

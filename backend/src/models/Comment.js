@@ -43,6 +43,15 @@ const commentSchema = new mongoose.Schema(
       ref: 'Comment',
       default: null,
     },
+    is_coordinated_submission: {
+      type: Boolean,
+      default: false,
+    },
+    coordination_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'PeerCoordination',
+      default: null,
+    },
     created_at: {
       type: Date,
       default: Date.now,

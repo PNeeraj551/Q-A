@@ -2,14 +2,17 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { changePassword, getMe } from '../api/auth'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 
 function PasswordField({ id, label, value, onChange, error, disabled, placeholder, autoComplete }) {
   const [show, setShow] = useState(false)
   return (
-    <div>
-      <label htmlFor={id} className="block text-sm font-medium text-slate-700 mb-1.5">{label}</label>
+    <div className="space-y-1.5">
+      <Label htmlFor={id}>{label}</Label>
       <div className="relative">
-        <input
+        <Input
           id={id}
           type={show ? 'text' : 'password'}
           autoComplete={autoComplete}
@@ -17,14 +20,13 @@ function PasswordField({ id, label, value, onChange, error, disabled, placeholde
           onChange={onChange}
           disabled={disabled}
           placeholder={placeholder}
-          className={`w-full border rounded-xl px-3.5 py-2.5 pr-10 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition ${
-            error ? 'border-red-400 bg-red-50' : 'border-slate-300'
-          }`}
+          aria-invalid={!!error}
+          className="pr-10"
         />
         <button
           type="button"
           onClick={() => setShow(v => !v)}
-          className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400 hover:text-slate-600 transition-colors"
+          className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 transition-colors"
           tabIndex={-1}
         >
           {show ? (
@@ -39,7 +41,7 @@ function PasswordField({ id, label, value, onChange, error, disabled, placeholde
           )}
         </button>
       </div>
-      {error && <p className="mt-1.5 text-xs text-red-500">{error}</p>}
+      {error && <p className="text-xs text-destructive">{error}</p>}
     </div>
   )
 }
@@ -96,7 +98,7 @@ export default function ChangePasswordPage() {
       if (status === 401) {
         setServerError('Current password is incorrect')
       } else {
-        setServerError('Something went wrong. Please try again.')
+        setServerError(err.response?.data?.message || 'Something went wrong. Please try again.')
       }
     } finally {
       setLoading(false)
@@ -108,8 +110,8 @@ export default function ChangePasswordPage() {
       <div className="w-full max-w-md">
         <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-8">
           <div className="mb-7">
-            <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center mb-4">
-              <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-4">
+              <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
               </svg>
             </div>
@@ -154,7 +156,7 @@ export default function ChangePasswordPage() {
             />
 
             {serverError && (
-              <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600 flex items-center gap-2">
+              <div className="rounded-xl bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive flex items-center gap-2">
                 <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                   <circle cx="12" cy="12" r="10" /><path strokeLinecap="round" d="M12 8v4m0 4h.01" />
                 </svg>
@@ -162,24 +164,28 @@ export default function ChangePasswordPage() {
               </div>
             )}
 
-            <button
+            <Button
+              id="change-password-submit"
               type="submit"
               disabled={loading}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-semibold py-2.5 px-4 rounded-xl text-sm transition-colors flex items-center justify-center gap-2 mt-2"
+              className="w-full mt-2"
+              size="lg"
             >
-              {loading && <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+              {loading && <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />}
               {loading ? 'Saving...' : 'Set New Password'}
-            </button>
+            </Button>
           </form>
 
           <div className="mt-5 text-center">
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="sm"
               onClick={logout}
-              className="text-sm text-slate-500 hover:text-slate-700 transition-colors"
+              className="text-slate-500"
             >
               Sign out instead
-            </button>
+            </Button>
           </div>
         </div>
 

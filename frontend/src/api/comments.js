@@ -18,8 +18,12 @@ export function deleteComment(commentId) {
   return axiosInstance.patch(`/comments/${commentId}/delete`)
 }
 
-export function pinComment(commentId) {
-  return axiosInstance.patch(`/comments/${commentId}/pin`)
+export function editComment(commentId, comment_text) {
+  return axiosInstance.patch(`/comments/${commentId}/edit`, { comment_text })
+}
+
+export function removeComment(commentId) {
+  return axiosInstance.patch(`/comments/${commentId}/remove`)
 }
 
 export function likeComment(commentId) {

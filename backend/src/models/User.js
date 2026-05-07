@@ -31,6 +31,10 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    refresh_token_hash: {
+      type: String,
+      default: null,
+    },
     created_at: {
       type: Date,
       default: Date.now,

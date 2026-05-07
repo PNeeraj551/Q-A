@@ -1,8 +1,18 @@
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const PasswordResetRequest = require('../models/PasswordResetRequest');
-const { signToken } = require('../utils/jwtUtils');
+const { signAccessToken, signRefreshToken, verifyRefreshToken } = require('../utils/jwtUtils');
+
+const REFRESH_COOKIE = 'refresh_token';
+const COOKIE_OPTS = (NODE_ENV) => ({
+  httpOnly: true,
+  sameSite: 'strict',
+  secure: NODE_ENV === 'production',
+  maxAge: 7 * 24 * 60 * 60 * 1000,
+  path: '/',
+});
 const { success, error } = require('../utils/responseUtils');
+const { NODE_ENV } = require('../config/env');
 
 const NAME_MAX = 80;
 
@@ -34,12 +44,19 @@ const login = async (req, res) => {
 
     const payload = {
       user_id: user._id.toString(),
+      name: user.name,
       email: user.email,
       role: user.role,
       must_change_password: user.must_change_password,
     };
 
-    const token = signToken(payload);
+    const token = signAccessToken(payload);
+    const refreshToken = signRefreshToken(payload);
+
+    user.refresh_token_hash = await bcrypt.hash(refreshToken, 10);
+    await user.save();
+
+    res.cookie(REFRESH_COOKIE, refreshToken, COOKIE_OPTS(NODE_ENV));
 
     return success(res, {
       token,
@@ -80,8 +97,50 @@ const me = async (req, res) => {
   }
 };
 
-const logout = (req, res) => {
+const logout = async (req, res) => {
+  try {
+    await User.findByIdAndUpdate(req.user.user_id, { refresh_token_hash: null });
+  } catch { /* best-effort — still clear cookie */ }
+  res.clearCookie(REFRESH_COOKIE, { httpOnly: true, sameSite: 'strict', secure: NODE_ENV === 'production', path: '/' });
   return success(res, { message: 'Logged out' });
+};
+
+const refresh = async (req, res) => {
+  const token = req.cookies?.[REFRESH_COOKIE];
+  if (!token) return error(res, 'No refresh token', 401);
+
+  const clearRefreshCookie = () =>
+    res.clearCookie(REFRESH_COOKIE, { httpOnly: true, sameSite: 'strict', secure: NODE_ENV === 'production', path: '/' });
+
+  try {
+    const decoded = verifyRefreshToken(token);
+    const user = await User.findOne({ _id: decoded.user_id, is_active: true })
+      .select('_id name email role must_change_password refresh_token_hash');
+    if (!user || !user.refresh_token_hash) {
+      clearRefreshCookie();
+      return error(res, 'Invalid or expired refresh token', 401);
+    }
+
+    const isValid = await bcrypt.compare(token, user.refresh_token_hash);
+    if (!isValid) {
+      clearRefreshCookie();
+      return error(res, 'Invalid or expired refresh token', 401);
+    }
+
+    const payload = {
+      user_id: user._id.toString(),
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      must_change_password: user.must_change_password,
+    };
+
+    const access_token = signAccessToken(payload);
+    return success(res, { access_token });
+  } catch {
+    clearRefreshCookie();
+    return error(res, 'Invalid or expired refresh token', 401);
+  }
 };
 
 const updateMe = async (req, res) => {
@@ -251,4 +310,4 @@ const changePassword = async (req, res) => {
   }
 };
 
-module.exports = { login, me, logout, updateMe, forgotPassword, getResetRequests, adminResetPassword, changePassword };
+module.exports = { login, me, logout, refresh, updateMe, forgotPassword, getResetRequests, adminResetPassword, changePassword };

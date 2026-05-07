@@ -64,6 +64,10 @@ const sessionSchema = new mongoose.Schema(
     closed_at: {
       type: Date,
     },
+    reminders_sent: {
+      type: [String],
+      default: [], // e.g. ['24H', '1H']
+    },
   },
   {
     timestamps: false,

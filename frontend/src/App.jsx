@@ -9,8 +9,12 @@ import SessionCreatePage from './pages/admin/SessionCreatePage'
 import LiveSessionFeed from './pages/admin/LiveSessionFeed'
 import ArchivedSessionsPage from './pages/admin/ArchivedSessionsPage'
 import ArchivedSessionDetails from './pages/admin/ArchivedSessionDetails'
+import ParticipantsPage from './pages/admin/ParticipantsPage'
+import AnalyticsDashboard from './pages/admin/AnalyticsDashboard'
+import SessionAnalyticsPage from './pages/admin/SessionAnalyticsPage'
 import AvailableSessionsList from './pages/participant/AvailableSessionsList'
 import SessionFeedPage from './pages/participant/SessionFeedPage'
+import UpcomingEventsPage from './pages/participant/UpcomingEventsPage'
 
 export default function App() {
   return (
@@ -61,6 +65,30 @@ export default function App() {
               </AdminRoute>
             }
           />
+          <Route
+            path="/admin/participants"
+            element={
+              <AdminRoute>
+                <ParticipantsPage />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/analytics"
+            element={
+              <AdminRoute>
+                <AnalyticsDashboard />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/analytics/:id"
+            element={
+              <AdminRoute>
+                <SessionAnalyticsPage />
+              </AdminRoute>
+            }
+          />
 
           {/* Participant routes */}
           <Route
@@ -74,6 +102,14 @@ export default function App() {
           <Route
             path="/sessions"
             element={<Navigate to="/participant/sessions" replace />}
+          />
+          <Route
+            path="/participant/events"
+            element={
+              <ProtectedRoute>
+                <UpcomingEventsPage />
+              </ProtectedRoute>
+            }
           />
           <Route
             path="/sessions/:id"
