@@ -161,7 +161,7 @@ export default function AnalyticsDashboard() {
               {/* Engagement Trend */}
               <div className="bg-white rounded-xl border border-slate-100 p-4 shadow-sm">
                 <p className="text-xs font-bold text-slate-700 uppercase tracking-wide mb-0.5">Engagement Trend</p>
-                <p className="text-[10px] text-slate-400 mb-4">Anonymous activity events · last 8 weeks</p>
+                <p className="text-[10px] text-slate-400 mb-4">All interactions · last 8 weeks</p>
                 <ResponsiveContainer width="100%" height={180}>
                   <AreaChart data={data.engagementTrend} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
                     <defs>
@@ -271,7 +271,7 @@ export default function AnalyticsDashboard() {
             </div>
 
             <p className="text-[10px] text-slate-300 text-center">
-              All data is anonymously aggregated. No participant identity is stored or displayed.
+              Interaction data is aggregated across all sessions.
             </p>
           </>
         )}
