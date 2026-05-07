@@ -81,6 +81,9 @@ async function createChat(req, res) {
 
     return success(res, { chat });
   } catch (err) {
+    if (err.code === 11000) {
+      return error(res, 'A chat with this participant already exists for this session.', 409);
+    }
     return error(res, 'Failed to create chat.', 500);
   }
 }

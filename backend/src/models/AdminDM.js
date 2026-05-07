@@ -23,4 +23,13 @@ const adminDMSchema = new Schema({
 
 adminDMSchema.index({ session_id: 1, admin_id: 1 });
 
-module.exports = mongoose.model('AdminDM', adminDMSchema);
+const AdminDM = mongoose.model('AdminDM', adminDMSchema);
+
+// Drop the old unique index from the previous schema if it still exists
+mongoose.connection.on('connected', () => {
+  AdminDM.collection
+    .dropIndex('session_id_1_participant_id_1')
+    .catch(() => {})
+});
+
+module.exports = AdminDM;

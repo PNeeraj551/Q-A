@@ -86,8 +86,9 @@ export default function AdminDMPanel({ sessionId, socket, presenceParticipants =
       setSelectedIds([])
       setShowNewChat(false)
       setSelectedChat(newChat)
-    } catch {
-      setErrorMsg('Failed to create chat.')
+    } catch (err) {
+      const msg = err.response?.data?.message
+      setErrorMsg(msg || 'Failed to create chat.')
     } finally {
       setCreating(false)
     }
