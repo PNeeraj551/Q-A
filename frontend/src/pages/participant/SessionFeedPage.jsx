@@ -289,7 +289,23 @@ export default function SessionFeedPage() {
     }
   }
 
+  function applyRemoveLocal(commentId) {
+    setComments(prev => prev
+      .filter(c => c._id !== commentId)
+      .map(c => ({ ...c, replies: (c.replies || []).filter(r => r._id !== commentId) }))
+    )
+  }
+
+  function applyEditLocal(commentId, text) {
+    const updated_at = new Date().toISOString()
+    setComments(prev => prev.map(c => {
+      if (c._id === commentId) return { ...c, comment_text: text, updated_at }
+      return { ...c, replies: (c.replies || []).map(r => r._id === commentId ? { ...r, comment_text: text, updated_at } : r) }
+    }))
+  }
+
   async function handleRemove(commentId) {
+    applyRemoveLocal(commentId)
     try { await removeComment(commentId) } catch {}
   }
 
@@ -298,6 +314,7 @@ export default function SessionFeedPage() {
     if (!text) return
     try {
       await editComment(commentId, text)
+      applyEditLocal(commentId, text)
       setEditingId(null)
       setEditText('')
     } catch {}
@@ -580,6 +597,7 @@ export default function SessionFeedPage() {
                     {(comment.replies || []).map(reply => {
                       const rLikedByMe = (reply.liked_by || []).includes(currentUserId)
                       const rLikeCount = (reply.liked_by || []).length
+                      const isMyReply = reply.participant_id === currentUserId && !reply.is_admin_comment
                       return (
                         <div key={reply._id} className="flex gap-3">
                           <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold shrink-0 mt-0.5 shadow-sm ${
@@ -595,18 +613,59 @@ export default function SessionFeedPage() {
                                 {new Date(reply.created_at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
                               </span>
                             </div>
-                            <p className="text-xs text-slate-600 leading-relaxed">{reply.comment_text}</p>
-                            <button
-                              onClick={() => handleLike(reply._id)}
-                              className={`mt-1 inline-flex items-center gap-1 text-[10px] font-bold transition-colors ${
-                                rLikedByMe ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'
-                              }`}
-                            >
-                              <svg className="w-3 h-3" fill={rLikedByMe ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
-                              </svg>
-                              {rLikeCount > 0 ? rLikeCount : 'Like'}
-                            </button>
+                            {editingId === reply._id ? (
+                              <div className="flex gap-2 mt-1">
+                                <textarea
+                                  value={editText}
+                                  onChange={e => setEditText(e.target.value)}
+                                  rows={2}
+                                  maxLength={1000}
+                                  className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none"
+                                  autoFocus
+                                />
+                                <div className="flex flex-col gap-1">
+                                  <button onClick={() => handleEditSave(reply._id)} className="text-[10px] px-2 py-1 bg-indigo-600 text-white rounded font-semibold hover:bg-indigo-700">Save</button>
+                                  <button onClick={() => setEditingId(null)} className="text-[10px] px-2 py-1 bg-slate-100 text-slate-600 rounded hover:bg-slate-200">Cancel</button>
+                                </div>
+                              </div>
+                            ) : (
+                              <p className="text-xs text-slate-600 leading-relaxed">{reply.comment_text}</p>
+                            )}
+                            <div className="flex items-center gap-1 mt-1">
+                              <button
+                                onClick={() => handleLike(reply._id)}
+                                className={`inline-flex items-center gap-1 text-[10px] font-bold transition-colors ${
+                                  rLikedByMe ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'
+                                }`}
+                              >
+                                <svg className="w-3 h-3" fill={rLikedByMe ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
+                                </svg>
+                                {rLikeCount > 0 ? rLikeCount : 'Like'}
+                              </button>
+                              {isMyReply && (
+                                <>
+                                  <button
+                                    onClick={() => { setEditingId(reply._id); setEditText(reply.comment_text) }}
+                                    className="p-1 text-slate-300 hover:text-indigo-500 rounded transition"
+                                    title="Edit"
+                                  >
+                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                    </svg>
+                                  </button>
+                                  <button
+                                    onClick={() => handleRemove(reply._id)}
+                                    className="p-1 text-slate-300 hover:text-red-500 rounded transition"
+                                    title="Remove"
+                                  >
+                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                  </button>
+                                </>
+                              )}
+                            </div>
                           </div>
                         </div>
                       )
