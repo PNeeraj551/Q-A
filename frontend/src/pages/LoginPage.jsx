@@ -50,10 +50,20 @@ export default function LoginPage() {
         navigate('/participant/sessions', { replace: true })
       }
     } catch (err) {
-      if (err.response?.status === 401) {
-        setServerError('Invalid email or password')
+      const status = err.response?.status
+      const message = err.response?.data?.message
+      if (status === 401) {
+        setServerError('Incorrect email or password. Please check your credentials and try again.')
+      } else if (status === 403) {
+        setServerError('Your account has been deactivated. Please contact your administrator.')
+      } else if (status === 404) {
+        setServerError('No account found with this email address.')
+      } else if (status === 429) {
+        setServerError('Too many sign-in attempts. Please wait a few minutes and try again.')
+      } else if (!err.response) {
+        setServerError('Unable to connect to the server. Please check your internet connection and try again.')
       } else {
-        setServerError(err.response?.data?.message || 'Something went wrong. Please try again.')
+        setServerError(message || 'An unexpected error occurred. Please try again.')
       }
     } finally {
       setLoading(false)
