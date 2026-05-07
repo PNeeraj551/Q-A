@@ -8,6 +8,15 @@ import {
 } from 'recharts'
 import { getPostSessionAnalytics } from '../api/adminAnalytics'
 
+function fmtTime(iso) {
+  if (!iso) return '—'
+  return new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hour12: true })
+}
+
+function fmtTimeline(data = []) {
+  return data.map(d => ({ ...d, time: fmtTime(d.time) }))
+}
+
 const LEVEL_CONFIG = {
   Low:    { className: 'bg-slate-100 text-slate-600 border-slate-200',     dot: 'bg-slate-400' },
   Medium: { className: 'bg-amber-50 text-amber-700 border-amber-200',      dot: 'bg-amber-500' },
@@ -74,8 +83,8 @@ export default function PostSessionAnalyticsPanel({ sessionId, sessionStatus }) 
   const hasCollab = analytics?.anonymous_collaboration_activity?.some(t => t.count > 0)
 
   // Thin timeline data: show every other tick label to prevent crowding
-  const timelineData = analytics?.timeline ?? []
-  const collabData = analytics?.anonymous_collaboration_activity ?? []
+  const timelineData = fmtTimeline(analytics?.timeline)
+  const collabData = fmtTimeline(analytics?.anonymous_collaboration_activity)
 
   return (
     <div className="bg-gradient-to-b from-slate-50 to-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
@@ -123,7 +132,7 @@ export default function PostSessionAnalyticsPanel({ sessionId, sessionStatus }) 
               />
               <MetricCard
                 label="Peak Activity"
-                value={analytics.peak_activity_time ?? '—'}
+                value={fmtTime(analytics.peak_activity_time)}
                 sub="highest engagement window"
                 icon={
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">

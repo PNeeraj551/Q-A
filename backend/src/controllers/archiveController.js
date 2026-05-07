@@ -111,11 +111,17 @@ const searchArchive = async (req, res) => {
     }
 
     const enriched = await Promise.all(
-      sessions.map(async (s) => ({
-        ...s,
-        participant_count: s.assigned_participants ? s.assigned_participants.length : 0,
-        comment_count: await Comment.countDocuments({ session_id: s._id, is_deleted: false }),
-      }))
+      sessions.map(async (s) => {
+        const [distinctParticipants, comment_count] = await Promise.all([
+          Comment.distinct('participant_id', { session_id: s._id, is_admin_comment: false, is_deleted: false }),
+          Comment.countDocuments({ session_id: s._id, is_deleted: false }),
+        ]);
+        return {
+          ...s,
+          participant_count: distinctParticipants.length,
+          comment_count,
+        };
+      })
     );
 
     return success(res, {

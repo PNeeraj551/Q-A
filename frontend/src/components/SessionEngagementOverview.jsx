@@ -11,6 +11,15 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import axiosInstance from '@/api/axiosInstance'
 
+function fmtTime(iso) {
+  if (!iso) return '—'
+  return new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hour12: true })
+}
+
+function fmtTimeline(data = []) {
+  return data.map(d => ({ ...d, time: fmtTime(d.time) }))
+}
+
 const INTENSITY_CONFIG = {
   LOW:    { label: 'LOW',    className: 'bg-gray-100 text-gray-500 border-gray-200' },
   MEDIUM: { label: 'MEDIUM', className: 'bg-yellow-100 text-yellow-700 border-yellow-200' },
@@ -98,7 +107,7 @@ export default function SessionEngagementOverview({ sessionId, socket }) {
           <MetricCard label="Public Questions" value={analytics?.public_questions_count} />
           <MetricCard label="Participants Active" value={analytics?.participants_active} sub="last 10 min" />
           <MetricCard label="Participants Idle" value={analytics?.participants_idle} />
-          <MetricCard label="Peak Activity" value={analytics?.peak_activity_time} />
+          <MetricCard label="Peak Activity" value={fmtTime(analytics?.peak_activity_time)} />
         </div>
 
         {analytics?.engagement_timeline?.length > 0 && (
@@ -108,7 +117,7 @@ export default function SessionEngagementOverview({ sessionId, socket }) {
             </p>
             <ResponsiveContainer width="100%" height={120}>
               <AreaChart
-                data={analytics.engagement_timeline}
+                data={fmtTimeline(analytics.engagement_timeline)}
                 margin={{ top: 4, right: 4, left: -28, bottom: 0 }}
               >
                 <defs>

@@ -7,7 +7,7 @@ const { success, error } = require('../utils/responseUtils');
 const ALLOWED_STATUSES = ['POST_SESSION', 'CLOSED'];
 
 function formatTime(date) {
-  return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+  return date.toISOString();
 }
 
 function floorTo5Min(date) {

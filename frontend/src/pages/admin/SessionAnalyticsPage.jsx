@@ -7,6 +7,15 @@ import {
 import DashboardLayout from '../../components/DashboardLayout'
 import { getSessionDetailAnalytics } from '../../api/adminAnalytics'
 
+function fmtTime(iso) {
+  if (!iso) return '—'
+  return new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hour12: true })
+}
+
+function fmtTimeline(data = []) {
+  return data.map(d => ({ ...d, time: fmtTime(d.time) }))
+}
+
 const LEVEL_CONFIG = {
   Low:    { className: 'bg-slate-100 text-slate-600 border-slate-200',     dot: 'bg-slate-400' },
   Medium: { className: 'bg-amber-50 text-amber-700 border-amber-200',      dot: 'bg-amber-500' },
@@ -149,7 +158,7 @@ export default function SessionAnalyticsPage() {
               />
               <MetricCard
                 label="Peak Activity"
-                value={data.peak_activity_time ?? '—'}
+                value={fmtTime(data.peak_activity_time)}
                 sub="highest engagement window"
                 icon={
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -187,7 +196,7 @@ export default function SessionAnalyticsPage() {
                 <p className="text-xs text-slate-400 text-center py-8">No activity recorded for this session.</p>
               ) : (
                 <ResponsiveContainer width="100%" height={160}>
-                  <AreaChart data={data.timeline} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
+                  <AreaChart data={fmtTimeline(data.timeline)} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
                     <defs>
                       <linearGradient id="saTimelineGrad" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#6366f1" stopOpacity={0.2} />
@@ -212,7 +221,7 @@ export default function SessionAnalyticsPage() {
                 <p className="text-xs text-slate-400 text-center py-8">No questions recorded for this session.</p>
               ) : (
                 <ResponsiveContainer width="100%" height={140}>
-                  <BarChart data={data.question_timeline} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
+                  <BarChart data={fmtTimeline(data.question_timeline)} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
                     <defs>
                       <linearGradient id="saQuestionGrad" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="#0ea5e9" stopOpacity={0.85} />
@@ -237,7 +246,7 @@ export default function SessionAnalyticsPage() {
                 <p className="text-xs text-slate-400 text-center py-8">No collaboration activity recorded.</p>
               ) : (
                 <ResponsiveContainer width="100%" height={140}>
-                  <BarChart data={data.anonymous_collaboration_activity} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
+                  <BarChart data={fmtTimeline(data.anonymous_collaboration_activity)} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
                     <defs>
                       <linearGradient id="saCollabGrad" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.85} />
