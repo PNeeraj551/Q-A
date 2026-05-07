@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { io } from 'socket.io-client'
+import { SOCKET_URL } from '../../api/socketUrl'
 import { getSessions } from '../../api/sessions'
 import DashboardLayout from '../../components/DashboardLayout'
 import { Input } from '@/components/ui/input'
@@ -54,7 +55,7 @@ export default function UpcomingEventsPage() {
   useEffect(() => {
     const token = localStorage.getItem('jwt')
     if (!token) return
-    const socket = io('/', { autoConnect: false, auth: { token } })
+    const socket = io(SOCKET_URL, { autoConnect: false, auth: { token } })
     socket.on('session:created', () => silentRefresh())
     socket.on('session:updated', () => silentRefresh())
     socket.on('session:state_changed', () => silentRefresh())

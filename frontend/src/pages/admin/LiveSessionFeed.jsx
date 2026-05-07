@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { io } from 'socket.io-client'
+import { SOCKET_URL } from '../../api/socketUrl'
 import { getSessionById, updateSessionStatus, liveInviteParticipant } from '../../api/sessions'
 import { getComments, createComment, likeComment, hideComment, deleteComment, editComment, removeComment } from '../../api/comments'
 import axiosInstance from '../../api/axiosInstance'
@@ -114,7 +115,7 @@ export default function LiveSessionFeed() {
   // Socket setup
   useEffect(() => {
     const token = localStorage.getItem('jwt')
-    const socket = io('/', {
+    const socket = io(SOCKET_URL, {
       autoConnect: false,
       auth: { token },
     })

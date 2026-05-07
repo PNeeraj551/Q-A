@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { io } from 'socket.io-client'
+import { SOCKET_URL } from '../api/socketUrl'
 import { getNotifications, markAsRead, markAllAsRead } from '../api/notifications'
 
 /**
@@ -47,9 +48,9 @@ export default function NotificationBell() {
 
     fetchNotifications()
 
-    const socket = io('/', { 
-      autoConnect: false, 
-      auth: { token } 
+    const socket = io(SOCKET_URL, {
+      autoConnect: false,
+      auth: { token }
     })
 
     socket.on('notification:new', (notif) => {

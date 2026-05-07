@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { io } from 'socket.io-client'
+import { SOCKET_URL } from '../../api/socketUrl'
 import { useAuth } from '../../context/AuthContext'
 import { getSessions } from '../../api/sessions'
 import DashboardLayout from '../../components/DashboardLayout'
@@ -80,7 +81,7 @@ export default function AvailableSessionsList() {
   useEffect(() => {
     const token = localStorage.getItem('jwt')
     if (!token) return
-    const socket = io('/', { autoConnect: false, auth: { token } })
+    const socket = io(SOCKET_URL, { autoConnect: false, auth: { token } })
     socket.on('connect', () => {})
     socket.on('session:created', () => silentRefresh())
     socket.on('session:updated', () => silentRefresh())

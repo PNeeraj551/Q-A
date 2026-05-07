@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { io } from 'socket.io-client'
+import { SOCKET_URL } from '../../api/socketUrl'
 import { getSessionById } from '../../api/sessions'
 import { getComments, createComment, likeComment, editComment, removeComment } from '../../api/comments'
 import ParticipantsDirectoryModal from '../../components/ParticipantsDirectoryModal'
@@ -119,7 +120,7 @@ export default function SessionFeedPage() {
 
   useEffect(() => {
     const token = localStorage.getItem('jwt')
-    const socket = io('/', {
+    const socket = io(SOCKET_URL, {
       autoConnect: false,
       auth: { token },
     })
