@@ -35,9 +35,11 @@ const httpServer = http.createServer(app);
 
 /* SOCKET.IO */
 
+const allowedOrigin = CLIENT_URL.replace(/\/$/, '');
+
 const io = new Server(httpServer, {
   cors: {
-    origin: CLIENT_URL,
+    origin: allowedOrigin,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     credentials: true,
   },
@@ -56,15 +58,14 @@ app.use(
   })
 );
 
-app.use(
-  cors({
-    origin: CLIENT_URL,
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-  })
-);
+const corsOptions = {
+  origin: allowedOrigin,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+};
 
-app.options('*', cors());
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true }));
