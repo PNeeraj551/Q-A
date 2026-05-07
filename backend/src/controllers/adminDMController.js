@@ -16,15 +16,7 @@ async function getSessionChats(req, res) {
       .select('participants messages created_at')
       .lean();
 
-    const result = chats.map(c => ({
-      _id: c._id,
-      participants: c.participants,
-      last_message: c.messages.length ? c.messages[c.messages.length - 1] : null,
-      message_count: c.messages.length,
-      created_at: c.created_at,
-    }));
-
-    return success(res, { chats: result });
+    return success(res, { chats });
   } catch (err) {
     return error(res, 'Failed to load chats.', 500);
   }
@@ -120,16 +112,18 @@ async function sendMessage(req, res) {
     chat.messages.push(msg);
     await chat.save();
 
+    const messagePayload = {
+      chat_id: chatId,
+      session_id: chat.session_id,
+      sender_name: senderName,
+      sender_role: 'admin',
+      text: msg.text,
+      sent_at: msg.sent_at,
+    };
+
     try {
       chat.participants.forEach(p => {
-        getIO().to(`user_${p.user_id}`).emit('private:message', {
-          chat_id: chatId,
-          session_id: chat.session_id,
-          sender_name: senderName,
-          sender_role: 'admin',
-          text: msg.text,
-          sent_at: msg.sent_at,
-        });
+        getIO().to(`user_${p.user_id}`).emit('private:message', messagePayload);
       });
     } catch (_) {}
 

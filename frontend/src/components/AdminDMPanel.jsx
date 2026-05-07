@@ -28,15 +28,18 @@ export default function AdminDMPanel({ sessionId, socket, presenceParticipants =
   useEffect(() => {
     if (!socket) return
     function onMessage(payload) {
-      if (payload.sender_role !== 'participant') return
       const chatId = payload.chat_id?.toString()
       setSelectedChat(prev => {
         if (!prev || prev._id?.toString() !== chatId) return prev
+        const already = (prev.messages || []).some(
+          m => m.sent_at === payload.sent_at && m.sender_role === payload.sender_role && m.text === payload.text
+        )
+        if (already) return prev
         return { ...prev, messages: [...(prev.messages || []), payload] }
       })
       setChats(prev => prev.map(c =>
         c._id?.toString() === chatId
-          ? { ...c, last_message: payload, message_count: (c.message_count || 0) + 1 }
+          ? { ...c, messages: [...(c.messages || []), payload] }
           : c
       ))
     }
