@@ -4,7 +4,7 @@ const User = require('../models/User');
 const { success, error } = require('../utils/responseUtils');
 
 const VALID_TRANSITIONS = {
-  SCHEDULED: ['PRE_SESSION', 'ACTIVE_SESSION'],
+  SCHEDULED: ['PRE_SESSION', 'ACTIVE_SESSION', 'CLOSED'],
   PRE_SESSION: ['ACTIVE_SESSION', 'CLOSED'],
   ACTIVE_SESSION: ['POST_SESSION', 'CLOSED'],
   POST_SESSION: ['CLOSED'],
