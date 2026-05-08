@@ -6,8 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { inputCls } from '@/lib/ui'
 import { listQna, deleteQna } from '../../api/qna'
 import { useDebounce } from '../../hooks/useDebounce'
-import { Toast } from '../../components/Toast'
-import { useToast } from '../../hooks/useToast'
+import toast from 'react-hot-toast'
 
 function Skeleton({ className }) {
   return <div className={`bg-muted rounded-md animate-pulse ${className}`} />
@@ -73,7 +72,6 @@ export default function QnaDashboard() {
   const [fetchError, setFetchError] = useState(false)
   const [deletingId, setDeletingId] = useState(null)
   const [confirmId, setConfirmId] = useState(null)
-  const { toast, show: showToast, dismiss } = useToast()
 
   const [search, setSearch] = useState('')
   const [visibility, setVisibility] = useState('')
@@ -119,9 +117,9 @@ export default function QnaDashboard() {
       await deleteQna(id)
       setPosts((prev) => prev.filter((p) => p._id !== id))
       setTotal((t) => t - 1)
-      showToast('Q&A post deleted.', 'success')
+      toast.success('Q&A post deleted.')
     } catch {
-      showToast('Failed to delete. Please try again.', 'error')
+      toast.error('Failed to delete. Please try again.')
     } finally {
       setDeletingId(null)
       setConfirmId(null)
@@ -135,8 +133,7 @@ export default function QnaDashboard() {
   ]
 
   return (
-    <>
-      <DashboardLayout
+    <DashboardLayout
         title="Q&A"
         subtitle="Manage all Q&A boards"
         actions={
@@ -312,8 +309,6 @@ export default function QnaDashboard() {
             </>
           )}
         </div>
-      </DashboardLayout>
-      {toast && <Toast key={toast.key} message={toast.message} type={toast.type} onDismiss={dismiss} />}
-    </>
+    </DashboardLayout>
   )
 }

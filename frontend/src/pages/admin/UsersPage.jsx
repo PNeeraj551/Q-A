@@ -5,8 +5,7 @@ import { Label } from '@/components/ui/label'
 import { inputCls, errorInputCls } from '@/lib/ui'
 import { getUsers, createUser, updateUser, deleteUser, resetUserPassword } from '../../api/users'
 import { useDebounce } from '../../hooks/useDebounce'
-import { Toast } from '../../components/Toast'
-import { useToast } from '../../hooks/useToast'
+import toast from 'react-hot-toast'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -39,7 +38,6 @@ export default function UsersPage() {
   const [confirmDeleteId, setConfirmDeleteId] = useState(null)
   const [actionLoading, setActionLoading] = useState(null)
   const [fetchError, setFetchError] = useState(false)
-  const { toast, show: showToast, dismiss } = useToast()
 
   const debouncedSearch = useDebounce(search, 400)
 
@@ -57,9 +55,9 @@ export default function UsersPage() {
     try {
       await deleteUser(id)
       setUsers((prev) => prev.filter((u) => u._id !== id))
-      showToast('User deleted.', 'success')
+      toast.success('User deleted.')
     } catch {
-      showToast('Failed to delete user. Please try again.', 'error')
+      toast.error('Failed to delete user. Please try again.')
     } finally {
       setActionLoading(null)
       setConfirmDeleteId(null)
@@ -77,7 +75,6 @@ export default function UsersPage() {
   }
 
   return (
-    <>
     <DashboardLayout
       title="Users"
       subtitle="Manage participant accounts"
@@ -169,7 +166,6 @@ export default function UsersPage() {
         <CreateUserModal
           onClose={() => setCreateOpen(false)}
           onCreated={(user) => { setUsers((prev) => [user, ...prev]); setCreateOpen(false) }}
-          onToast={showToast}
         />
       )}
 
@@ -181,7 +177,6 @@ export default function UsersPage() {
             setUsers((prev) => prev.map((u) => u._id === updated._id ? updated : u))
             setEditUser(null)
           }}
-          onToast={showToast}
         />
       )}
 
@@ -197,12 +192,10 @@ export default function UsersPage() {
         </Modal>
       )}
     </DashboardLayout>
-    {toast && <Toast key={toast.key} message={toast.message} type={toast.type} onDismiss={dismiss} />}
-  </>
   )
 }
 
-function CreateUserModal({ onClose, onCreated, onToast }) {
+function CreateUserModal({ onClose, onCreated }) {
   const [form, setForm] = useState({ name: '', email: '', password: '', role: 'participant' })
   const [errors, setErrors] = useState({})
   const [submitting, setSubmitting] = useState(false)
@@ -229,7 +222,7 @@ function CreateUserModal({ onClose, onCreated, onToast }) {
         role: form.role,
       })
       onCreated(res.data.user)
-      onToast?.('User created successfully.', 'success')
+      toast.success('User created successfully.')
     } catch (err) {
       setErrors({ submit: err.response?.data?.error || 'Failed to create user.' })
     } finally {
@@ -295,7 +288,7 @@ function CreateUserModal({ onClose, onCreated, onToast }) {
   )
 }
 
-function EditUserModal({ user, onClose, onUpdated, onToast }) {
+function EditUserModal({ user, onClose, onUpdated }) {
   const [name, setName] = useState(user.name)
   const [email, setEmail] = useState(user.email)
   const [errors, setErrors] = useState({})
@@ -317,7 +310,7 @@ function EditUserModal({ user, onClose, onUpdated, onToast }) {
     try {
       const res = await updateUser(user._id, { name: name.trim(), email: email.trim().toLowerCase() })
       onUpdated(res.data.user)
-      onToast?.('User updated successfully.', 'success')
+      toast.success('User updated successfully.')
     } catch (err) {
       setErrors({ submit: err.response?.data?.error || 'Failed to update user.' })
     } finally {

@@ -8,8 +8,7 @@ import { getQna, setQnaStatus } from '../../api/qna'
 import { listQuestions, createQuestion } from '../../api/questions'
 import { QuestionCard } from '../../components/QuestionCard'
 import { useQnaSocket } from '../../hooks/useQnaSocket'
-import { Toast } from '../../components/Toast'
-import { useToast } from '../../hooks/useToast'
+import toast from 'react-hot-toast'
 
 export default function QnaDetailPage() {
   const { id } = useParams()
@@ -23,7 +22,6 @@ export default function QnaDetailPage() {
   const [questionText, setQuestionText] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const inputRef = useRef(null)
-  const { toast, show: showToast, dismiss } = useToast()
 
   useEffect(() => {
     Promise.all([getQna(id), listQuestions(id)])
@@ -70,9 +68,9 @@ export default function QnaDetailPage() {
     try {
       await setQnaStatus(id, newStatus)
       setPost((p) => ({ ...p, status: newStatus }))
-      showToast(newStatus === 'CLOSED' ? 'Q&A closed.' : 'Q&A reopened.', 'success')
+      toast.success(newStatus === 'CLOSED' ? 'Q&A closed.' : 'Q&A reopened.')
     } catch {
-      showToast('Failed to update status.', 'error')
+      toast.error('Failed to update status.')
     } finally {
       setTogglingStatus(false)
     }
@@ -111,7 +109,7 @@ export default function QnaDetailPage() {
     } catch {
       setQuestions((prev) => prev.filter((q) => q._id !== tempId))
       setQuestionText(text)
-      showToast('Failed to post question. Please try again.', 'error')
+      toast.error('Failed to post question. Please try again.')
     } finally {
       setSubmitting(false)
     }
@@ -195,7 +193,6 @@ export default function QnaDetailPage() {
   )
 
   return (
-    <>
     <DashboardLayout
       title={post.title}
       subtitle={post.description || undefined}
@@ -246,7 +243,5 @@ export default function QnaDetailPage() {
         )}
       </div>
     </DashboardLayout>
-    {toast && <Toast key={toast.key} message={toast.message} type={toast.type} onDismiss={dismiss} />}
-    </>
   )
 }

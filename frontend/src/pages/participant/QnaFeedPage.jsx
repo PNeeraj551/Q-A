@@ -7,8 +7,7 @@ import { getQna } from '../../api/qna'
 import { listQuestions, createQuestion } from '../../api/questions'
 import { QuestionCard } from '../../components/QuestionCard'
 import { useQnaSocket } from '../../hooks/useQnaSocket'
-import { Toast } from '../../components/Toast'
-import { useToast } from '../../hooks/useToast'
+import toast from 'react-hot-toast'
 
 export default function QnaFeedPage() {
   const { id } = useParams()
@@ -21,7 +20,6 @@ export default function QnaFeedPage() {
   const [questionText, setQuestionText] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const inputRef = useRef(null)
-  const { toast, show: showToast, dismiss } = useToast()
 
   useEffect(() => {
     Promise.all([getQna(id), listQuestions(id)])
@@ -94,7 +92,7 @@ export default function QnaFeedPage() {
     } catch {
       setQuestions((prev) => prev.filter((q) => q._id !== tempId))
       setQuestionText(text)
-      showToast('Failed to post question. Please try again.', 'error')
+      toast.error('Failed to post question. Please try again.')
     } finally {
       setSubmitting(false)
     }
@@ -186,7 +184,6 @@ export default function QnaFeedPage() {
   )
 
   return (
-    <>
     <DashboardLayout
       title={post.title}
       subtitle={post.description || undefined}
@@ -224,7 +221,5 @@ export default function QnaFeedPage() {
         )}
       </div>
     </DashboardLayout>
-    {toast && <Toast key={toast.key} message={toast.message} type={toast.type} onDismiss={dismiss} />}
-    </>
   )
 }
