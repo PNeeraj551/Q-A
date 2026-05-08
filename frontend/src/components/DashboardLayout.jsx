@@ -11,10 +11,9 @@ function SidebarLink({ to, label, icon, end }) {
       to={to}
       end={end}
       className={({ isActive }) =>
-        `flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-          isActive
-            ? 'bg-primary text-primary-foreground'
-            : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+        `flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors ${isActive
+          ? 'bg-primary text-primary-foreground'
+          : 'text-muted-foreground hover:text-foreground hover:bg-accent'
         }`
       }
     >
@@ -81,7 +80,7 @@ export default function DashboardLayout({ children, title, subtitle, actions, on
         <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
           {user?.role === 'admin' ? (
             <>
-              <SidebarLink to="/admin/qna" label="Q&A Posts" icon={QnaIcon} end />
+              <SidebarLink to="/admin/qna" label="Q&A" icon={QnaIcon} end />
               <SidebarLink to="/admin/users" label="Users" icon={UsersIcon} />
               <SidebarLink to="/admin/analytics" label="Analytics" icon={AnalyticsIcon} />
             </>

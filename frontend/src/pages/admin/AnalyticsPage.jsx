@@ -89,7 +89,7 @@ export default function AnalyticsPage() {
       ) : (
         <div className="space-y-8 max-w-3xl">
           <div className="grid grid-cols-3 gap-4">
-            <StatCard label="Total Q&A Posts" value={data?.total_posts} />
+            <StatCard label="Total Q&A" value={data?.total_posts} />
             <StatCard label="Total Questions" value={data?.total_questions} />
             <StatCard label="Total Replies" value={data?.total_replies} />
           </div>
@@ -104,7 +104,7 @@ export default function AnalyticsPage() {
 
           {data?.most_active_topics?.length > 0 && (
             <div>
-              <h2 className="text-sm font-semibold text-foreground mb-3">Most Active Q&A Posts</h2>
+              <h2 className="text-sm font-semibold text-foreground mb-3">Most Active Q&A</h2>
               <div className="space-y-2">
                 {data.most_active_topics.map((p, i) => (
                   <div

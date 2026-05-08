@@ -149,7 +149,7 @@ export default function QnaDetailPage() {
           <p className="text-sm font-medium text-foreground">Failed to load this Q&A</p>
           <p className="text-sm text-muted-foreground mt-1">It may have been removed or you may not have access.</p>
           <button onClick={() => navigate('/admin/qna')} className="mt-4 text-sm text-primary hover:underline">
-            Back to Q&A posts
+            Back to Q&A
           </button>
         </div>
       </DashboardLayout>

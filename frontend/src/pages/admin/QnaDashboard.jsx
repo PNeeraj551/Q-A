@@ -157,7 +157,7 @@ export default function QnaDashboard() {
                 className={`${inputCls} pl-9`}
                 value={search}
                 onChange={handleSearchChange}
-                placeholder="Search Q&A posts..."
+                placeholder="Search Q&A..."
               />
             </div>
             <div className="flex items-center gap-1 border border-border rounded-md p-0.5 shrink-0">
@@ -233,7 +233,7 @@ export default function QnaDashboard() {
                 </>
               ) : (
                 <>
-                  <p className="text-sm font-medium text-foreground">No Q&A posts yet</p>
+                  <p className="text-sm font-medium text-foreground">No Q&A yet</p>
                   <p className="text-sm text-muted-foreground mt-1">Create your first Q&A board to get started.</p>
                   <Button className="mt-5" onClick={() => navigate('/admin/qna/create')}>
                     Create Q&A
