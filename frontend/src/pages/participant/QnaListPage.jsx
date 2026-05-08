@@ -38,11 +38,10 @@ function Pagination({ page, totalPages, onChange }) {
             <button
               key={p}
               onClick={() => onChange(p)}
-              className={`h-8 w-8 rounded-md text-sm transition-colors ${
-                p === page
+              className={`h-8 w-8 rounded-md text-sm transition-colors ${p === page
                   ? 'bg-primary text-primary-foreground font-medium'
                   : 'text-muted-foreground hover:bg-accent hover:text-foreground'
-              }`}
+                }`}
             >
               {p}
             </button>
@@ -70,7 +69,7 @@ export default function QnaListPage() {
   const [totalPages, setTotalPages] = useState(1)
   const [total, setTotal] = useState(0)
 
-  const debouncedSearch = useDebounce(search, 400)
+  const debouncedSearch = useDebounce(search, 800)
 
   const fetchPosts = useCallback((params) => {
     setLoading(true)
@@ -80,7 +79,7 @@ export default function QnaListPage() {
         setTotalPages(res.data.totalPages || 1)
         setTotal(res.data.total || 0)
       })
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setLoading(false))
   }, [])
 

@@ -82,7 +82,7 @@ export default function QnaDashboard() {
   const [totalPages, setTotalPages] = useState(1)
   const [total, setTotal] = useState(0)
 
-  const debouncedSearch = useDebounce(search, 400)
+  const debouncedSearch = useDebounce(search, 800)
 
   const fetchPosts = useCallback((params) => {
     setLoading(true)
