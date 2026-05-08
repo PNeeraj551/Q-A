@@ -19,15 +19,3 @@ export function logout() {
 export function changePassword(currentPassword, newPassword) {
   return axiosInstance.patch('/auth/change-password', { currentPassword, newPassword })
 }
-
-export function adminResetPassword(userId) {
-  return axiosInstance.patch(`/auth/admin-reset-password/${userId}`)
-}
-
-export function forgotPassword(email) {
-  return axiosInstance.post('/auth/forgot-password', { email })
-}
-
-export function getResetRequests() {
-  return axiosInstance.get('/auth/reset-requests')
-}

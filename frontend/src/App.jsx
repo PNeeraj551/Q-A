@@ -4,17 +4,14 @@ import LoginPage from './pages/LoginPage'
 import ChangePasswordPage from './pages/ChangePasswordPage'
 import ProtectedRoute from './components/ProtectedRoute'
 import AdminRoute from './components/AdminRoute'
-import SessionDashboard from './pages/admin/SessionDashboard'
-import SessionCreatePage from './pages/admin/SessionCreatePage'
-import LiveSessionFeed from './pages/admin/LiveSessionFeed'
-import ArchivedSessionsPage from './pages/admin/ArchivedSessionsPage'
-import ArchivedSessionDetails from './pages/admin/ArchivedSessionDetails'
-import ParticipantsPage from './pages/admin/ParticipantsPage'
-import AnalyticsDashboard from './pages/admin/AnalyticsDashboard'
-import SessionAnalyticsPage from './pages/admin/SessionAnalyticsPage'
-import AvailableSessionsList from './pages/participant/AvailableSessionsList'
-import SessionFeedPage from './pages/participant/SessionFeedPage'
-import UpcomingEventsPage from './pages/participant/UpcomingEventsPage'
+import QnaDashboard from './pages/admin/QnaDashboard'
+import QnaCreatePage from './pages/admin/QnaCreatePage'
+import QnaEditPage from './pages/admin/QnaEditPage'
+import QnaDetailPage from './pages/admin/QnaDetailPage'
+import UsersPage from './pages/admin/UsersPage'
+import AnalyticsPage from './pages/admin/AnalyticsPage'
+import QnaListPage from './pages/participant/QnaListPage'
+import QnaFeedPage from './pages/participant/QnaFeedPage'
 
 export default function App() {
   return (
@@ -25,108 +22,19 @@ export default function App() {
           <Route path="/login" element={<LoginPage />} />
 
           {/* Admin routes */}
-          <Route
-            path="/admin/sessions"
-            element={
-              <AdminRoute>
-                <SessionDashboard />
-              </AdminRoute>
-            }
-          />
-          <Route
-            path="/admin/sessions/create"
-            element={
-              <AdminRoute>
-                <SessionCreatePage />
-              </AdminRoute>
-            }
-          />
-          <Route
-            path="/admin/sessions/:id/feed"
-            element={
-              <AdminRoute>
-                <LiveSessionFeed />
-              </AdminRoute>
-            }
-          />
-          <Route
-            path="/admin/archive"
-            element={
-              <AdminRoute>
-                <ArchivedSessionsPage />
-              </AdminRoute>
-            }
-          />
-          <Route
-            path="/admin/archive/:id"
-            element={
-              <AdminRoute>
-                <ArchivedSessionDetails />
-              </AdminRoute>
-            }
-          />
-          <Route
-            path="/admin/participants"
-            element={
-              <AdminRoute>
-                <ParticipantsPage />
-              </AdminRoute>
-            }
-          />
-          <Route
-            path="/admin/analytics"
-            element={
-              <AdminRoute>
-                <AnalyticsDashboard />
-              </AdminRoute>
-            }
-          />
-          <Route
-            path="/admin/analytics/:id"
-            element={
-              <AdminRoute>
-                <SessionAnalyticsPage />
-              </AdminRoute>
-            }
-          />
+          <Route path="/admin/qna" element={<AdminRoute><QnaDashboard /></AdminRoute>} />
+          <Route path="/admin/qna/create" element={<AdminRoute><QnaCreatePage /></AdminRoute>} />
+          <Route path="/admin/qna/:id/edit" element={<AdminRoute><QnaEditPage /></AdminRoute>} />
+          <Route path="/admin/qna/:id" element={<AdminRoute><QnaDetailPage /></AdminRoute>} />
+          <Route path="/admin/users" element={<AdminRoute><UsersPage /></AdminRoute>} />
+          <Route path="/admin/analytics" element={<AdminRoute><AnalyticsPage /></AdminRoute>} />
 
           {/* Participant routes */}
-          <Route
-            path="/participant/sessions"
-            element={
-              <ProtectedRoute>
-                <AvailableSessionsList />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/sessions"
-            element={<Navigate to="/participant/sessions" replace />}
-          />
-          <Route
-            path="/participant/events"
-            element={
-              <ProtectedRoute>
-                <UpcomingEventsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/sessions/:id"
-            element={
-              <ProtectedRoute>
-                <SessionFeedPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/change-password"
-            element={
-              <ProtectedRoute>
-                <ChangePasswordPage />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/participant/qna" element={<ProtectedRoute><QnaListPage /></ProtectedRoute>} />
+          <Route path="/participant/qna/:id" element={<ProtectedRoute><QnaFeedPage /></ProtectedRoute>} />
+
+          {/* Shared */}
+          <Route path="/change-password" element={<ProtectedRoute><ChangePasswordPage /></ProtectedRoute>} />
 
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>

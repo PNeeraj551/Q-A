@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { changePassword, getMe } from '../api/auth'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { inputCls, errorInputCls } from '@/lib/ui'
 
 function PasswordField({ id, label, value, onChange, error, disabled, placeholder, autoComplete }) {
   const [show, setShow] = useState(false)
@@ -12,7 +12,7 @@ function PasswordField({ id, label, value, onChange, error, disabled, placeholde
     <div className="space-y-1.5">
       <Label htmlFor={id}>{label}</Label>
       <div className="relative">
-        <Input
+        <input
           id={id}
           type={show ? 'text' : 'password'}
           autoComplete={autoComplete}
@@ -20,13 +20,12 @@ function PasswordField({ id, label, value, onChange, error, disabled, placeholde
           onChange={onChange}
           disabled={disabled}
           placeholder={placeholder}
-          aria-invalid={!!error}
-          className="pr-10"
+          className={`${inputCls} pr-9 ${error ? errorInputCls : ''}`}
         />
         <button
           type="button"
           onClick={() => setShow(v => !v)}
-          className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 transition-colors"
+          className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground transition-colors"
           tabIndex={-1}
         >
           {show ? (
@@ -82,17 +81,14 @@ export default function ChangePasswordPage() {
     e.preventDefault()
     setServerError('')
     const errs = validate()
-    if (Object.keys(errs).length > 0) {
-      setErrors(errs)
-      return
-    }
+    if (Object.keys(errs).length > 0) { setErrors(errs); return }
     setErrors({})
     setLoading(true)
     try {
       await changePassword(currentPassword, newPassword)
       const res = await getMe()
       setUser(res.data)
-      navigate('/participant/sessions', { replace: true })
+      navigate(user?.role === 'admin' ? '/admin/qna' : '/participant/qna', { replace: true })
     } catch (err) {
       const status = err.response?.status
       if (status === 401) {
@@ -106,17 +102,17 @@ export default function ChangePasswordPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md">
-        <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-8">
-          <div className="mb-7">
-            <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-4">
-              <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4 py-12">
+      <div className="w-full max-w-sm">
+        <div className="bg-card rounded-xl shadow-sm border border-border p-8">
+          <div className="mb-6">
+            <div className="w-9 h-9 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
+              <svg className="w-4.5 h-4.5 text-primary" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
               </svg>
             </div>
-            <h1 className="text-2xl font-bold text-slate-900">Set New Password</h1>
-            <p className="text-sm text-slate-500 mt-1">
+            <h1 className="text-xl font-semibold text-foreground">Set new password</h1>
+            <p className="text-sm text-muted-foreground mt-1">
               You must change your temporary password to continue.
             </p>
           </div>
@@ -124,7 +120,7 @@ export default function ChangePasswordPage() {
           <form onSubmit={handleSubmit} noValidate className="space-y-4">
             <PasswordField
               id="currentPassword"
-              label="Temporary Password"
+              label="Temporary password"
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
               error={errors.currentPassword}
@@ -132,21 +128,19 @@ export default function ChangePasswordPage() {
               placeholder="Enter temporary password"
               autoComplete="current-password"
             />
-
             <PasswordField
               id="newPassword"
-              label="New Password"
+              label="New password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               error={errors.newPassword}
               disabled={loading}
-              placeholder="Min. 6 characters"
+              placeholder="Minimum 6 characters"
               autoComplete="new-password"
             />
-
             <PasswordField
               id="confirmPassword"
-              label="Confirm New Password"
+              label="Confirm new password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               error={errors.confirmPassword}
@@ -156,7 +150,7 @@ export default function ChangePasswordPage() {
             />
 
             {serverError && (
-              <div className="rounded-xl bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive flex items-center gap-2">
+              <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-3 py-2.5 text-sm text-destructive flex items-center gap-2">
                 <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                   <circle cx="12" cy="12" r="10" /><path strokeLinecap="round" d="M12 8v4m0 4h.01" />
                 </svg>
@@ -164,32 +158,24 @@ export default function ChangePasswordPage() {
               </div>
             )}
 
-            <Button
-              id="change-password-submit"
-              type="submit"
-              disabled={loading}
-              className="w-full mt-2"
-              size="lg"
-            >
-              {loading && <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />}
-              {loading ? 'Saving...' : 'Set New Password'}
+            <Button type="submit" disabled={loading} className="w-full">
+              {loading && <span className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />}
+              {loading ? 'Saving...' : 'Set new password'}
             </Button>
           </form>
 
-          <div className="mt-5 text-center">
-            <Button
+          <div className="mt-4 text-center">
+            <button
               type="button"
-              variant="ghost"
-              size="sm"
               onClick={logout}
-              className="text-slate-500"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               Sign out instead
-            </Button>
+            </button>
           </div>
         </div>
 
-        <p className="text-center text-xs text-slate-400 mt-6">
+        <p className="text-center text-xs text-muted-foreground mt-5">
           &copy; {new Date().getFullYear()} AthivaTech. All rights reserved.
         </p>
       </div>

@@ -8,7 +8,7 @@ export default function AdminRoute({ children }) {
   return (
     <ProtectedRoute>
       {user && user.role !== 'admin' ? (
-        <Navigate to="/participant/sessions" replace />
+        <Navigate to="/participant/qna" replace />
       ) : (
         children
       )}

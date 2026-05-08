@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/authMiddleware');
 const roleGuard = require('../middleware/roleGuard');
-const { getUsers, createUser, updateUser, deleteUser } = require('../controllers/userController');
+const { getUsers, createUser, updateUser, deleteUser, adminResetPassword } = require('../controllers/userController');
 
 const adminOnly = [authMiddleware, roleGuard('admin')];
 
@@ -10,5 +10,6 @@ router.get('/', adminOnly, getUsers);
 router.post('/', adminOnly, createUser);
 router.patch('/:id', adminOnly, updateUser);
 router.delete('/:id', adminOnly, deleteUser);
+router.patch('/:id/reset-password', adminOnly, adminResetPassword);
 
 module.exports = router;

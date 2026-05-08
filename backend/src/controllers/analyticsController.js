@@ -1,74 +1,59 @@
-const mongoose = require('mongoose');
-const Comment = require('../models/Comment');
-const SessionActivity = require('../models/SessionActivity');
-const { getPresenceSnapshot } = require('../sockets/socketHandler');
+const QnaPost = require('../models/QnaPost');
+const Question = require('../models/Question');
+const Reply = require('../models/Reply');
 const { success, error } = require('../utils/responseUtils');
 
-function formatTime(date) {
-  return date.toISOString();
-}
-
-function floorTo5Min(date) {
-  const ms = 5 * 60 * 1000;
-  return new Date(Math.floor(date.getTime() / ms) * ms);
-}
-
-async function getSessionAnalytics(req, res) {
+// GET /api/admin/analytics
+const getAnalytics = async (req, res) => {
   try {
-    const session_id = req.params.id;
-    if (!mongoose.Types.ObjectId.isValid(session_id)) return error(res, 'Invalid session ID', 400);
+    const [totalPosts, totalQuestions, totalReplies, visibilityBreakdown, mostActiveTopics] =
+      await Promise.all([
+        QnaPost.countDocuments(),
+        Question.countDocuments({ is_deleted: false }),
+        Reply.countDocuments({ is_deleted: false }),
 
-    const session = req.session;
-    const now = new Date();
-    const tenMinutesAgo = new Date(now - 10 * 60 * 1000);
-    const fiveMinutesAgo = new Date(now - 5 * 60 * 1000);
+        QnaPost.aggregate([
+          { $group: { _id: '$visibility', count: { $sum: 1 } } },
+        ]),
 
-    const public_questions_count = await Comment.countDocuments({ session_id, is_deleted: false });
+        Question.aggregate([
+          { $match: { is_deleted: false } },
+          { $group: { _id: '$qna_id', count: { $sum: 1 } } },
+          { $sort: { count: -1 } },
+          { $limit: 5 },
+          {
+            $lookup: {
+              from: 'qnaposts',
+              localField: '_id',
+              foreignField: '_id',
+              as: 'post',
+            },
+          },
+          { $unwind: '$post' },
+          {
+            $project: {
+              _id: 0,
+              qna_id: '$_id',
+              title: '$post.title',
+              question_count: '$count',
+            },
+          },
+        ]),
+      ]);
 
-    const presenceEntries = getPresenceSnapshot(session_id);
-    const participants_active = presenceEntries.filter(
-      p => p.last_activity_time && p.last_activity_time > tenMinutesAgo
-    ).length;
-    const participants_idle = Math.max(0, presenceEntries.length - participants_active);
-
-    const allEvents = await SessionActivity.find({ session_id }).sort({ timestamp: 1 }).lean();
-
-    const bucketMap = new Map();
-    for (const evt of allEvents) {
-      const key = floorTo5Min(evt.timestamp).toISOString();
-      bucketMap.set(key, (bucketMap.get(key) || 0) + 1);
-    }
-
-    let peakKey = null, peakCount = 0;
-    for (const [key, count] of bucketMap.entries()) {
-      if (count > peakCount) { peakCount = count; peakKey = key; }
-    }
-    const peak_activity_time = peakKey ? formatTime(new Date(peakKey)) : null;
-
-    const recentCount = allEvents.filter(e => e.timestamp >= fiveMinutesAgo).length;
-    const activity_intensity = recentCount <= 5 ? 'LOW' : recentCount <= 20 ? 'MEDIUM' : 'HIGH';
-
-    const sessionStart = session.planned_start_time || session.created_at;
-    const startBucket = floorTo5Min(new Date(sessionStart));
-    const engagement_timeline = [];
-    let cursor = new Date(startBucket);
-    while (cursor <= now) {
-      engagement_timeline.push({ time: formatTime(cursor), events: bucketMap.get(cursor.toISOString()) || 0 });
-      cursor = new Date(cursor.getTime() + 5 * 60 * 1000);
-    }
+    const publicCount = visibilityBreakdown.find((v) => v._id === 'PUBLIC')?.count ?? 0;
+    const privateCount = visibilityBreakdown.find((v) => v._id === 'PRIVATE')?.count ?? 0;
 
     return success(res, {
-      public_questions_count,
-      participants_active,
-      participants_idle,
-      peak_activity_time,
-      activity_intensity,
-      engagement_timeline,
+      total_posts: totalPosts,
+      total_questions: totalQuestions,
+      total_replies: totalReplies,
+      visibility: { public: publicCount, private: privateCount },
+      most_active_topics: mostActiveTopics,
     });
   } catch (err) {
-    console.error('[analytics] error:', err.message);
-    return error(res, 'Failed to load analytics', 500);
+    return error(res, 'Failed to load analytics.', 500);
   }
-}
+};
 
-module.exports = { getSessionAnalytics };
+module.exports = { getAnalytics };

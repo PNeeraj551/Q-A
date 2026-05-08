@@ -1,0 +1,248 @@
+const mongoose = require('mongoose');
+const QnaPost = require('../models/QnaPost');
+const Question = require('../models/Question');
+const Reply = require('../models/Reply');
+const User = require('../models/User');
+const { success, error } = require('../utils/responseUtils');
+
+// GET /api/qna
+// Admin: all posts. Participant: PUBLIC + assigned PRIVATE.
+// Query: ?search=&visibility=&page=1&limit=10
+const listQna = async (req, res) => {
+  try {
+    const { search, visibility, page = 1, limit = 10 } = req.query;
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.min(50, Math.max(1, parseInt(limit, 10) || 10));
+    const skip = (pageNum - 1) * limitNum;
+
+    let accessFilter = {};
+    if (req.user.role !== 'admin') {
+      accessFilter = {
+        $or: [
+          { visibility: 'PUBLIC' },
+          { visibility: 'PRIVATE', allowed_participants: new mongoose.Types.ObjectId(req.user.user_id) },
+        ],
+      };
+    }
+
+    const andClauses = [];
+    if (Object.keys(accessFilter).length) andClauses.push(accessFilter);
+    if (search && search.trim()) {
+      andClauses.push({ title: { $regex: search.trim(), $options: 'i' } });
+    }
+    if (visibility && ['PUBLIC', 'PRIVATE'].includes(visibility)) {
+      andClauses.push({ visibility });
+    }
+
+    const filter = andClauses.length > 1 ? { $and: andClauses } : andClauses[0] || {};
+
+    const [posts, total] = await Promise.all([
+      QnaPost.find(filter).sort({ created_at: -1 }).skip(skip).limit(limitNum).lean(),
+      QnaPost.countDocuments(filter),
+    ]);
+
+    const ids = posts.map((p) => p._id);
+    const counts = await Question.aggregate([
+      { $match: { qna_id: { $in: ids }, is_deleted: false } },
+      { $group: { _id: '$qna_id', count: { $sum: 1 } } },
+    ]);
+    const countMap = {};
+    counts.forEach((c) => { countMap[c._id.toString()] = c.count; });
+
+    const result = posts.map((p) => ({ ...p, question_count: countMap[p._id.toString()] || 0 }));
+
+    return success(res, {
+      posts: result,
+      total,
+      page: pageNum,
+      totalPages: Math.ceil(total / limitNum),
+    });
+  } catch (err) {
+    return error(res, 'Failed to load Q&A posts.', 500);
+  }
+};
+
+// GET /api/qna/:id
+const getQna = async (req, res) => {
+  try {
+    const post = req.qnaPost; // set by qnaAccessGuard
+
+    const question_count = await Question.countDocuments({ qna_id: post._id, is_deleted: false });
+
+    return success(res, { post: { ...post, question_count } });
+  } catch (err) {
+    return error(res, 'Failed to load Q&A post.', 500);
+  }
+};
+
+// POST /api/qna
+const createQna = async (req, res) => {
+  const { title, description, visibility, allowed_participants } = req.body;
+
+  if (!title || typeof title !== 'string' || !title.trim()) {
+    return error(res, 'Title is required', 400);
+  }
+  if (title.trim().length > 120) {
+    return error(res, 'Title must be 120 characters or fewer', 400);
+  }
+  if (!visibility || !['PUBLIC', 'PRIVATE'].includes(visibility)) {
+    return error(res, 'Visibility must be PUBLIC or PRIVATE', 400);
+  }
+
+  try {
+    let participants = [];
+    if (visibility === 'PRIVATE' && Array.isArray(allowed_participants)) {
+      participants = allowed_participants.filter((id) =>
+        mongoose.Types.ObjectId.isValid(id)
+      );
+    }
+
+    const post = await QnaPost.create({
+      title: title.trim(),
+      description: (description || '').trim(),
+      visibility,
+      allowed_participants: participants,
+      created_by: req.user.user_id,
+    });
+
+    return success(res, { post }, 201);
+  } catch (err) {
+    return error(res, 'Failed to create Q&A post.', 500);
+  }
+};
+
+// PATCH /api/qna/:id
+const updateQna = async (req, res) => {
+  const { title, description, visibility, allowed_participants } = req.body;
+
+  try {
+    const post = await QnaPost.findById(req.params.id);
+    if (!post) return error(res, 'Q&A not found', 404);
+
+    if (title !== undefined) {
+      const trimmed = (title || '').trim();
+      if (!trimmed) return error(res, 'Title is required', 400);
+      if (trimmed.length > 120) return error(res, 'Title must be 120 characters or fewer', 400);
+      post.title = trimmed;
+    }
+
+    if (description !== undefined) {
+      post.description = (description || '').trim();
+    }
+
+    if (visibility !== undefined) {
+      if (!['PUBLIC', 'PRIVATE'].includes(visibility)) {
+        return error(res, 'Visibility must be PUBLIC or PRIVATE', 400);
+      }
+      post.visibility = visibility;
+    }
+
+    if (allowed_participants !== undefined && Array.isArray(allowed_participants)) {
+      post.allowed_participants = allowed_participants.filter((id) =>
+        mongoose.Types.ObjectId.isValid(id)
+      );
+    }
+
+    post.updated_at = new Date();
+    await post.save();
+
+    return success(res, { post });
+  } catch (err) {
+    return error(res, 'Failed to update Q&A post.', 500);
+  }
+};
+
+// DELETE /api/qna/:id
+const deleteQna = async (req, res) => {
+  try {
+    const post = await QnaPost.findById(req.params.id);
+    if (!post) return error(res, 'Q&A not found', 404);
+
+    const qnaId = post._id;
+
+    // Cascade soft-delete all questions and replies
+    await Question.updateMany({ qna_id: qnaId }, { $set: { is_deleted: true } });
+    await Reply.updateMany({ qna_id: qnaId }, { $set: { is_deleted: true } });
+    await QnaPost.findByIdAndDelete(qnaId);
+
+    return success(res, { message: 'Q&A post deleted' });
+  } catch (err) {
+    return error(res, 'Failed to delete Q&A post.', 500);
+  }
+};
+
+// GET /api/qna/:id/participants
+const getParticipants = async (req, res) => {
+  try {
+    const post = await QnaPost.findById(req.params.id).lean();
+    if (!post) return error(res, 'Q&A not found', 404);
+
+    const participants = await User.find({
+      _id: { $in: post.allowed_participants },
+    }).select('_id name email is_active').lean();
+
+    return success(res, { participants });
+  } catch (err) {
+    return error(res, 'Failed to load participants.', 500);
+  }
+};
+
+// POST /api/qna/:id/participants
+const addParticipant = async (req, res) => {
+  const { userId } = req.body;
+
+  if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+    return error(res, 'Valid userId is required', 400);
+  }
+
+  try {
+    const post = await QnaPost.findById(req.params.id);
+    if (!post) return error(res, 'Q&A not found', 404);
+
+    const user = await User.findOne({ _id: userId, is_active: true }).select('_id').lean();
+    if (!user) return error(res, 'User not found', 404);
+
+    await QnaPost.findByIdAndUpdate(post._id, {
+      $addToSet: { allowed_participants: userId },
+      $set: { updated_at: new Date() },
+    });
+
+    return success(res, { message: 'Participant added' });
+  } catch (err) {
+    return error(res, 'Failed to add participant.', 500);
+  }
+};
+
+// DELETE /api/qna/:id/participants/:userId
+const removeParticipant = async (req, res) => {
+  const { userId } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    return error(res, 'Invalid user ID', 400);
+  }
+
+  try {
+    const post = await QnaPost.findById(req.params.id);
+    if (!post) return error(res, 'Q&A not found', 404);
+
+    await QnaPost.findByIdAndUpdate(post._id, {
+      $pull: { allowed_participants: new mongoose.Types.ObjectId(userId) },
+      $set: { updated_at: new Date() },
+    });
+
+    return success(res, { message: 'Participant removed' });
+  } catch (err) {
+    return error(res, 'Failed to remove participant.', 500);
+  }
+};
+
+module.exports = {
+  listQna,
+  getQna,
+  createQna,
+  updateQna,
+  deleteQna,
+  getParticipants,
+  addParticipant,
+  removeParticipant,
+};

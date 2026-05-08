@@ -1,21 +1,12 @@
 import axiosInstance from './axiosInstance'
 
-export function searchUsers(query = '') {
-  return axiosInstance.get('/users', { params: { search: query } })
-}
+export const getUsers = (search = '') =>
+  axiosInstance.get('/users', { params: search ? { search } : {} })
 
-export function getUsers(query = '') {
-  return axiosInstance.get('/users', { params: query ? { search: query } : {} })
-}
+export const createUser = (payload) => axiosInstance.post('/users', payload)
 
-export function createUser(data) {
-  return axiosInstance.post('/users', data)
-}
+export const updateUser = (id, payload) => axiosInstance.patch(`/users/${id}`, payload)
 
-export function deactivateUser(id) {
-  return axiosInstance.delete(`/users/${id}`)
-}
+export const deleteUser = (id) => axiosInstance.delete(`/users/${id}`)
 
-export function updateUser(id, data) {
-  return axiosInstance.patch(`/users/${id}`, data)
-}
+export const resetUserPassword = (id) => axiosInstance.patch(`/users/${id}/reset-password`)

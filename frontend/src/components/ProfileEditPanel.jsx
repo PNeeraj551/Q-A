@@ -5,19 +5,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
-function Avatar({ name, size = 'xl' }) {
-  const initial = name?.[0]?.toUpperCase() || '?'
-  const sz =
-    size === 'xl' ? 'w-16 h-16 text-2xl' :
-    size === 'lg' ? 'w-10 h-10 text-base' :
-    'w-8 h-8 text-sm'
-  return (
-    <div className={`${sz} rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center font-bold select-none shrink-0`}>
-      {initial}
-    </div>
-  )
-}
-
 function InputField({ id, label, type = 'text', value, onChange, error, disabled, placeholder, autoComplete }) {
   const [show, setShow] = useState(false)
   const isPassword = type === 'password'
@@ -40,7 +27,7 @@ function InputField({ id, label, type = 'text', value, onChange, error, disabled
           <button
             type="button"
             onClick={() => setShow(v => !v)}
-            className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600"
+            className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground transition-colors"
             tabIndex={-1}
           >
             {show ? (
@@ -75,19 +62,28 @@ export default function ProfileEditPanel({ onClose }) {
 
   const [errors, setErrors] = useState({})
   const [serverError, setServerError] = useState('')
-  const [success, setSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [open, setOpen] = useState(false)
 
   useEffect(() => {
-    const handleKey = (e) => { if (e.key === 'Escape') onClose() }
+    requestAnimationFrame(() => setOpen(true))
+  }, [])
+
+  useEffect(() => {
+    const handleKey = (e) => { if (e.key === 'Escape') handleClose() }
     document.addEventListener('keydown', handleKey)
     return () => document.removeEventListener('keydown', handleKey)
-  }, [onClose])
+  }, [])
 
   useEffect(() => {
     document.body.style.overflow = 'hidden'
     return () => { document.body.style.overflow = '' }
   }, [])
+
+  function handleClose() {
+    setOpen(false)
+    setTimeout(onClose, 250)
+  }
 
   function validate() {
     const errs = {}
@@ -106,7 +102,6 @@ export default function ProfileEditPanel({ onClose }) {
 
   async function handleSubmit(e) {
     e.preventDefault()
-    setSuccess(false)
     setServerError('')
     const errs = validate()
     if (Object.keys(errs).length) { setErrors(errs); return }
@@ -123,7 +118,7 @@ export default function ProfileEditPanel({ onClose }) {
       }
       const res = await updateMe(payload)
       setUser(res.data.data ?? res.data)
-      onClose()
+      handleClose()
     } catch (err) {
       setServerError(err.response?.data?.error || err.response?.data?.message || 'Failed to save changes.')
     } finally {
@@ -142,9 +137,9 @@ export default function ProfileEditPanel({ onClose }) {
   return (
     <>
       <div
-        className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 transition-opacity"
-        onClick={onClose}
+        onClick={handleClose}
         aria-hidden="true"
+        className={`fixed inset-0 bg-black/40 backdrop-blur-sm z-40 transition-opacity duration-250 ${open ? 'opacity-100' : 'opacity-0'}`}
       />
 
       <div
@@ -152,50 +147,42 @@ export default function ProfileEditPanel({ onClose }) {
         role="dialog"
         aria-modal="true"
         aria-label="Edit Profile"
-        className="fixed inset-y-0 right-0 z-50 w-full max-w-md bg-white shadow-2xl flex flex-col"
-        style={{ animation: 'slideInRight 0.25s ease-out' }}
+        className={`fixed inset-y-0 right-0 z-50 w-full max-w-md bg-card border-l border-border shadow-2xl flex flex-col transition-transform duration-250 ease-out ${open ? 'translate-x-0' : 'translate-x-full'}`}
       >
-        <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between shrink-0">
+        <div className="px-6 py-5 border-b border-border flex items-center justify-between shrink-0">
           <div>
-            <h2 className="text-base font-bold text-gray-900">Edit Profile</h2>
-            <p className="text-xs text-gray-400 mt-0.5">Update your personal information</p>
+            <h2 className="text-base font-semibold text-foreground">Edit Profile</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">Update your personal information</p>
           </div>
           <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition"
+            onClick={handleClose}
+            className="w-7 h-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
             aria-label="Close"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
-          <div className="flex items-center gap-4 pb-4 border-b border-gray-100">
-            <Avatar name={name || user?.name} size="xl" />
+          <div className="flex items-center gap-4 pb-5 border-b border-border">
+            <div className="w-14 h-14 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-xl select-none shrink-0">
+              {(name || user?.name)?.[0]?.toUpperCase() || '?'}
+            </div>
             <div>
-              <p className="text-sm font-semibold text-gray-900">{name || user?.name}</p>
-              <p className="text-xs text-gray-400 capitalize">{user?.role}</p>
-              {memberSince && <p className="text-xs text-gray-400 mt-0.5">Member since {memberSince}</p>}
+              <p className="text-sm font-semibold text-foreground">{name || user?.name}</p>
+              <p className="text-xs text-muted-foreground capitalize">{user?.role}</p>
+              {memberSince && <p className="text-xs text-muted-foreground mt-0.5">Member since {memberSince}</p>}
             </div>
           </div>
 
-          {success && (
-            <div className="flex items-center gap-2.5 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3">
-              <svg className="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
-              <p className="text-xs font-semibold text-emerald-700">Profile updated successfully!</p>
-            </div>
-          )}
-
           {serverError && (
-            <div className="flex items-center gap-2.5 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
-              <svg className="w-4 h-4 text-red-500 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <div className="flex items-center gap-2.5 bg-destructive/10 border border-destructive/20 rounded-lg px-4 py-3">
+              <svg className="w-4 h-4 text-destructive shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <circle cx="12" cy="12" r="10" /><path strokeLinecap="round" d="M12 8v4m0 4h.01" />
               </svg>
-              <p className="text-xs text-red-600">{serverError}</p>
+              <p className="text-xs text-destructive">{serverError}</p>
             </div>
           )}
 
@@ -223,13 +210,13 @@ export default function ProfileEditPanel({ onClose }) {
               autoComplete="email"
             />
 
-            <div className="pt-2 border-t border-gray-100">
+            <div className="pt-2 border-t border-border">
               <button
                 type="button"
                 onClick={() => { setChangePassword(v => !v); setErrors({}); setCurrentPassword(''); setNewPassword(''); setConfirmPassword('') }}
-                className="flex items-center gap-2 text-xs font-semibold text-blue-600 hover:text-blue-700 transition"
+                className="flex items-center gap-2 text-xs font-semibold text-primary hover:text-primary/80 transition-colors"
               >
-                <svg className={`w-3.5 h-3.5 transition-transform ${changePassword ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                <svg className={`w-3.5 h-3.5 transition-transform duration-200 ${changePassword ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                 </svg>
                 {changePassword ? 'Cancel password change' : 'Change password'}
@@ -276,34 +263,16 @@ export default function ProfileEditPanel({ onClose }) {
           </form>
         </div>
 
-        <div className="shrink-0 px-6 py-4 border-t border-gray-100 bg-gray-50 flex gap-3">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onClose}
-            disabled={loading}
-            className="flex-1"
-          >
+        <div className="shrink-0 px-6 py-4 border-t border-border bg-muted/30 flex gap-3">
+          <Button type="button" variant="outline" onClick={handleClose} disabled={loading} className="flex-1">
             Cancel
           </Button>
-          <Button
-            type="submit"
-            form="profile-form"
-            disabled={loading || !hasChanges}
-            className="flex-1"
-          >
-            {loading && <span className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />}
+          <Button type="submit" form="profile-form" disabled={loading || !hasChanges} className="flex-1">
+            {loading && <span className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />}
             {loading ? 'Saving...' : 'Save Changes'}
           </Button>
         </div>
       </div>
-
-      <style>{`
-        @keyframes slideInRight {
-          from { transform: translateX(100%); opacity: 0; }
-          to { transform: translateX(0); opacity: 1; }
-        }
-      `}</style>
     </>
   )
 }
