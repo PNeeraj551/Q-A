@@ -37,6 +37,9 @@ const createQuestion = async (req, res) => {
   if (text.trim().length > 1000) {
     return error(res, 'Question must be 1000 characters or fewer', 400);
   }
+  if (req.qnaPost?.status === 'CLOSED') {
+    return error(res, 'This Q&A board is closed. No new questions can be posted.', 403);
+  }
 
   try {
     const question = await Question.create({

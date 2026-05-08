@@ -113,7 +113,7 @@ const createQna = async (req, res) => {
 
 // PATCH /api/qna/:id
 const updateQna = async (req, res) => {
-  const { title, description, visibility, allowed_participants } = req.body;
+  const { title, description, visibility, allowed_participants, status } = req.body;
 
   try {
     const post = await QnaPost.findById(req.params.id);
@@ -141,6 +141,13 @@ const updateQna = async (req, res) => {
       post.allowed_participants = allowed_participants.filter((id) =>
         mongoose.Types.ObjectId.isValid(id)
       );
+    }
+
+    if (status !== undefined) {
+      if (!['OPEN', 'CLOSED'].includes(status)) {
+        return error(res, 'Status must be OPEN or CLOSED', 400);
+      }
+      post.status = status;
     }
 
     post.updated_at = new Date();

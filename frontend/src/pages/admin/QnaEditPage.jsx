@@ -38,7 +38,8 @@ export default function QnaEditPage() {
 
   useEffect(() => {
     if (visibility !== 'PRIVATE') return
-    getUsers(debouncedSearch)
+    if (debouncedSearch.trim().length < 2) { setUserResults([]); return }
+    getUsers(debouncedSearch.trim())
       .then((res) => setUserResults((res.data.users || []).filter((u) => u.role === 'participant')))
       .catch(() => {})
   }, [debouncedSearch, visibility])

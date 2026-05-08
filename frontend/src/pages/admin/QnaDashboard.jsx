@@ -257,12 +257,12 @@ export default function QnaDashboard() {
                   >
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-sm font-medium text-foreground truncate">{post.title}</span>
-                      <Badge
-                        variant={post.visibility === 'PUBLIC' ? 'default' : 'secondary'}
-                        className="shrink-0 text-xs"
-                      >
+                      <Badge variant={post.visibility === 'PUBLIC' ? 'default' : 'secondary'} className="shrink-0 text-xs">
                         {post.visibility === 'PUBLIC' ? 'Public' : 'Private'}
                       </Badge>
+                      {post.status === 'CLOSED' && (
+                        <Badge variant="secondary" className="shrink-0 text-xs">Closed</Badge>
+                      )}
                     </div>
                     {post.description && (
                       <p className="text-xs text-muted-foreground truncate mb-1">{post.description}</p>

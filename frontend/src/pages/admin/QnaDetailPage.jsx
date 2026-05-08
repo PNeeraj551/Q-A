@@ -4,7 +4,7 @@ import DashboardLayout from '../../components/DashboardLayout'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useAuth } from '../../context/AuthContext'
-import { getQna } from '../../api/qna'
+import { getQna, setQnaStatus } from '../../api/qna'
 import { listQuestions, createQuestion } from '../../api/questions'
 import { QuestionCard } from '../../components/QuestionCard'
 import { useQnaSocket } from '../../hooks/useQnaSocket'
@@ -19,6 +19,7 @@ export default function QnaDetailPage() {
   const [questions, setQuestions] = useState([])
   const [loading, setLoading] = useState(true)
   const [fetchError, setFetchError] = useState(false)
+  const [togglingStatus, setTogglingStatus] = useState(false)
   const [questionText, setQuestionText] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const inputRef = useRef(null)
@@ -61,6 +62,21 @@ export default function QnaDetailPage() {
   }, [])
 
   const socketRef = useQnaSocket(id, { onQuestionNew, onReplyNew })
+
+  async function handleToggleStatus() {
+    if (!post) return
+    const newStatus = post.status === 'CLOSED' ? 'OPEN' : 'CLOSED'
+    setTogglingStatus(true)
+    try {
+      await setQnaStatus(id, newStatus)
+      setPost((p) => ({ ...p, status: newStatus }))
+      showToast(newStatus === 'CLOSED' ? 'Q&A closed.' : 'Q&A reopened.', 'success')
+    } catch {
+      showToast('Failed to update status.', 'error')
+    } finally {
+      setTogglingStatus(false)
+    }
+  }
 
   async function handleSubmitQuestion(e) {
     e.preventDefault()
@@ -189,6 +205,19 @@ export default function QnaDetailPage() {
           <Badge variant={post.visibility === 'PUBLIC' ? 'default' : 'secondary'}>
             {post.visibility === 'PUBLIC' ? 'Public' : 'Private'}
           </Badge>
+          <Badge variant={post.status === 'OPEN' ? 'default' : 'secondary'}>
+            {post.status === 'OPEN' ? 'Open' : 'Closed'}
+          </Badge>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={togglingStatus}
+            onClick={handleToggleStatus}
+          >
+            {togglingStatus
+              ? '...'
+              : post.status === 'OPEN' ? 'Close Q&A' : 'Reopen Q&A'}
+          </Button>
           <Button variant="outline" size="sm" onClick={() => navigate(`/admin/qna/${id}/edit`)}>
             Edit
           </Button>

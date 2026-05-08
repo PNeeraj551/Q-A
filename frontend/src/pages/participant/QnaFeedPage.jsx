@@ -140,8 +140,16 @@ export default function QnaFeedPage() {
   }
 
   const currentUserId = user?._id || user?.user_id
+  const isClosed = post.status === 'CLOSED'
 
-  const questionForm = (
+  const questionForm = isClosed ? (
+    <div className="flex items-center gap-2 text-sm text-muted-foreground px-1">
+      <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+        <rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path strokeLinecap="round" strokeLinejoin="round" d="M7 11V7a5 5 0 0110 0v4" />
+      </svg>
+      This Q&A board is closed. No new questions can be posted.
+    </div>
+  ) : (
     <form
       onSubmit={handleSubmitQuestion}
       className="flex items-center gap-3 bg-background border border-border rounded-lg px-4 py-2"
@@ -184,9 +192,12 @@ export default function QnaFeedPage() {
       subtitle={post.description || undefined}
       onBack={() => navigate('/participant/qna')}
       actions={
-        <Badge variant={post.visibility === 'PUBLIC' ? 'default' : 'secondary'}>
-          {post.visibility === 'PUBLIC' ? 'Public' : 'Private'}
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant={post.visibility === 'PUBLIC' ? 'default' : 'secondary'}>
+            {post.visibility === 'PUBLIC' ? 'Public' : 'Private'}
+          </Badge>
+          {isClosed && <Badge variant="secondary">Closed</Badge>}
+        </div>
       }
       bottomBar={questionForm}
     >

@@ -19,6 +19,11 @@ const qnaPostSchema = new mongoose.Schema(
       enum: ['PUBLIC', 'PRIVATE'],
       required: [true, 'Visibility is required'],
     },
+    status: {
+      type: String,
+      enum: ['OPEN', 'CLOSED'],
+      default: 'OPEN',
+    },
     allowed_participants: [
       {
         type: mongoose.Schema.Types.ObjectId,
