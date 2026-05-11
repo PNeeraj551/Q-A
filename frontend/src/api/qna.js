@@ -12,10 +12,10 @@ export const deleteQna = (id) => axiosInstance.delete(`/qna/${id}`)
 
 export const setQnaStatus = (id, status) => axiosInstance.patch(`/qna/${id}`, { status })
 
-export const getQnaParticipants = (id) => axiosInstance.get(`/qna/${id}/participants`)
+export const getQnaUsers = (id) => axiosInstance.get(`/qna/${id}/users`)
 
-export const addQnaParticipant = (id, userId) =>
-  axiosInstance.post(`/qna/${id}/participants`, { userId })
+export const addQnaUser = (id, userId) =>
+  axiosInstance.post(`/qna/${id}/users`, { userId })
 
-export const removeQnaParticipant = (id, userId) =>
-  axiosInstance.delete(`/qna/${id}/participants/${userId}`)
+export const removeQnaUser = (id, userId) =>
+  axiosInstance.delete(`/qna/${id}/users/${userId}`)

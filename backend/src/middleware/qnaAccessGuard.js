@@ -25,7 +25,7 @@ const qnaAccessGuard = async (req, res, next) => {
     }
 
     // PRIVATE: return 404 — never reveal the post exists to non-assigned users
-    const allowed = post.allowed_participants.some(
+    const allowed = post.allowed_users.some(
       (id) => id.toString() === req.user.user_id
     );
     if (!allowed) return error(res, 'Q&A not found', 404);

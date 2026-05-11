@@ -11,8 +11,8 @@ import QnaEditPage from './pages/admin/QnaEditPage'
 import QnaDetailPage from './pages/admin/QnaDetailPage'
 import UsersPage from './pages/admin/UsersPage'
 import AnalyticsPage from './pages/admin/AnalyticsPage'
-import QnaListPage from './pages/participant/QnaListPage'
-import QnaFeedPage from './pages/participant/QnaFeedPage'
+import QnaListPage from './pages/user/QnaListPage'
+import QnaFeedPage from './pages/user/QnaFeedPage'
 
 export default function App() {
   return (
@@ -30,9 +30,9 @@ export default function App() {
           <Route path="/admin/users" element={<AdminRoute><UsersPage /></AdminRoute>} />
           <Route path="/admin/analytics" element={<AdminRoute><AnalyticsPage /></AdminRoute>} />
 
-          {/* Participant routes */}
-          <Route path="/participant/qna" element={<ProtectedRoute><QnaListPage /></ProtectedRoute>} />
-          <Route path="/participant/qna/:id" element={<ProtectedRoute><QnaFeedPage /></ProtectedRoute>} />
+          {/* User routes */}
+          <Route path="/user/qna" element={<ProtectedRoute><QnaListPage /></ProtectedRoute>} />
+          <Route path="/user/qna/:id" element={<ProtectedRoute><QnaFeedPage /></ProtectedRoute>} />
 
           {/* Shared */}
           <Route path="/change-password" element={<ProtectedRoute><ChangePasswordPage /></ProtectedRoute>} />

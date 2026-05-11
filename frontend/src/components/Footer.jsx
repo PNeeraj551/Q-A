@@ -8,7 +8,7 @@ export default function Footer() {
         <div className="flex items-center gap-6">
           <a href="#" className="text-xs text-gray-400 hover:text-gray-600 transition">Privacy Policy</a>
           <a href="#" className="text-xs text-gray-400 hover:text-gray-600 transition">Terms of Service</a>
-          <a href="#" className="text-xs text-gray-400 hover:text-gray-600 transition">Contact Us</a>
+          <a href="#" className="text-xs text-gray-400 hover:text-gray-600 transition">Contact Administrator</a>
         </div>
       </div>
     </footer>

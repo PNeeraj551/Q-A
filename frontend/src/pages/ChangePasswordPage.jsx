@@ -91,7 +91,7 @@ export default function ChangePasswordPage() {
       await changePassword(currentPassword, newPassword)
       const res = await getMe()
       setUser(res.data)
-      navigate(user?.role === 'admin' ? '/admin/qna' : '/participant/qna', { replace: true })
+      navigate(user?.role === 'admin' ? '/admin/qna' : '/user/qna', { replace: true })
     } catch (err) {
       const status = err.response?.status
       if (status === 401) {

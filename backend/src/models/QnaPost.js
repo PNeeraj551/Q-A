@@ -24,7 +24,7 @@ const qnaPostSchema = new mongoose.Schema(
       enum: ['OPEN', 'CLOSED'],
       default: 'OPEN',
     },
-    allowed_participants: [
+    allowed_users: [
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
@@ -47,7 +47,7 @@ const qnaPostSchema = new mongoose.Schema(
 );
 
 qnaPostSchema.index({ visibility: 1 });
-qnaPostSchema.index({ allowed_participants: 1 });
+qnaPostSchema.index({ allowed_users: 1 });
 qnaPostSchema.index({ created_at: -1 });
 
 module.exports = mongoose.model('QnaPost', qnaPostSchema);

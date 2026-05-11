@@ -4,7 +4,7 @@ import DashboardLayout from '../../components/DashboardLayout'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { inputCls, textareaCls, errorInputCls } from '@/lib/ui'
-import { getQna, updateQna, getQnaParticipants, addQnaParticipant, removeQnaParticipant } from '../../api/qna'
+import { getQna, updateQna, getQnaUsers, addQnaUser, removeQnaUser } from '../../api/qna'
 import { getUsers } from '../../api/users'
 import { useDebounce } from '../../hooks/useDebounce'
 
@@ -15,7 +15,7 @@ export default function QnaEditPage() {
   const [description, setDescription] = useState('')
   const [visibility, setVisibility] = useState('PUBLIC')
   const [status, setStatus] = useState('OPEN')
-  const [assignedParticipants, setAssignedParticipants] = useState([])
+  const [assignedUsers, setAssignedUsers] = useState([])
   const [userSearch, setUserSearch] = useState('')
   const [userResults, setUserResults] = useState([])
   const [submitting, setSubmitting] = useState(false)
@@ -28,14 +28,14 @@ export default function QnaEditPage() {
   const debouncedSearch = useDebounce(userSearch, 300)
 
   useEffect(() => {
-    Promise.all([getQna(id), getQnaParticipants(id)])
-      .then(([postRes, participantsRes]) => {
+    Promise.all([getQna(id), getQnaUsers(id)])
+      .then(([postRes, usersRes]) => {
         const post = postRes.data.post
         setTitle(post.title)
         setDescription(post.description || '')
         setVisibility(post.visibility)
         setStatus(post.status)
-        setAssignedParticipants(participantsRes.data.participants || [])
+        setAssignedUsers(usersRes.data.users || [])
       })
       .catch(() => navigate('/admin/qna'))
       .finally(() => setLoading(false))
@@ -45,27 +45,27 @@ export default function QnaEditPage() {
     if (visibility !== 'PRIVATE') return
     if (debouncedSearch.trim().length < 2) { setUserResults([]); return }
     getUsers(debouncedSearch.trim())
-      .then((res) => setUserResults((res.data.users || []).filter((u) => u.role === 'participant')))
+      .then((res) => setUserResults((res.data.users || []).filter((u) => u.role === 'user')))
       .catch(() => {})
   }, [debouncedSearch, visibility])
 
-  async function handleAddParticipant(user) {
+  async function handleAddUser(user) {
     if (addingRef.current.has(user._id)) return
     addingRef.current.add(user._id)
     try {
-      await addQnaParticipant(id, user._id)
-      setAssignedParticipants((prev) => [...prev, user])
+      await addQnaUser(id, user._id)
+      setAssignedUsers((prev) => [...prev, user])
     } catch { /* ignore */ } finally {
       addingRef.current.delete(user._id)
     }
   }
 
-  async function handleRemoveParticipant(userId) {
+  async function handleRemoveUser(userId) {
     if (removingRef.current.has(userId)) return
     removingRef.current.add(userId)
     try {
-      await removeQnaParticipant(id, userId)
-      setAssignedParticipants((prev) => prev.filter((p) => p._id !== userId))
+      await removeQnaUser(id, userId)
+      setAssignedUsers((prev) => prev.filter((u) => u._id !== userId))
     } catch { /* ignore */ } finally {
       removingRef.current.delete(userId)
     }
@@ -185,25 +185,25 @@ export default function QnaEditPage() {
             </div>
             <p className="text-xs text-muted-foreground">
               {status === 'OPEN'
-                ? 'Participants can ask questions and post replies.'
-                : 'Q&A is read-only. Participants can view but not interact.'}
+                ? 'Users can ask questions and post replies.'
+                : 'Q&A is read-only. Users can view but not interact.'}
             </p>
           </div>
 
           {visibility === 'PRIVATE' && (
             <div className="space-y-2">
-              <Label>Manage Participants</Label>
-              {assignedParticipants.length > 0 && (
+              <Label>Manage Users</Label>
+              {assignedUsers.length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
-                  {assignedParticipants.map((p) => (
+                  {assignedUsers.map((u) => (
                     <span
-                      key={p._id}
+                      key={u._id}
                       className="inline-flex items-center gap-1 bg-primary/10 text-primary text-xs px-2.5 py-1 rounded-full font-medium"
                     >
-                      {p.name}
+                      {u.name}
                       <button
                         type="button"
-                        onClick={() => handleRemoveParticipant(p._id)}
+                        onClick={() => handleRemoveUser(u._id)}
                         className="hover:text-destructive ml-0.5 text-primary/60"
                       >
                         ×
@@ -216,17 +216,17 @@ export default function QnaEditPage() {
                 className={inputCls}
                 value={userSearch}
                 onChange={(e) => setUserSearch(e.target.value)}
-                placeholder="Search to add participants..."
+                placeholder="Search to add users..."
               />
-              {userResults.filter((u) => !assignedParticipants.find((p) => p._id === u._id)).length > 0 && (
+              {userResults.filter((u) => !assignedUsers.find((a) => a._id === u._id)).length > 0 && (
                 <div className="border border-border rounded-md divide-y divide-border max-h-48 overflow-y-auto bg-card">
                   {userResults
-                    .filter((u) => !assignedParticipants.find((p) => p._id === u._id))
+                    .filter((u) => !assignedUsers.find((a) => a._id === u._id))
                     .map((u) => (
                       <button
                         key={u._id}
                         type="button"
-                        onClick={() => handleAddParticipant(u)}
+                        onClick={() => handleAddUser(u)}
                         className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-accent text-sm text-left transition-colors"
                       >
                         <span className="font-medium text-foreground">{u.name}</span>

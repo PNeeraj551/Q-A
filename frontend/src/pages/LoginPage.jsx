@@ -48,16 +48,12 @@ export default function LoginPage() {
       } else if (userData.role === 'admin') {
         navigate('/admin/qna', { replace: true })
       } else {
-        navigate('/participant/qna', { replace: true })
+        navigate('/user/qna', { replace: true })
       }
     } catch (err) {
       const status = err.response?.status
       if (status === 401) {
         setServerError('Incorrect email or password.')
-      } else if (status === 403) {
-        setServerError('Your account has been deactivated. Contact your administrator.')
-      } else if (status === 404) {
-        setServerError('No account found with this email address.')
       } else if (status === 429) {
         setServerError('Too many attempts. Please wait a few minutes and try again.')
       } else if (!err.response) {

@@ -85,7 +85,7 @@ export default function DashboardLayout({ children, title, subtitle, actions, on
               <SidebarLink to="/admin/analytics" label="Analytics" icon={AnalyticsIcon} />
             </>
           ) : (
-            <SidebarLink to="/participant/qna" label="Q&A Boards" icon={QnaIcon} end />
+            <SidebarLink to="/user/qna" label="Q&A Boards" icon={QnaIcon} end />
           )}
         </nav>
 

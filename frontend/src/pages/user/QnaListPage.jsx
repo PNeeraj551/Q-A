@@ -153,7 +153,7 @@ export default function QnaListPage() {
               {posts.map((post) => (
                 <button
                   key={post._id}
-                  onClick={() => navigate(`/participant/qna/${post._id}`)}
+                  onClick={() => navigate(`/user/qna/${post._id}`)}
                   className="w-full bg-card border border-border rounded-xl px-5 py-4 text-left hover:border-primary/30 hover:shadow-sm transition-all group"
                 >
                   <div className="flex items-start justify-between gap-3">

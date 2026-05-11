@@ -9,9 +9,9 @@ const {
   createQna,
   updateQna,
   deleteQna,
-  getParticipants,
-  addParticipant,
-  removeParticipant,
+  getUsers,
+  addUser,
+  removeUser,
 } = require('../controllers/qnaController');
 
 const adminOnly = [authMiddleware, roleGuard('admin')];
@@ -22,8 +22,8 @@ router.post('/', adminOnly, createQna);
 router.get('/:id', authenticated, qnaAccessGuard, getQna);
 router.patch('/:id', adminOnly, updateQna);
 router.delete('/:id', adminOnly, deleteQna);
-router.get('/:id/participants', adminOnly, getParticipants);
-router.post('/:id/participants', adminOnly, addParticipant);
-router.delete('/:id/participants/:userId', adminOnly, removeParticipant);
+router.get('/:id/users', adminOnly, getUsers);
+router.post('/:id/users', adminOnly, addUser);
+router.delete('/:id/users/:userId', adminOnly, removeUser);
 
 module.exports = router;

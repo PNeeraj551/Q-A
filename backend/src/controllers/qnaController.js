@@ -6,7 +6,7 @@ const User = require('../models/User');
 const { success, error } = require('../utils/responseUtils');
 
 // GET /api/qna
-// Admin: all posts. Participant: PUBLIC + assigned PRIVATE.
+// Admin: all posts. User: PUBLIC + assigned PRIVATE.
 // Query: ?search=&visibility=&page=1&limit=10
 const listQna = async (req, res) => {
   try {
@@ -20,7 +20,7 @@ const listQna = async (req, res) => {
       accessFilter = {
         $or: [
           { visibility: 'PUBLIC' },
-          { visibility: 'PRIVATE', allowed_participants: new mongoose.Types.ObjectId(req.user.user_id) },
+          { visibility: 'PRIVATE', allowed_users: new mongoose.Types.ObjectId(req.user.user_id) },
         ],
       };
     }
@@ -77,7 +77,7 @@ const getQna = async (req, res) => {
 
 // POST /api/qna
 const createQna = async (req, res) => {
-  const { title, description, visibility, allowed_participants } = req.body;
+  const { title, description, visibility, allowed_users } = req.body;
 
   if (!title || typeof title !== 'string' || !title.trim()) {
     return error(res, 'Title is required', 400);
@@ -90,9 +90,9 @@ const createQna = async (req, res) => {
   }
 
   try {
-    let participants = [];
-    if (visibility === 'PRIVATE' && Array.isArray(allowed_participants)) {
-      participants = allowed_participants.filter((id) =>
+    let users = [];
+    if (visibility === 'PRIVATE' && Array.isArray(allowed_users)) {
+      users = allowed_users.filter((id) =>
         mongoose.Types.ObjectId.isValid(id)
       );
     }
@@ -101,7 +101,7 @@ const createQna = async (req, res) => {
       title: title.trim(),
       description: (description || '').trim(),
       visibility,
-      allowed_participants: participants,
+      allowed_users: users,
       created_by: req.user.user_id,
     });
 
@@ -113,7 +113,7 @@ const createQna = async (req, res) => {
 
 // PATCH /api/qna/:id
 const updateQna = async (req, res) => {
-  const { title, description, visibility, allowed_participants, status } = req.body;
+  const { title, description, visibility, allowed_users, status } = req.body;
 
   try {
     const post = await QnaPost.findById(req.params.id);
@@ -137,8 +137,8 @@ const updateQna = async (req, res) => {
       post.visibility = visibility;
     }
 
-    if (allowed_participants !== undefined && Array.isArray(allowed_participants)) {
-      post.allowed_participants = allowed_participants.filter((id) =>
+    if (allowed_users !== undefined && Array.isArray(allowed_users)) {
+      post.allowed_users = allowed_users.filter((id) =>
         mongoose.Types.ObjectId.isValid(id)
       );
     }
@@ -178,24 +178,24 @@ const deleteQna = async (req, res) => {
   }
 };
 
-// GET /api/qna/:id/participants
-const getParticipants = async (req, res) => {
+// GET /api/qna/:id/users
+const getUsers = async (req, res) => {
   try {
     const post = await QnaPost.findById(req.params.id).lean();
     if (!post) return error(res, 'Q&A not found', 404);
 
-    const participants = await User.find({
-      _id: { $in: post.allowed_participants },
+    const users = await User.find({
+      _id: { $in: post.allowed_users },
     }).select('_id name email is_active').lean();
 
-    return success(res, { participants });
+    return success(res, { users });
   } catch (err) {
-    return error(res, 'Failed to load participants.', 500);
+    return error(res, 'Failed to load users.', 500);
   }
 };
 
-// POST /api/qna/:id/participants
-const addParticipant = async (req, res) => {
+// POST /api/qna/:id/users
+const addUser = async (req, res) => {
   const { userId } = req.body;
 
   if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
@@ -210,18 +210,18 @@ const addParticipant = async (req, res) => {
     if (!user) return error(res, 'User not found', 404);
 
     await QnaPost.findByIdAndUpdate(post._id, {
-      $addToSet: { allowed_participants: userId },
+      $addToSet: { allowed_users: userId },
       $set: { updated_at: new Date() },
     });
 
-    return success(res, { message: 'Participant added' });
+    return success(res, { message: 'User added' });
   } catch (err) {
-    return error(res, 'Failed to add participant.', 500);
+    return error(res, 'Failed to add user.', 500);
   }
 };
 
-// DELETE /api/qna/:id/participants/:userId
-const removeParticipant = async (req, res) => {
+// DELETE /api/qna/:id/users/:userId
+const removeUser = async (req, res) => {
   const { userId } = req.params;
 
   if (!mongoose.Types.ObjectId.isValid(userId)) {
@@ -233,13 +233,13 @@ const removeParticipant = async (req, res) => {
     if (!post) return error(res, 'Q&A not found', 404);
 
     await QnaPost.findByIdAndUpdate(post._id, {
-      $pull: { allowed_participants: new mongoose.Types.ObjectId(userId) },
+      $pull: { allowed_users: new mongoose.Types.ObjectId(userId) },
       $set: { updated_at: new Date() },
     });
 
-    return success(res, { message: 'Participant removed' });
+    return success(res, { message: 'User removed' });
   } catch (err) {
-    return error(res, 'Failed to remove participant.', 500);
+    return error(res, 'Failed to remove user.', 500);
   }
 };
 
@@ -249,7 +249,7 @@ module.exports = {
   createQna,
   updateQna,
   deleteQna,
-  getParticipants,
-  addParticipant,
-  removeParticipant,
+  getUsers,
+  addUser,
+  removeUser,
 };

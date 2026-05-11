@@ -52,13 +52,48 @@ export default function QnaDetailPage() {
     })
   }, [])
 
+  const onQuestionUpdate = useCallback((updated) => {
+    setQuestions((prev) =>
+      prev.map((q) => (q._id === updated._id ? { ...q, ...updated } : q))
+    )
+  }, [])
+
+  const onQuestionDelete = useCallback(({ question_id }) => {
+    setQuestions((prev) => prev.filter((q) => q._id !== question_id))
+  }, [])
+
+  const onQuestionLike = useCallback(({ question_id, likes_count }) => {
+    setQuestions((prev) =>
+      prev.map((q) => (q._id === question_id ? { ...q, likes_count } : q))
+          .sort((a, b) => b.likes_count - a.likes_count || new Date(b.created_at) - new Date(a.created_at))
+    )
+  }, [])
+
   const onReplyNew = useCallback(({ question_id }) => {
     setQuestions((prev) =>
       prev.map((q) => String(q._id) === String(question_id) ? { ...q, reply_count: q.reply_count + 1 } : q)
     )
   }, [])
 
-  const socketRef = useQnaSocket(id, { onQuestionNew, onReplyNew })
+  const onReplyDelete = useCallback(({ question_id }) => {
+    setQuestions((prev) =>
+      prev.map((q) => String(q._id) === String(question_id) ? { ...q, reply_count: Math.max(0, q.reply_count - 1) } : q)
+    )
+  }, [])
+
+  const onQnaUpdate = useCallback((updatedPost) => {
+    setPost(updatedPost)
+  }, [])
+
+  const socketRef = useQnaSocket(id, {
+    onQuestionNew,
+    onQuestionUpdate,
+    onQuestionDelete,
+    onQuestionLike,
+    onReplyNew,
+    onReplyDelete,
+    onQnaUpdate
+  })
 
   async function handleSubmitQuestion(e) {
     e.preventDefault()

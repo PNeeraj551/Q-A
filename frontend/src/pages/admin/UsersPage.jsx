@@ -80,7 +80,7 @@ export default function UsersPage() {
   return (
     <DashboardLayout
       title="Users"
-      subtitle="Manage participant accounts"
+      subtitle="Manage user accounts"
       actions={<Button onClick={() => setCreateOpen(true)}>+ Add User</Button>}
     >
       <div className="max-w-3xl">
@@ -185,7 +185,7 @@ export default function UsersPage() {
       {tempPassword && (
         <Modal title="Temporary Password" onClose={() => setTempPassword(null)}>
           <p className="text-sm text-muted-foreground mb-3">
-            Share this temporary password with the participant. They will be prompted to change it on next login.
+            Share this temporary password with the user. They will be prompted to change it on next login.
           </p>
           <div className="bg-muted rounded-md px-4 py-3 font-mono text-foreground text-center text-lg tracking-widest select-all border border-border">
             {tempPassword}
@@ -198,7 +198,7 @@ export default function UsersPage() {
 }
 
 function CreateUserModal({ onClose, onCreated }) {
-  const [form, setForm] = useState({ name: '', email: '', password: '', role: 'participant' })
+  const [form, setForm] = useState({ name: '', email: '', password: '', role: 'user' })
   const [errors, setErrors] = useState({})
   const submittingRef = useRef(false)
 
@@ -275,7 +275,7 @@ function CreateUserModal({ onClose, onCreated }) {
             value={form.role}
             onChange={(e) => setForm({ ...form, role: e.target.value })}
           >
-            <option value="participant">Participant</option>
+            <option value="user">User</option>
             <option value="admin">Admin</option>
           </select>
         </div>

@@ -53,8 +53,8 @@ const createUser = async (req, res) => {
       return error(res, 'Password must be at least 6 characters', 400);
     }
 
-    if (!role || !['admin', 'participant'].includes(role)) {
-      return error(res, 'Role must be either admin or participant', 400);
+    if (!role || !['admin', 'user'].includes(role)) {
+      return error(res, 'Role must be either admin or user', 400);
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -177,7 +177,7 @@ const adminResetPassword = async (req, res) => {
 
     const user = await User.findById(id);
     if (!user || !user.is_active) return error(res, 'User not found', 404);
-    if (user.role !== 'participant') return error(res, 'Can only reset password for participants', 400);
+    if (user.role !== 'user') return error(res, 'Can only reset password for users', 400);
 
     user.password = await bcrypt.hash(TEMP_PASSWORD, 10);
     user.must_change_password = true;

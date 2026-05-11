@@ -123,7 +123,7 @@ export default function QnaFeedPage() {
 
   if (fetchError) {
     return (
-      <DashboardLayout title="Q&A" onBack={() => navigate('/participant/qna')}>
+      <DashboardLayout title="Q&A" onBack={() => navigate('/user/qna')}>
         <div className="flex flex-col items-center justify-center py-24 text-center">
           <div className="w-10 h-10 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
             <svg className="w-5 h-5 text-destructive" fill="none" stroke="currentColor" strokeWidth="1.75" viewBox="0 0 24 24">
@@ -132,7 +132,7 @@ export default function QnaFeedPage() {
           </div>
           <p className="text-sm font-medium text-foreground">Failed to load this Q&A</p>
           <p className="text-sm text-muted-foreground mt-1">It may have been removed or you may not have access.</p>
-          <button onClick={() => navigate('/participant/qna')} className="mt-4 text-sm text-primary hover:underline">
+          <button onClick={() => navigate('/user/qna')} className="mt-4 text-sm text-primary hover:underline">
             Back to boards
           </button>
         </div>
@@ -185,7 +185,7 @@ export default function QnaFeedPage() {
     <DashboardLayout
       title={post.title}
       subtitle={post.description || undefined}
-      onBack={() => navigate('/participant/qna')}
+      onBack={() => navigate('/user/qna')}
       actions={
         <div className="flex items-center gap-2">
           <Badge variant={post.visibility === 'PUBLIC' ? 'default' : 'secondary'}>

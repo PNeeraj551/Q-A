@@ -13,7 +13,7 @@ export default function QnaCreatePage() {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [visibility, setVisibility] = useState('PUBLIC')
-  const [selectedParticipants, setSelectedParticipants] = useState([])
+  const [selectedUsers, setSelectedUsers] = useState([])
   const [userSearch, setUserSearch] = useState('')
   const [userResults, setUserResults] = useState([])
   const [submitting, setSubmitting] = useState(false)
@@ -26,12 +26,12 @@ export default function QnaCreatePage() {
     if (visibility !== 'PRIVATE') return
     if (debouncedSearch.trim().length < 2) { setUserResults([]); return }
     getUsers(debouncedSearch.trim())
-      .then((res) => setUserResults((res.data.users || []).filter((u) => u.role === 'participant')))
+      .then((res) => setUserResults((res.data.users || []).filter((u) => u.role === 'user')))
       .catch(() => {})
   }, [debouncedSearch, visibility])
 
-  function toggleParticipant(user) {
-    setSelectedParticipants((prev) => {
+  function toggleUser(user) {
+    setSelectedUsers((prev) => {
       const exists = prev.find((p) => p._id === user._id)
       return exists ? prev.filter((p) => p._id !== user._id) : [...prev, user]
     })
@@ -57,7 +57,7 @@ export default function QnaCreatePage() {
         title: title.trim(),
         description: description.trim(),
         visibility,
-        allowed_participants: visibility === 'PRIVATE' ? selectedParticipants.map((p) => p._id) : [],
+        allowed_users: visibility === 'PRIVATE' ? selectedUsers.map((u) => u._id) : [],
       })
       navigate('/admin/qna')
     } catch (err) {
@@ -94,7 +94,7 @@ export default function QnaCreatePage() {
               className={`${textareaCls} min-h-[80px]`}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Optional context or instructions for participants..."
+              placeholder="Optional context or instructions for users..."
               maxLength={1000}
               rows={3}
               disabled={submitting}
@@ -130,25 +130,25 @@ export default function QnaCreatePage() {
             </div>
             <p className="text-xs text-muted-foreground">
               {visibility === 'PUBLIC'
-                ? 'All participants can see and join this Q&A.'
-                : 'Only assigned participants can see this Q&A.'}
+                ? 'All users can see and join this Q&A.'
+                : 'Only assigned users can see this Q&A.'}
             </p>
           </div>
 
           {visibility === 'PRIVATE' && (
             <div className="space-y-2">
-              <Label>Assign Participants</Label>
-              {selectedParticipants.length > 0 && (
+              <Label>Assign Users</Label>
+              {selectedUsers.length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
-                  {selectedParticipants.map((p) => (
+                  {selectedUsers.map((u) => (
                     <span
-                      key={p._id}
+                      key={u._id}
                       className="inline-flex items-center gap-1 bg-primary/10 text-primary text-xs px-2.5 py-1 rounded-full font-medium"
                     >
-                      {p.name}
+                      {u.name}
                       <button
                         type="button"
-                        onClick={() => toggleParticipant(p)}
+                        onClick={() => toggleUser(u)}
                         className="hover:text-destructive ml-0.5 text-primary/60"
                       >
                         ×
@@ -161,17 +161,17 @@ export default function QnaCreatePage() {
                 className={inputCls}
                 value={userSearch}
                 onChange={(e) => setUserSearch(e.target.value)}
-                placeholder="Search participants by name or email..."
+                placeholder="Search users by name or email..."
               />
-              {userResults.filter((u) => !selectedParticipants.find((p) => p._id === u._id)).length > 0 && (
+              {userResults.filter((u) => !selectedUsers.find((p) => p._id === u._id)).length > 0 && (
                 <div className="border border-border rounded-md divide-y divide-border max-h-48 overflow-y-auto bg-card">
                   {userResults
-                    .filter((u) => !selectedParticipants.find((p) => p._id === u._id))
+                    .filter((u) => !selectedUsers.find((p) => p._id === u._id))
                     .map((u) => (
                       <button
                         key={u._id}
                         type="button"
-                        onClick={() => toggleParticipant(u)}
+                        onClick={() => toggleUser(u)}
                         className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-accent text-sm text-left transition-colors"
                       >
                         <span className="font-medium text-foreground">{u.name}</span>
