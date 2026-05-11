@@ -14,6 +14,7 @@ export default function QnaEditPage() {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [visibility, setVisibility] = useState('PUBLIC')
+  const [status, setStatus] = useState('OPEN')
   const [assignedParticipants, setAssignedParticipants] = useState([])
   const [userSearch, setUserSearch] = useState('')
   const [userResults, setUserResults] = useState([])
@@ -33,6 +34,7 @@ export default function QnaEditPage() {
         setTitle(post.title)
         setDescription(post.description || '')
         setVisibility(post.visibility)
+        setStatus(post.status)
         setAssignedParticipants(participantsRes.data.participants || [])
       })
       .catch(() => navigate('/admin/qna'))
@@ -85,7 +87,7 @@ export default function QnaEditPage() {
     submittingRef.current = true
     setSubmitting(true)
     try {
-      await updateQna(id, { title: title.trim(), description: description.trim(), visibility })
+      await updateQna(id, { title: title.trim(), description: description.trim(), visibility, status })
       navigate('/admin/qna')
     } catch (err) {
       setErrors({ submit: err.response?.data?.error || 'Failed to update Q&A.' })
@@ -161,6 +163,31 @@ export default function QnaEditPage() {
                 </button>
               ))}
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Status</Label>
+            <div className="flex gap-2">
+              {['OPEN', 'CLOSED'].map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setStatus(s)}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md border text-sm font-medium transition-colors ${
+                    status === s
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'border-border text-muted-foreground hover:bg-accent hover:text-foreground'
+                  }`}
+                >
+                  {s === 'OPEN' ? 'Open' : 'Closed'}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {status === 'OPEN'
+                ? 'Participants can ask questions and post replies.'
+                : 'Q&A is read-only. Participants can view but not interact.'}
+            </p>
           </div>
 
           {visibility === 'PRIVATE' && (

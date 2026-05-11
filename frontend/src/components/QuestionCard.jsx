@@ -6,7 +6,7 @@ import { listReplies, createReply, updateReply, deleteReply } from '../api/repli
 import { updateQuestion, deleteQuestion, toggleLike } from '../api/questions'
 
 // ───────────────────────── REPLY THREAD ─────────────────────────
-export function ReplyThread({ qnaId, question, currentUserId, isAdmin, socketRef }) {
+export function ReplyThread({ qnaId, question, currentUserId, isAdmin, isClosed, socketRef }) {
   const [replies, setReplies] = useState([])
   const [loaded, setLoaded] = useState(false)
   const [replyText, setReplyText] = useState('')
@@ -133,7 +133,7 @@ export function ReplyThread({ qnaId, question, currentUserId, isAdmin, socketRef
               <p className="text-sm text-foreground/80 mt-0.5 leading-relaxed">{r.text}</p>
             )}
           </div>
-          {(r.author_id === currentUserId || isAdmin) && editingId !== r._id && (
+          {!isClosed && (r.author_id === currentUserId || isAdmin) && editingId !== r._id && (
             <div className="flex gap-2 shrink-0">
               {r.author_id === currentUserId && (
                 <button
@@ -154,24 +154,26 @@ export function ReplyThread({ qnaId, question, currentUserId, isAdmin, socketRef
         </div>
       ))}
 
-      <form onSubmit={handleSubmitReply} className="flex gap-2 pt-1">
-        <input
-          className={`${inputCls} flex-1`}
-          value={replyText}
-          onChange={(e) => setReplyText(e.target.value)}
-          placeholder="Write a reply..."
-          maxLength={1000}
-        />
-        <Button type="submit" size="sm">
-          Reply
-        </Button>
-      </form>
+      {!isClosed && (
+        <form onSubmit={handleSubmitReply} className="flex gap-2 pt-1">
+          <input
+            className={`${inputCls} flex-1`}
+            value={replyText}
+            onChange={(e) => setReplyText(e.target.value)}
+            placeholder="Write a reply..."
+            maxLength={1000}
+          />
+          <Button type="submit" size="sm">
+            Reply
+          </Button>
+        </form>
+      )}
     </div>
   )
 }
 
 // ───────────────────────── QUESTION CARD ─────────────────────────
-export function QuestionCard({ qnaId, question, currentUserId, isAdmin, onUpdate, onDelete, socketRef }) {
+export function QuestionCard({ qnaId, question, currentUserId, isAdmin, isClosed, onUpdate, onDelete, socketRef }) {
   const [showReplies, setShowReplies] = useState(false)
   const likingRef = useRef(false)
   const savingRef = useRef(false)
@@ -261,11 +263,11 @@ export function QuestionCard({ qnaId, question, currentUserId, isAdmin, onUpdate
 
           <div className="flex items-center gap-4 mt-3">
             <button
-              onClick={handleLike}
-              className={`flex items-center gap-1.5 text-sm transition-colors ${
-                question.liked_by_me
-                  ? 'text-primary font-medium'
-                  : 'text-muted-foreground hover:text-foreground'
+              onClick={!isClosed ? handleLike : undefined}
+              className={`flex items-center gap-1.5 text-sm ${
+                isClosed
+                  ? 'text-muted-foreground cursor-default'
+                  : `transition-colors ${question.liked_by_me ? 'text-primary font-medium' : 'text-muted-foreground hover:text-foreground'}`
               }`}
             >
               <svg
@@ -287,7 +289,7 @@ export function QuestionCard({ qnaId, question, currentUserId, isAdmin, onUpdate
               {showReplies ? 'Hide replies' : replyLabel}
             </button>
 
-            {canModify && !editMode && (
+            {!isClosed && canModify && !editMode && (
               <div className="flex items-center gap-3 ml-auto">
                 {question.author_id === currentUserId && (
                   <button
@@ -333,6 +335,7 @@ export function QuestionCard({ qnaId, question, currentUserId, isAdmin, onUpdate
             question={question}
             currentUserId={currentUserId}
             isAdmin={isAdmin}
+            isClosed={isClosed}
             socketRef={socketRef}
           />
         </div>

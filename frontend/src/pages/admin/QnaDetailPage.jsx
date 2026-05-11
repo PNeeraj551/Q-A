@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import DashboardLayout from '../../components/DashboardLayout'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useAuth } from '../../context/AuthContext'
-import { getQna, setQnaStatus } from '../../api/qna'
+import { getQna } from '../../api/qna'
 import { listQuestions, createQuestion } from '../../api/questions'
 import { QuestionCard } from '../../components/QuestionCard'
 import { useQnaSocket } from '../../hooks/useQnaSocket'
@@ -18,7 +17,6 @@ export default function QnaDetailPage() {
   const [questions, setQuestions] = useState([])
   const [loading, setLoading] = useState(true)
   const [fetchError, setFetchError] = useState(false)
-  const togglingRef = useRef(false)
   const [questionText, setQuestionText] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const submittingRef = useRef(false)
@@ -61,21 +59,6 @@ export default function QnaDetailPage() {
   }, [])
 
   const socketRef = useQnaSocket(id, { onQuestionNew, onReplyNew })
-
-  async function handleToggleStatus() {
-    if (!post || togglingRef.current) return
-    togglingRef.current = true
-    const newStatus = post.status === 'CLOSED' ? 'OPEN' : 'CLOSED'
-    try {
-      await setQnaStatus(id, newStatus)
-      setPost((p) => ({ ...p, status: newStatus }))
-      toast.success(newStatus === 'CLOSED' ? 'Q&A closed.' : 'Q&A reopened.')
-    } catch {
-      toast.error('Failed to update status.')
-    } finally {
-      togglingRef.current = false
-    }
-  }
 
   async function handleSubmitQuestion(e) {
     e.preventDefault()
@@ -158,6 +141,7 @@ export default function QnaDetailPage() {
   }
 
   const currentUserId = user?._id || user?.user_id
+  const isClosed = post.status === 'CLOSED'
 
   const questionForm = (
     <form
@@ -203,16 +187,6 @@ export default function QnaDetailPage() {
           <Badge variant={post.status === 'OPEN' ? 'default' : 'secondary'}>
             {post.status === 'OPEN' ? 'Open' : 'Closed'}
           </Badge>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleToggleStatus}
-          >
-            {post.status === 'OPEN' ? 'Close Q&A' : 'Reopen Q&A'}
-          </Button>
-          <Button size="sm" onClick={() => navigate(`/admin/qna/${id}/edit`)}>
-            Edit
-          </Button>
         </div>
       }
       bottomBar={questionForm}
@@ -229,6 +203,7 @@ export default function QnaDetailPage() {
                 question={q}
                 currentUserId={currentUserId}
                 isAdmin={true}
+                isClosed={isClosed}
                 onUpdate={handleUpdate}
                 onDelete={handleDelete}
                 socketRef={socketRef}

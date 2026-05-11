@@ -210,6 +210,7 @@ export default function QnaFeedPage() {
                 question={q}
                 currentUserId={currentUserId}
                 isAdmin={user?.role === 'admin'}
+                isClosed={isClosed}
                 onUpdate={handleUpdate}
                 onDelete={handleDelete}
                 socketRef={socketRef}
