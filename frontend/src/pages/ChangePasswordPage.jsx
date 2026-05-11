@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { changePassword, getMe } from '../api/auth'
@@ -55,6 +55,7 @@ export default function ChangePasswordPage() {
   const [errors, setErrors] = useState({})
   const [serverError, setServerError] = useState('')
   const [loading, setLoading] = useState(false)
+  const loadingRef = useRef(false)
 
   if (!user) {
     navigate('/login', { replace: true })
@@ -82,7 +83,9 @@ export default function ChangePasswordPage() {
     setServerError('')
     const errs = validate()
     if (Object.keys(errs).length > 0) { setErrors(errs); return }
+    if (loadingRef.current) return
     setErrors({})
+    loadingRef.current = true
     setLoading(true)
     try {
       await changePassword(currentPassword, newPassword)
@@ -97,6 +100,7 @@ export default function ChangePasswordPage() {
         setServerError(err.response?.data?.message || 'Something went wrong. Please try again.')
       }
     } finally {
+      loadingRef.current = false
       setLoading(false)
     }
   }
@@ -158,9 +162,8 @@ export default function ChangePasswordPage() {
               </div>
             )}
 
-            <Button type="submit" disabled={loading} className="w-full">
-              {loading && <span className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />}
-              {loading ? 'Saving...' : 'Set new password'}
+            <Button type="submit" className="w-full">
+              Set new password
             </Button>
           </form>
 

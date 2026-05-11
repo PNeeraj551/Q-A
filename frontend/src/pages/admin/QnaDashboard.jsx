@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import DashboardLayout from '../../components/DashboardLayout'
 import { Button } from '@/components/ui/button'
@@ -70,7 +70,7 @@ export default function QnaDashboard() {
   const [posts, setPosts] = useState([])
   const [loading, setLoading] = useState(true)
   const [fetchError, setFetchError] = useState(false)
-  const [deletingId, setDeletingId] = useState(null)
+  const deletingRef = useRef(new Set())
   const [confirmId, setConfirmId] = useState(null)
 
   const [search, setSearch] = useState('')
@@ -112,7 +112,8 @@ export default function QnaDashboard() {
   }
 
   async function handleDelete(id) {
-    setDeletingId(id)
+    if (deletingRef.current.has(id)) return
+    deletingRef.current.add(id)
     try {
       await deleteQna(id)
       setPosts((prev) => prev.filter((p) => p._id !== id))
@@ -121,7 +122,7 @@ export default function QnaDashboard() {
     } catch {
       toast.error('Failed to delete. Please try again.')
     } finally {
-      setDeletingId(null)
+      deletingRef.current.delete(id)
       setConfirmId(null)
     }
   }
@@ -271,7 +272,6 @@ export default function QnaDashboard() {
 
                     <div className="flex items-center gap-2 shrink-0">
                       <Button
-                        variant="outline"
                         size="sm"
                         onClick={() => navigate(`/admin/qna/${post._id}/edit`)}
                       >
@@ -282,10 +282,9 @@ export default function QnaDashboard() {
                           <Button
                             variant="destructive"
                             size="sm"
-                            disabled={deletingId === post._id}
                             onClick={() => handleDelete(post._id)}
                           >
-                            {deletingId === post._id ? 'Deleting...' : 'Confirm'}
+                            Confirm
                           </Button>
                           <Button variant="ghost" size="sm" onClick={() => setConfirmId(null)}>
                             Cancel

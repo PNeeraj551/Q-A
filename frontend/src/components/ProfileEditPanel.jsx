@@ -63,6 +63,7 @@ export default function ProfileEditPanel({ onClose }) {
   const [errors, setErrors] = useState({})
   const [serverError, setServerError] = useState('')
   const [loading, setLoading] = useState(false)
+  const loadingRef = useRef(false)
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
@@ -105,7 +106,9 @@ export default function ProfileEditPanel({ onClose }) {
     setServerError('')
     const errs = validate()
     if (Object.keys(errs).length) { setErrors(errs); return }
+    if (!hasChanges || loadingRef.current) return
     setErrors({})
+    loadingRef.current = true
     setLoading(true)
     try {
       const payload = {}
@@ -122,6 +125,7 @@ export default function ProfileEditPanel({ onClose }) {
     } catch (err) {
       setServerError(err.response?.data?.error || err.response?.data?.message || 'Failed to save changes.')
     } finally {
+      loadingRef.current = false
       setLoading(false)
     }
   }
@@ -264,12 +268,11 @@ export default function ProfileEditPanel({ onClose }) {
         </div>
 
         <div className="shrink-0 px-6 py-4 border-t border-border bg-muted/30 flex gap-3">
-          <Button type="button" variant="outline" onClick={handleClose} disabled={loading} className="flex-1">
+          <Button type="button" variant="outline" onClick={handleClose} className="flex-1">
             Cancel
           </Button>
-          <Button type="submit" form="profile-form" disabled={loading || !hasChanges} className="flex-1">
-            {loading && <span className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />}
-            {loading ? 'Saving...' : 'Save Changes'}
+          <Button type="submit" form="profile-form" className="flex-1">
+            Save Changes
           </Button>
         </div>
       </div>

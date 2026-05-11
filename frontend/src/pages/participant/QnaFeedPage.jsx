@@ -19,6 +19,7 @@ export default function QnaFeedPage() {
   const [fetchError, setFetchError] = useState(false)
   const [questionText, setQuestionText] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const submittingRef = useRef(false)
   const inputRef = useRef(null)
 
   useEffect(() => {
@@ -62,7 +63,8 @@ export default function QnaFeedPage() {
   async function handleSubmitQuestion(e) {
     e.preventDefault()
     const text = questionText.trim()
-    if (!text) return
+    if (!text || submittingRef.current) return
+    submittingRef.current = true
 
     const tempId = 'temp_' + Date.now()
     const tempQuestion = {
@@ -94,6 +96,7 @@ export default function QnaFeedPage() {
       setQuestionText(text)
       toast.error('Failed to post question. Please try again.')
     } finally {
+      submittingRef.current = false
       setSubmitting(false)
     }
   }
@@ -163,22 +166,17 @@ export default function QnaFeedPage() {
         onKeyDown={(e) => {
           if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault()
-            if (questionText.trim() && !submitting) handleSubmitQuestion(e)
+            if (questionText.trim() && !submittingRef.current) handleSubmitQuestion(e)
           }
         }}
       />
       <button
         type="submit"
-        disabled={submitting || !questionText.trim()}
-        className="shrink-0 w-7 h-7 rounded-md bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        className="shrink-0 w-7 h-7 rounded-md bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 transition-colors"
       >
-        {submitting ? (
-          <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
-        ) : (
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
-          </svg>
-        )}
+        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+        </svg>
       </button>
     </form>
   )

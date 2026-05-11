@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { inputCls, textareaCls } from '@/lib/ui'
 import { getRelativeTime } from '@/lib/utils'
@@ -10,10 +10,11 @@ export function ReplyThread({ qnaId, question, currentUserId, isAdmin, socketRef
   const [replies, setReplies] = useState([])
   const [loaded, setLoaded] = useState(false)
   const [replyText, setReplyText] = useState('')
-  const [submitting, setSubmitting] = useState(false)
+  const submittingRef = useRef(false)
   const [editingId, setEditingId] = useState(null)
   const [editText, setEditText] = useState('')
-  const [deletingId, setDeletingId] = useState(null)
+  const deletingRepliesRef = useRef(new Set())
+  const savingRepliesRef = useRef(new Set())
 
   useEffect(() => {
     listReplies(qnaId, question._id)
@@ -43,14 +44,14 @@ export function ReplyThread({ qnaId, question, currentUserId, isAdmin, socketRef
   async function handleSubmitReply(e) {
     e.preventDefault()
     const text = replyText.trim()
-    if (!text) return
+    if (!text || submittingRef.current) return
+    submittingRef.current = true
     const tempId = 'temp_' + Date.now()
     setReplies((prev) => [...prev, {
       _id: tempId, text, author_id: currentUserId,
       author_name: 'You', created_at: new Date().toISOString(), _isOptimistic: true,
     }])
     setReplyText('')
-    setSubmitting(true)
     try {
       const res = await createReply(qnaId, question._id, text)
       setReplies((prev) => prev.map((r) => (r._id === tempId ? res.data.reply : r)))
@@ -58,12 +59,13 @@ export function ReplyThread({ qnaId, question, currentUserId, isAdmin, socketRef
       setReplies((prev) => prev.filter((r) => r._id !== tempId))
       setReplyText(text)
     } finally {
-      setSubmitting(false)
+      submittingRef.current = false
     }
   }
 
   async function handleDeleteReply(rId) {
-    setDeletingId(rId)
+    if (deletingRepliesRef.current.has(rId)) return
+    deletingRepliesRef.current.add(rId)
     const backup = replies.find((r) => r._id === rId)
     setReplies((prev) => prev.filter((r) => r._id !== rId))
     try {
@@ -71,13 +73,14 @@ export function ReplyThread({ qnaId, question, currentUserId, isAdmin, socketRef
     } catch {
       if (backup) setReplies((prev) => [...prev, backup].sort((a, b) => new Date(a.created_at) - new Date(b.created_at)))
     } finally {
-      setDeletingId(null)
+      deletingRepliesRef.current.delete(rId)
     }
   }
 
   async function handleSaveEdit(rId) {
     const text = editText.trim()
-    if (!text) return
+    if (!text || savingRepliesRef.current.has(rId)) return
+    savingRepliesRef.current.add(rId)
     const original = replies.find((r) => r._id === rId)
     setReplies((prev) => prev.map((r) => (r._id === rId ? { ...r, text } : r)))
     setEditingId(null)
@@ -86,6 +89,8 @@ export function ReplyThread({ qnaId, question, currentUserId, isAdmin, socketRef
       setReplies((prev) => prev.map((r) => (r._id === rId ? res.data.reply : r)))
     } catch {
       if (original) setReplies((prev) => prev.map((r) => (r._id === rId ? original : r)))
+    } finally {
+      savingRepliesRef.current.delete(rId)
     }
   }
 
@@ -139,8 +144,7 @@ export function ReplyThread({ qnaId, question, currentUserId, isAdmin, socketRef
                 </button>
               )}
               <button
-                className="text-xs text-muted-foreground hover:text-destructive transition-colors disabled:opacity-40"
-                disabled={deletingId === r._id}
+                className="text-xs text-muted-foreground hover:text-destructive transition-colors"
                 onClick={() => handleDeleteReply(r._id)}
               >
                 Delete
@@ -157,9 +161,8 @@ export function ReplyThread({ qnaId, question, currentUserId, isAdmin, socketRef
           onChange={(e) => setReplyText(e.target.value)}
           placeholder="Write a reply..."
           maxLength={1000}
-          disabled={submitting}
         />
-        <Button type="submit" size="sm" disabled={submitting || !replyText.trim()}>
+        <Button type="submit" size="sm">
           Reply
         </Button>
       </form>
@@ -170,31 +173,30 @@ export function ReplyThread({ qnaId, question, currentUserId, isAdmin, socketRef
 // ───────────────────────── QUESTION CARD ─────────────────────────
 export function QuestionCard({ qnaId, question, currentUserId, isAdmin, onUpdate, onDelete, socketRef }) {
   const [showReplies, setShowReplies] = useState(false)
-  const [liking, setLiking] = useState(false)
+  const likingRef = useRef(false)
+  const savingRef = useRef(false)
+  const deletingRef = useRef(false)
   const [editMode, setEditMode] = useState(false)
   const [editText, setEditText] = useState(question.text)
   const [confirmDelete, setConfirmDelete] = useState(false)
-  const [deleting, setDeleting] = useState(false)
 
   async function handleLike() {
-    if (liking) return
-    setLiking(true)
-    const optimisticLiked = !question.liked_by_me
-    const optimisticCount = question.likes_count + (optimisticLiked ? 1 : -1)
-    onUpdate({ ...question, liked_by_me: optimisticLiked, likes_count: optimisticCount })
+    if (likingRef.current) return
+    likingRef.current = true
     try {
       const res = await toggleLike(qnaId, question._id)
       onUpdate({ ...question, liked_by_me: res.data.liked_by_me, likes_count: res.data.likes_count })
     } catch {
-      onUpdate(question)
+      // state unchanged — no optimistic update to roll back
     } finally {
-      setLiking(false)
+      likingRef.current = false
     }
   }
 
   async function handleSaveEdit() {
     const text = editText.trim()
-    if (!text || text === question.text) { setEditMode(false); return }
+    if (!text || text === question.text || savingRef.current) { setEditMode(false); return }
+    savingRef.current = true
     const original = question.text
     onUpdate({ ...question, text })
     setEditMode(false)
@@ -203,11 +205,14 @@ export function QuestionCard({ qnaId, question, currentUserId, isAdmin, onUpdate
       onUpdate(res.data.question)
     } catch {
       onUpdate({ ...question, text: original })
+    } finally {
+      savingRef.current = false
     }
   }
 
   async function handleDelete() {
-    setDeleting(true)
+    if (deletingRef.current) return
+    deletingRef.current = true
     onDelete(question._id)
     try {
       await deleteQuestion(qnaId, question._id)
@@ -257,8 +262,7 @@ export function QuestionCard({ qnaId, question, currentUserId, isAdmin, onUpdate
           <div className="flex items-center gap-4 mt-3">
             <button
               onClick={handleLike}
-              disabled={liking}
-              className={`flex items-center gap-1.5 text-sm transition-colors disabled:cursor-not-allowed ${
+              className={`flex items-center gap-1.5 text-sm transition-colors ${
                 question.liked_by_me
                   ? 'text-primary font-medium'
                   : 'text-muted-foreground hover:text-foreground'
@@ -304,8 +308,7 @@ export function QuestionCard({ qnaId, question, currentUserId, isAdmin, onUpdate
                   <div className="flex items-center gap-2">
                     <button
                       onClick={handleDelete}
-                      disabled={deleting}
-                      className="text-xs text-destructive font-medium hover:text-destructive/80 transition-colors disabled:opacity-40"
+                      className="text-xs text-destructive font-medium hover:text-destructive/80 transition-colors"
                     >
                       Confirm
                     </button>

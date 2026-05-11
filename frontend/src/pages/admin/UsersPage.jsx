@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import DashboardLayout from '../../components/DashboardLayout'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -36,7 +36,8 @@ export default function UsersPage() {
   const [editUser, setEditUser] = useState(null)
   const [tempPassword, setTempPassword] = useState(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState(null)
-  const [actionLoading, setActionLoading] = useState(null)
+  const deletingRef = useRef(new Set())
+  const resetRef = useRef(new Set())
   const [fetchError, setFetchError] = useState(false)
 
   const debouncedSearch = useDebounce(search, 400)
@@ -51,7 +52,8 @@ export default function UsersPage() {
   }, [debouncedSearch])
 
   async function handleDelete(id) {
-    setActionLoading(id + '_delete')
+    if (deletingRef.current.has(id)) return
+    deletingRef.current.add(id)
     try {
       await deleteUser(id)
       setUsers((prev) => prev.filter((u) => u._id !== id))
@@ -59,18 +61,19 @@ export default function UsersPage() {
     } catch {
       toast.error('Failed to delete user. Please try again.')
     } finally {
-      setActionLoading(null)
+      deletingRef.current.delete(id)
       setConfirmDeleteId(null)
     }
   }
 
   async function handleResetPassword(id) {
-    setActionLoading(id + '_reset')
+    if (resetRef.current.has(id)) return
+    resetRef.current.add(id)
     try {
       const res = await resetUserPassword(id)
       setTempPassword(res.data.temporaryPassword)
     } catch { /* ignore */ } finally {
-      setActionLoading(null)
+      resetRef.current.delete(id)
     }
   }
 
@@ -129,7 +132,7 @@ export default function UsersPage() {
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
 
-                  <Button variant="outline" size="sm" onClick={() => setEditUser(u)}>
+                  <Button size="sm" onClick={() => setEditUser(u)}>
                     Edit
                   </Button>
                   {confirmDeleteId === u._id ? (
@@ -137,7 +140,6 @@ export default function UsersPage() {
                       <Button
                         variant="destructive"
                         size="sm"
-                        disabled={actionLoading === u._id + '_delete'}
                         onClick={() => handleDelete(u._id)}
                       >
                         Confirm
@@ -198,7 +200,7 @@ export default function UsersPage() {
 function CreateUserModal({ onClose, onCreated }) {
   const [form, setForm] = useState({ name: '', email: '', password: '', role: 'participant' })
   const [errors, setErrors] = useState({})
-  const [submitting, setSubmitting] = useState(false)
+  const submittingRef = useRef(false)
 
   function validate() {
     const errs = {}
@@ -212,8 +214,9 @@ function CreateUserModal({ onClose, onCreated }) {
     e.preventDefault()
     const errs = validate()
     if (Object.keys(errs).length) { setErrors(errs); return }
+    if (submittingRef.current) return
     setErrors({})
-    setSubmitting(true)
+    submittingRef.current = true
     try {
       const res = await createUser({
         name: form.name.trim(),
@@ -226,7 +229,7 @@ function CreateUserModal({ onClose, onCreated }) {
     } catch (err) {
       setErrors({ submit: err.response?.data?.error || 'Failed to create user.' })
     } finally {
-      setSubmitting(false)
+      submittingRef.current = false
     }
   }
 
@@ -278,8 +281,8 @@ function CreateUserModal({ onClose, onCreated }) {
         </div>
         {errors.submit && <p className="text-sm text-destructive">{errors.submit}</p>}
         <div className="flex gap-2 pt-1">
-          <Button type="submit" disabled={submitting} className="flex-1">
-            {submitting ? 'Creating...' : 'Create User'}
+          <Button type="submit" className="flex-1">
+            Create User
           </Button>
           <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
         </div>
@@ -292,7 +295,7 @@ function EditUserModal({ user, onClose, onUpdated }) {
   const [name, setName] = useState(user.name)
   const [email, setEmail] = useState(user.email)
   const [errors, setErrors] = useState({})
-  const [submitting, setSubmitting] = useState(false)
+  const submittingRef = useRef(false)
 
   function validate() {
     const errs = {}
@@ -305,8 +308,9 @@ function EditUserModal({ user, onClose, onUpdated }) {
     e.preventDefault()
     const errs = validate()
     if (Object.keys(errs).length) { setErrors(errs); return }
+    if (submittingRef.current) return
     setErrors({})
-    setSubmitting(true)
+    submittingRef.current = true
     try {
       const res = await updateUser(user._id, { name: name.trim(), email: email.trim().toLowerCase() })
       onUpdated(res.data.user)
@@ -314,7 +318,7 @@ function EditUserModal({ user, onClose, onUpdated }) {
     } catch (err) {
       setErrors({ submit: err.response?.data?.error || 'Failed to update user.' })
     } finally {
-      setSubmitting(false)
+      submittingRef.current = false
     }
   }
 
@@ -342,8 +346,8 @@ function EditUserModal({ user, onClose, onUpdated }) {
         </div>
         {errors.submit && <p className="text-sm text-destructive">{errors.submit}</p>}
         <div className="flex gap-2 pt-1">
-          <Button type="submit" disabled={submitting} className="flex-1">
-            {submitting ? 'Saving...' : 'Save Changes'}
+          <Button type="submit" className="flex-1">
+            Save Changes
           </Button>
           <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
         </div>

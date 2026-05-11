@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import DashboardLayout from '../../components/DashboardLayout'
 import { Button } from '@/components/ui/button'
@@ -17,6 +17,7 @@ export default function QnaCreatePage() {
   const [userSearch, setUserSearch] = useState('')
   const [userResults, setUserResults] = useState([])
   const [submitting, setSubmitting] = useState(false)
+  const submittingRef = useRef(false)
   const [errors, setErrors] = useState({})
 
   const debouncedSearch = useDebounce(userSearch, 300)
@@ -47,7 +48,9 @@ export default function QnaCreatePage() {
     e.preventDefault()
     const errs = validate()
     if (Object.keys(errs).length > 0) { setErrors(errs); return }
+    if (submittingRef.current) return
     setErrors({})
+    submittingRef.current = true
     setSubmitting(true)
     try {
       await createQna({
@@ -60,6 +63,7 @@ export default function QnaCreatePage() {
     } catch (err) {
       setErrors({ submit: err.response?.data?.error || 'Failed to create Q&A.' })
     } finally {
+      submittingRef.current = false
       setSubmitting(false)
     }
   }
@@ -182,8 +186,8 @@ export default function QnaCreatePage() {
           {errors.submit && <p className="text-sm text-destructive">{errors.submit}</p>}
 
           <div className="flex gap-2 pt-1">
-            <Button type="submit" disabled={submitting}>
-              {submitting ? 'Creating...' : 'Create Q&A'}
+            <Button type="submit">
+              Create Q&A
             </Button>
             <Button type="button" variant="outline" onClick={() => navigate('/admin/qna')}>
               Cancel

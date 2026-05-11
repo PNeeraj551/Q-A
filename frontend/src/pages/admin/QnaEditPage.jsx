@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import DashboardLayout from '../../components/DashboardLayout'
 import { Button } from '@/components/ui/button'
@@ -18,6 +18,9 @@ export default function QnaEditPage() {
   const [userSearch, setUserSearch] = useState('')
   const [userResults, setUserResults] = useState([])
   const [submitting, setSubmitting] = useState(false)
+  const submittingRef = useRef(false)
+  const addingRef = useRef(new Set())
+  const removingRef = useRef(new Set())
   const [loading, setLoading] = useState(true)
   const [errors, setErrors] = useState({})
 
@@ -45,17 +48,25 @@ export default function QnaEditPage() {
   }, [debouncedSearch, visibility])
 
   async function handleAddParticipant(user) {
+    if (addingRef.current.has(user._id)) return
+    addingRef.current.add(user._id)
     try {
       await addQnaParticipant(id, user._id)
       setAssignedParticipants((prev) => [...prev, user])
-    } catch { /* ignore */ }
+    } catch { /* ignore */ } finally {
+      addingRef.current.delete(user._id)
+    }
   }
 
   async function handleRemoveParticipant(userId) {
+    if (removingRef.current.has(userId)) return
+    removingRef.current.add(userId)
     try {
       await removeQnaParticipant(id, userId)
       setAssignedParticipants((prev) => prev.filter((p) => p._id !== userId))
-    } catch { /* ignore */ }
+    } catch { /* ignore */ } finally {
+      removingRef.current.delete(userId)
+    }
   }
 
   function validate() {
@@ -69,7 +80,9 @@ export default function QnaEditPage() {
     e.preventDefault()
     const errs = validate()
     if (Object.keys(errs).length > 0) { setErrors(errs); return }
+    if (submittingRef.current) return
     setErrors({})
+    submittingRef.current = true
     setSubmitting(true)
     try {
       await updateQna(id, { title: title.trim(), description: description.trim(), visibility })
@@ -77,6 +90,7 @@ export default function QnaEditPage() {
     } catch (err) {
       setErrors({ submit: err.response?.data?.error || 'Failed to update Q&A.' })
     } finally {
+      submittingRef.current = false
       setSubmitting(false)
     }
   }
@@ -200,8 +214,8 @@ export default function QnaEditPage() {
           {errors.submit && <p className="text-sm text-destructive">{errors.submit}</p>}
 
           <div className="flex gap-2 pt-1">
-            <Button type="submit" disabled={submitting}>
-              {submitting ? 'Saving...' : 'Save Changes'}
+            <Button type="submit">
+              Save Changes
             </Button>
             <Button type="button" variant="outline" onClick={() => navigate('/admin/qna')}>
               Cancel
