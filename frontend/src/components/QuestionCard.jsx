@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { inputCls, textareaCls } from '@/lib/ui'
+import { getRelativeTime } from '@/lib/utils'
 import { listReplies, createReply, updateReply, deleteReply } from '../api/replies'
 import { updateQuestion, deleteQuestion, toggleLike } from '../api/questions'
 
@@ -102,7 +103,12 @@ export function ReplyThread({ qnaId, question, currentUserId, isAdmin, socketRef
             {r.author_name?.[0]?.toUpperCase() || '?'}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-foreground">{r.author_name}</p>
+            <p className="text-xs font-medium text-foreground">
+              {r.author_name}
+              {r.created_at && (
+                <span className="ml-2 font-normal text-muted-foreground">{getRelativeTime(r.created_at)}</span>
+              )}
+            </p>
             {editingId === r._id ? (
               <div className="mt-1.5 space-y-2">
                 <textarea
@@ -222,7 +228,12 @@ export function QuestionCard({ qnaId, question, currentUserId, isAdmin, onUpdate
         </div>
 
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-medium text-muted-foreground mb-1.5">{question.author_name}</p>
+          <p className="text-xs font-medium text-muted-foreground mb-1.5">
+            {question.author_name}
+            {question.created_at && (
+              <span className="ml-2 font-normal opacity-60">{getRelativeTime(question.created_at)}</span>
+            )}
+          </p>
 
           {editMode ? (
             <div className="space-y-2">
