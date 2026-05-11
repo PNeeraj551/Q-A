@@ -15,6 +15,7 @@ export default function QnaEditPage() {
   const [description, setDescription] = useState('')
   const [visibility, setVisibility] = useState('PUBLIC')
   const [status, setStatus] = useState('OPEN')
+  const [endAt, setEndAt] = useState('')
   const [assignedUsers, setAssignedUsers] = useState([])
   const [userSearch, setUserSearch] = useState('')
   const [userResults, setUserResults] = useState([])
@@ -35,6 +36,11 @@ export default function QnaEditPage() {
         setDescription(post.description || '')
         setVisibility(post.visibility)
         setStatus(post.status)
+        if (post.end_at) {
+          const d = new Date(post.end_at)
+          const pad = (n) => String(n).padStart(2, '0')
+          setEndAt(`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`)
+        }
         setAssignedUsers(usersRes.data.users || [])
       })
       .catch(() => navigate('/admin/qna'))
@@ -87,7 +93,13 @@ export default function QnaEditPage() {
     submittingRef.current = true
     setSubmitting(true)
     try {
-      await updateQna(id, { title: title.trim(), description: description.trim(), visibility, status })
+      await updateQna(id, {
+        title: title.trim(),
+        description: description.trim(),
+        visibility,
+        status,
+        end_at: endAt ? new Date(endAt).toISOString() : null,
+      })
       navigate('/admin/qna')
     } catch (err) {
       setErrors({ submit: err.response?.data?.error || 'Failed to update Q&A.' })
@@ -187,6 +199,29 @@ export default function QnaEditPage() {
               {status === 'OPEN'
                 ? 'Users can ask questions and post replies.'
                 : 'Q&A is read-only. Users can view but not interact.'}
+            </p>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Auto-close at <span className="text-muted-foreground font-normal">(optional)</span></Label>
+            <input
+              type="datetime-local"
+              className={inputCls}
+              value={endAt}
+              onChange={(e) => setEndAt(e.target.value)}
+              disabled={submitting}
+            />
+            {endAt && (
+              <button
+                type="button"
+                onClick={() => setEndAt('')}
+                className="text-xs text-muted-foreground hover:text-destructive transition-colors"
+              >
+                Clear
+              </button>
+            )}
+            <p className="text-xs text-muted-foreground">
+              If set, the Q&A will automatically close at this date and time.
             </p>
           </div>
 

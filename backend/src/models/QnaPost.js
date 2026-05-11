@@ -39,6 +39,10 @@ const qnaPostSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+    end_at: {
+      type: Date,
+      default: null,
+    },
     updated_at: {
       type: Date,
     },

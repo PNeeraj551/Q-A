@@ -3,14 +3,21 @@ import { io } from 'socket.io-client'
 
 const SOCKET_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5300/api').replace('/api', '')
 
-export function useQnaSocket(qnaId, { onQuestionNew, onReplyNew } = {}) {
+export function useQnaSocket(qnaId, {
+  onQuestionNew,
+  onQuestionUpdate,
+  onQuestionDelete,
+  onQuestionLike,
+  onReplyNew,
+  onReplyDelete,
+  onQnaUpdate,
+} = {}) {
   const socketRef = useRef(null)
 
-  // Keep callbacks in refs so the effect never needs to re-run for them
-  const onQuestionNewRef = useRef(onQuestionNew)
-  const onReplyNewRef = useRef(onReplyNew)
-  useEffect(() => { onQuestionNewRef.current = onQuestionNew })
-  useEffect(() => { onReplyNewRef.current = onReplyNew })
+  const cbRefs = useRef({})
+  useEffect(() => {
+    cbRefs.current = { onQuestionNew, onQuestionUpdate, onQuestionDelete, onQuestionLike, onReplyNew, onReplyDelete, onQnaUpdate }
+  })
 
   useEffect(() => {
     if (!qnaId) return
@@ -26,13 +33,13 @@ export function useQnaSocket(qnaId, { onQuestionNew, onReplyNew } = {}) {
       socket.emit('qna:join', { qna_id: qnaId })
     })
 
-    socket.on('question:new', (question) => {
-      onQuestionNewRef.current?.(question)
-    })
-
-    socket.on('reply:new', (data) => {
-      onReplyNewRef.current?.(data)
-    })
+    socket.on('question:new',    (data) => cbRefs.current.onQuestionNew?.(data))
+    socket.on('question:update', (data) => cbRefs.current.onQuestionUpdate?.(data))
+    socket.on('question:delete', (data) => cbRefs.current.onQuestionDelete?.(data))
+    socket.on('question:like',   (data) => cbRefs.current.onQuestionLike?.(data))
+    socket.on('reply:new',       (data) => cbRefs.current.onReplyNew?.(data))
+    socket.on('reply:delete',    (data) => cbRefs.current.onReplyDelete?.(data))
+    socket.on('qna:update',      (data) => cbRefs.current.onQnaUpdate?.(data))
 
     return () => {
       socket.emit('qna:leave', { qna_id: qnaId })

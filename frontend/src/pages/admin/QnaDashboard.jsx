@@ -256,7 +256,7 @@ export default function QnaDashboard() {
                         <Badge variant={post.visibility === 'PUBLIC' ? 'default' : 'secondary'} className="shrink-0 text-xs">
                           {post.visibility === 'PUBLIC' ? 'Public' : 'Private'}
                         </Badge>
-                        {post.status === 'CLOSED' && (
+                        {(post.status === 'CLOSED' || (post.end_at && new Date() >= new Date(post.end_at))) && (
                           <Badge variant="secondary" className="shrink-0 text-xs">Closed</Badge>
                         )}
                       </div>

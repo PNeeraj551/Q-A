@@ -13,6 +13,7 @@ export default function QnaCreatePage() {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [visibility, setVisibility] = useState('PUBLIC')
+  const [endAt, setEndAt] = useState('')
   const [selectedUsers, setSelectedUsers] = useState([])
   const [userSearch, setUserSearch] = useState('')
   const [userResults, setUserResults] = useState([])
@@ -58,6 +59,7 @@ export default function QnaCreatePage() {
         description: description.trim(),
         visibility,
         allowed_users: visibility === 'PRIVATE' ? selectedUsers.map((u) => u._id) : [],
+        end_at: endAt ? new Date(endAt).toISOString() : null,
       })
       navigate('/admin/qna')
     } catch (err) {
@@ -132,6 +134,20 @@ export default function QnaCreatePage() {
               {visibility === 'PUBLIC'
                 ? 'All users can see and join this Q&A.'
                 : 'Only assigned users can see this Q&A.'}
+            </p>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Auto-close at <span className="text-muted-foreground font-normal">(optional)</span></Label>
+            <input
+              type="datetime-local"
+              className={inputCls}
+              value={endAt}
+              onChange={(e) => setEndAt(e.target.value)}
+              disabled={submitting}
+            />
+            <p className="text-xs text-muted-foreground">
+              If set, the Q&A will automatically close at this date and time.
             </p>
           </div>
 

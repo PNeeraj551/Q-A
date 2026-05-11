@@ -21,6 +21,15 @@ export default function QnaFeedPage() {
   const [submitting, setSubmitting] = useState(false)
   const submittingRef = useRef(false)
   const inputRef = useRef(null)
+  const [autoClosedByTimer, setAutoClosedByTimer] = useState(false)
+
+  useEffect(() => {
+    if (!post?.end_at || post?.status === 'CLOSED') return
+    const remaining = new Date(post.end_at) - Date.now()
+    if (remaining <= 0) { setAutoClosedByTimer(true); return }
+    const timer = setTimeout(() => setAutoClosedByTimer(true), remaining)
+    return () => clearTimeout(timer)
+  }, [post?.end_at, post?.status])
 
   useEffect(() => {
     Promise.all([getQna(id), listQuestions(id)])
@@ -36,7 +45,7 @@ export default function QnaFeedPage() {
     setQuestions((prev) =>
       prev
         .map((q) => (q._id === updated._id ? updated : q))
-        .sort((a, b) => b.likes_count - a.likes_count || new Date(b.created_at) - new Date(a.created_at))
+        .sort((a, b) => b.likes_count - a.likes_count || new Date(a.created_at) - new Date(b.created_at))
     )
   }, [])
 
@@ -48,8 +57,26 @@ export default function QnaFeedPage() {
     setQuestions((prev) => {
       if (prev.some((q) => q._id === question._id)) return prev
       if (prev.some((q) => q._isOptimistic && q.text === question.text && String(q.author_id) === String(question.author_id))) return prev
-      return [...prev, question].sort((a, b) => b.likes_count - a.likes_count || new Date(b.created_at) - new Date(a.created_at))
+      return [...prev, question].sort((a, b) => b.likes_count - a.likes_count || new Date(a.created_at) - new Date(b.created_at))
     })
+  }, [])
+
+  const onQuestionUpdate = useCallback((updated) => {
+    setQuestions((prev) =>
+      prev.map((q) => (q._id === updated._id ? { ...q, ...updated } : q))
+    )
+  }, [])
+
+  const onQuestionDelete = useCallback(({ question_id }) => {
+    setQuestions((prev) => prev.filter((q) => q._id !== question_id))
+  }, [])
+
+  const onQuestionLike = useCallback(({ question_id, likes_count }) => {
+    setQuestions((prev) =>
+      prev
+        .map((q) => (q._id === question_id ? { ...q, likes_count } : q))
+        .sort((a, b) => b.likes_count - a.likes_count || new Date(a.created_at) - new Date(b.created_at))
+    )
   }, [])
 
   const onReplyNew = useCallback(({ question_id }) => {
@@ -58,7 +85,17 @@ export default function QnaFeedPage() {
     )
   }, [])
 
-  const socketRef = useQnaSocket(id, { onQuestionNew, onReplyNew })
+  const onReplyDelete = useCallback(({ question_id }) => {
+    setQuestions((prev) =>
+      prev.map((q) => String(q._id) === String(question_id) ? { ...q, reply_count: Math.max(0, q.reply_count - 1) } : q)
+    )
+  }, [])
+
+  const onQnaUpdate = useCallback((updatedPost) => {
+    setPost(updatedPost)
+  }, [])
+
+  const socketRef = useQnaSocket(id, { onQuestionNew, onQuestionUpdate, onQuestionDelete, onQuestionLike, onReplyNew, onReplyDelete, onQnaUpdate })
 
   async function handleSubmitQuestion(e) {
     e.preventDefault()
@@ -89,7 +126,7 @@ export default function QnaFeedPage() {
       setQuestions((prev) =>
         prev
           .map((q) => (q._id === tempId ? res.data.question : q))
-          .sort((a, b) => b.likes_count - a.likes_count || new Date(b.created_at) - new Date(a.created_at))
+          .sort((a, b) => b.likes_count - a.likes_count || new Date(a.created_at) - new Date(b.created_at))
       )
     } catch {
       setQuestions((prev) => prev.filter((q) => q._id !== tempId))
@@ -141,7 +178,7 @@ export default function QnaFeedPage() {
   }
 
   const currentUserId = user?._id || user?.user_id
-  const isClosed = post.status === 'CLOSED'
+  const isClosed = post.status === 'CLOSED' || autoClosedByTimer || (post.end_at && new Date() >= new Date(post.end_at))
 
   const questionForm = isClosed ? (
     <div className="flex items-center gap-2 text-sm text-muted-foreground px-1">

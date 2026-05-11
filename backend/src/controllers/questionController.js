@@ -9,7 +9,7 @@ const listQuestions = async (req, res) => {
     const { qnaId } = req.params;
 
     const questions = await Question.find({ qna_id: qnaId, is_deleted: false })
-      .sort({ likes_count: -1, created_at: -1 })
+      .sort({ likes_count: -1, created_at: 1 })
       .lean();
 
     // Mark which questions the current user has liked
@@ -37,7 +37,9 @@ const createQuestion = async (req, res) => {
   if (text.trim().length > 1000) {
     return error(res, 'Question must be 1000 characters or fewer', 400);
   }
-  if (req.qnaPost?.status === 'CLOSED') {
+  const post = req.qnaPost
+  const effectivelyClosed = post?.status === 'CLOSED' || (post?.end_at && new Date() >= new Date(post.end_at))
+  if (effectivelyClosed) {
     return error(res, 'This Q&A board is closed. No new questions can be posted.', 403);
   }
 
@@ -87,13 +89,17 @@ const updateQuestion = async (req, res) => {
     question.updated_at = new Date();
     await question.save();
 
-    return success(res, {
-      question: {
-        ...question.toObject(),
-        liked_by_me: question.likes.some((id) => id.toString() === req.user.user_id),
-        likes: undefined,
-      },
-    });
+    const result = {
+      ...question.toObject(),
+      liked_by_me: question.likes.some((id) => id.toString() === req.user.user_id),
+      likes: undefined,
+    };
+
+    try {
+      getIO().to(`qna_${req.params.qnaId}`).emit('question:update', result);
+    } catch (_) {}
+
+    return success(res, { question: result });
   } catch (err) {
     return error(res, 'Failed to update question.', 500);
   }
@@ -115,6 +121,10 @@ const deleteQuestion = async (req, res) => {
     question.is_deleted = true;
     await question.save();
 
+    try {
+      getIO().to(`qna_${req.params.qnaId}`).emit('question:delete', { question_id: qId });
+    } catch (_) {}
+
     return success(res, { message: 'Question deleted' });
   } catch (err) {
     return error(res, 'Failed to delete question.', 500);
@@ -127,6 +137,11 @@ const toggleLike = async (req, res) => {
   const userId = req.user.user_id;
 
   try {
+    const qnaPost = req.qnaPost
+    if (qnaPost?.status === 'CLOSED' || (qnaPost?.end_at && new Date() >= new Date(qnaPost.end_at))) {
+      return error(res, 'This Q&A board is closed.', 403);
+    }
+
     const question = await Question.findById(qId).select('likes is_deleted').lean();
     if (!question || question.is_deleted) return error(res, 'Question not found', 404);
 
@@ -139,6 +154,13 @@ const toggleLike = async (req, res) => {
         : { $addToSet: { likes: new mongoose.Types.ObjectId(userId) }, $inc: { likes_count: 1 } },
       { new: true, select: 'likes_count' }
     );
+
+    try {
+      getIO().to(`qna_${req.params.qnaId}`).emit('question:like', {
+        question_id: qId,
+        likes_count: updated.likes_count,
+      });
+    } catch (_) {}
 
     return success(res, {
       likes_count: updated.likes_count,

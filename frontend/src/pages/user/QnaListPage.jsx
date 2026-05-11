@@ -1,10 +1,13 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useMemo, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { io } from 'socket.io-client'
 import DashboardLayout from '../../components/DashboardLayout'
 import { Badge } from '@/components/ui/badge'
 import { inputCls } from '@/lib/ui'
 import { listQna } from '../../api/qna'
 import { useDebounce } from '../../hooks/useDebounce'
+
+const SOCKET_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5300/api').replace('/api', '')
 
 const LIMIT = 10
 
@@ -88,6 +91,36 @@ export default function QnaListPage() {
     if (debouncedSearch.trim().length >= 3) params.search = debouncedSearch.trim()
     fetchPosts(params)
   }, [debouncedSearch, page, fetchPosts])
+
+  // Stable key derived from current visible post IDs — re-runs socket when list changes
+  const postIdsKey = useMemo(() => posts.map((p) => p._id).join(','), [posts])
+
+  useEffect(() => {
+    if (posts.length === 0) return
+    const ids = posts.map((p) => p._id)
+    const token = localStorage.getItem('jwt')
+    const socket = io(SOCKET_URL, { auth: { token }, transports: ['websocket', 'polling'] })
+
+    socket.on('connect', () => {
+      ids.forEach((id) => socket.emit('qna:join', { qna_id: id }))
+    })
+
+    socket.on('question:new', (question) => {
+      setPosts((prev) =>
+        prev.map((p) =>
+          String(p._id) === String(question.qna_id)
+            ? { ...p, question_count: (p.question_count || 0) + 1 }
+            : p
+        )
+      )
+    })
+
+    return () => {
+      ids.forEach((id) => socket.emit('qna:leave', { qna_id: id }))
+      socket.disconnect()
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [postIdsKey])
 
   function handleSearchChange(e) {
     setSearch(e.target.value)

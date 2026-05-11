@@ -31,6 +31,11 @@ const createReply = async (req, res) => {
   }
 
   try {
+    const qnaPost = req.qnaPost
+    if (qnaPost?.status === 'CLOSED' || (qnaPost?.end_at && new Date() >= new Date(qnaPost.end_at))) {
+      return error(res, 'This Q&A board is closed.', 403);
+    }
+
     const question = await Question.findById(qId).select('_id is_deleted').lean();
     if (!question || question.is_deleted) return error(res, 'Question not found', 404);
 
@@ -105,6 +110,10 @@ const deleteReply = async (req, res) => {
 
     // Decrement reply_count on question
     await Question.findByIdAndUpdate(qId, { $inc: { reply_count: -1 } });
+
+    try {
+      getIO().to(`qna_${req.params.qnaId}`).emit('reply:delete', { reply_id: rId, question_id: qId });
+    } catch (_) {}
 
     return success(res, { message: 'Reply deleted' });
   } catch (err) {

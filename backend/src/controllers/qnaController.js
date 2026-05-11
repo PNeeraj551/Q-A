@@ -77,7 +77,7 @@ const getQna = async (req, res) => {
 
 // POST /api/qna
 const createQna = async (req, res) => {
-  const { title, description, visibility, allowed_users } = req.body;
+  const { title, description, visibility, allowed_users, end_at } = req.body;
 
   if (!title || typeof title !== 'string' || !title.trim()) {
     return error(res, 'Title is required', 400);
@@ -102,6 +102,7 @@ const createQna = async (req, res) => {
       description: (description || '').trim(),
       visibility,
       allowed_users: users,
+      end_at: end_at ? new Date(end_at) : null,
       created_by: req.user.user_id,
     });
 
@@ -113,7 +114,7 @@ const createQna = async (req, res) => {
 
 // PATCH /api/qna/:id
 const updateQna = async (req, res) => {
-  const { title, description, visibility, allowed_users, status } = req.body;
+  const { title, description, visibility, allowed_users, status, end_at } = req.body;
 
   try {
     const post = await QnaPost.findById(req.params.id);
@@ -148,6 +149,10 @@ const updateQna = async (req, res) => {
         return error(res, 'Status must be OPEN or CLOSED', 400);
       }
       post.status = status;
+    }
+
+    if (end_at !== undefined) {
+      post.end_at = end_at ? new Date(end_at) : null;
     }
 
     post.updated_at = new Date();
