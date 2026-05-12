@@ -1,8 +1,7 @@
-import { NavLink, useNavigate, useLocation } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import ProfileEditPanel from './ProfileEditPanel'
-import { PageWrapper } from '../lib/motion'
 
 function SidebarLink({ to, label, icon, end }) {
   return (
@@ -50,7 +49,6 @@ const AnalyticsIcon = (
 export default function DashboardLayout({ children, title, subtitle, actions, onBack, bottomBar }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
-  const location = useLocation()
   const [profileOpen, setProfileOpen] = useState(false)
 
   async function handleLogout() {
@@ -154,9 +152,7 @@ export default function DashboardLayout({ children, title, subtitle, actions, on
         )}
 
         <main className="flex-1 px-8 py-8 overflow-auto">
-          <PageWrapper key={location.pathname}>
-            {children}
-          </PageWrapper>
+          {children}
         </main>
 
         {bottomBar && (

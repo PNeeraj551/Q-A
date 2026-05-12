@@ -1,13 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import DashboardLayout from '../../components/DashboardLayout'
-import { Button, MotionButton } from '@/components/ui/button'
+import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { inputCls, textareaCls, errorInputCls } from '@/lib/ui'
 import { getQna, updateQna, getQnaUsers, addQnaUser, removeQnaUser } from '../../api/qna'
 import { getUsers } from '../../api/users'
 import { useDebounce } from '../../hooks/useDebounce'
-import { FadeUp } from '../../lib/motion'
 
 export default function QnaEditPage() {
   const { id } = useParams()
@@ -135,7 +134,7 @@ export default function QnaEditPage() {
   return (
     <DashboardLayout title="Edit Q&A Post" onBack={() => navigate('/admin/qna')}>
       <div className="max-w-2xl">
-        <FadeUp className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
+        <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
           <form onSubmit={handleSubmit} className="space-y-6">
 
             <div className="space-y-1.5">
@@ -307,15 +306,15 @@ export default function QnaEditPage() {
             {errors.submit && <p className="text-sm text-red-500">{errors.submit}</p>}
 
             <div className="flex gap-3 pt-2">
-              <MotionButton type="submit" className="h-10" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}>
+              <Button type="submit" className="h-10">
                 Save Changes
-              </MotionButton>
+              </Button>
               <Button type="button" variant="outline" className="h-10" onClick={() => navigate('/admin/qna')}>
                 Cancel
               </Button>
             </div>
           </form>
-        </FadeUp>
+        </div>
       </div>
     </DashboardLayout>
   )

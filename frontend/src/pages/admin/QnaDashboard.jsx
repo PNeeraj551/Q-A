@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import DashboardLayout from '../../components/DashboardLayout'
-import { Button, MotionButton } from '@/components/ui/button'
+import { Button } from '@/components/ui/button'
 import { listQna, deleteQna } from '../../api/qna'
 import { useDebounce } from '../../hooks/useDebounce'
 import toast from 'react-hot-toast'
-import { StaggerList, StaggerItem, FadeUp } from '../../lib/motion'
 
 function Skeleton({ className }) {
   return <div className={`bg-slate-100 rounded-xl animate-pulse ${className}`} />
@@ -174,13 +173,9 @@ export default function QnaDashboard() {
         title="Q&A"
         subtitle="Manage all Q&A boards"
         actions={
-          <MotionButton
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.97 }}
-            onClick={() => navigate('/admin/qna/create')}
-          >
+          <Button onClick={() => navigate('/admin/qna/create')}>
             + New Q&A
-          </MotionButton>
+          </Button>
         }
       >
         <div className="max-w-5xl space-y-5">
@@ -239,7 +234,7 @@ export default function QnaDashboard() {
               ))}
             </div>
           ) : fetchError ? (
-            <FadeUp className="flex flex-col items-center justify-center py-24 text-center">
+            <div className="flex flex-col items-center justify-center py-24 text-center">
               <div className="w-12 h-12 rounded-2xl bg-red-50 border border-red-200 flex items-center justify-center mb-4">
                 <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" strokeWidth="1.75" viewBox="0 0 24 24">
                   <circle cx="12" cy="12" r="10" /><path strokeLinecap="round" d="M12 8v4m0 4h.01" />
@@ -250,9 +245,9 @@ export default function QnaDashboard() {
               <button onClick={() => fetchPosts({ page, limit: LIMIT })} className="mt-5 text-sm text-blue-600 hover:text-blue-700 font-semibold transition-colors duration-200">
                 Retry
               </button>
-            </FadeUp>
+            </div>
           ) : posts.length === 0 ? (
-            <FadeUp className="flex flex-col items-center justify-center py-24 text-center">
+            <div className="flex flex-col items-center justify-center py-24 text-center">
               <div className="w-12 h-12 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center mb-4">
                 <svg className="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" strokeWidth="1.75" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -278,12 +273,12 @@ export default function QnaDashboard() {
                   </Button>
                 </>
               )}
-            </FadeUp>
+            </div>
           ) : (
             <>
-              <StaggerList className="space-y-2">
+              <div className="space-y-2">
                 {posts.map((post) => (
-                  <StaggerItem
+                  <div
                     key={post._id}
                     className="bg-white border border-slate-200 rounded-2xl px-5 py-4 flex items-center justify-between gap-4 hover:border-slate-300 hover:shadow-md transition-all duration-200"
                   >
@@ -337,9 +332,9 @@ export default function QnaDashboard() {
                         </Button>
                       )}
                     </div>
-                  </StaggerItem>
+                  </div>
                 ))}
-              </StaggerList>
+              </div>
 
               <Pagination page={page} totalPages={totalPages} onChange={setPage} />
             </>

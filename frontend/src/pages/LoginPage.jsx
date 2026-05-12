@@ -1,10 +1,9 @@
 import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { MotionButton } from '@/components/ui/button'
+import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { inputCls, errorInputCls } from '@/lib/ui'
-import { FadeUp } from '../lib/motion'
 
 export default function LoginPage() {
   const { login } = useAuth()
@@ -71,7 +70,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-100 via-blue-50/50 to-indigo-50/40 px-4">
       <div className="w-full max-w-sm">
-        <FadeUp delay={0.1} className="bg-white rounded-2xl shadow-2xl shadow-slate-200/70 border border-slate-200/80 p-8">
+        <div className="bg-white rounded-2xl shadow-2xl shadow-slate-200/70 border border-slate-200/80 p-8">
           <div className="mb-7">
             <div className="w-11 h-11 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center mb-5 shadow-lg">
               <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
@@ -141,14 +140,12 @@ export default function LoginPage() {
               </div>
             )}
 
-            <MotionButton
+            <Button
               type="submit"
               className="w-full h-10 font-semibold"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.97 }}
             >
               {loading ? 'Signing in…' : 'Sign in'}
-            </MotionButton>
+            </Button>
           </form>
 
           <div className="border-t border-slate-100 mt-6 pt-4">
@@ -156,7 +153,7 @@ export default function LoginPage() {
               &copy; {new Date().getFullYear()} AthivaTech. All rights reserved.
             </p>
           </div>
-        </FadeUp>
+        </div>
       </div>
     </div>
   )

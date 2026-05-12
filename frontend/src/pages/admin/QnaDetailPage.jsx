@@ -7,7 +7,6 @@ import { listQuestions, createQuestion } from '../../api/questions'
 import { QuestionCard } from '../../components/QuestionCard'
 import { useQnaSocket } from '../../hooks/useQnaSocket'
 import toast from 'react-hot-toast'
-import { StaggerList, StaggerItem, FadeUp } from '../../lib/motion'
 
 function VisibilityBadge({ visibility }) {
   if (visibility === 'PUBLIC') {
@@ -271,7 +270,7 @@ export default function QnaDetailPage() {
     >
       <div className="max-w-3xl">
         {questions.length === 0 ? (
-          <FadeUp className="flex flex-col items-center justify-center py-20 text-center">
+          <div className="flex flex-col items-center justify-center py-20 text-center">
             <div className="w-14 h-14 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center mb-4">
               <svg className="w-7 h-7 text-slate-400" fill="none" stroke="currentColor" strokeWidth="1.75" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -279,11 +278,11 @@ export default function QnaDetailPage() {
             </div>
             <p className="text-base font-bold text-slate-900">No questions yet</p>
             <p className="text-sm text-slate-500 mt-1.5">Be the first to post a question below.</p>
-          </FadeUp>
+          </div>
         ) : (
-          <StaggerList className="space-y-4">
+          <div className="space-y-4">
             {questions.map((q) => (
-              <StaggerItem key={q._id}>
+              <div key={q._id}>
                 <QuestionCard
                   qnaId={id}
                   question={q}
@@ -294,9 +293,9 @@ export default function QnaDetailPage() {
                   onDelete={handleDelete}
                   socketRef={socketRef}
                 />
-              </StaggerItem>
+              </div>
             ))}
-          </StaggerList>
+          </div>
         )}
       </div>
     </DashboardLayout>

@@ -1,32 +1,18 @@
 import { useEffect, useRef, useState } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
 import DashboardLayout from '../../components/DashboardLayout'
-import { Button, MotionButton } from '@/components/ui/button'
+import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { inputCls, errorInputCls } from '@/lib/ui'
 import { getUsers, createUser, updateUser, deleteUser, resetUserPassword } from '../../api/users'
 import { useDebounce } from '../../hooks/useDebounce'
 import toast from 'react-hot-toast'
-import { StaggerList, StaggerItem, FadeUp, overlayVariants, modalVariants } from '../../lib/motion'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 function Modal({ title, onClose, children }) {
   return (
-    <motion.div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px]"
-      variants={overlayVariants}
-      initial="hidden"
-      animate="visible"
-      exit="exit"
-    >
-      <motion.div
-        className="bg-white border border-slate-200 rounded-2xl shadow-2xl shadow-slate-300/30 w-full max-w-md p-6"
-        variants={modalVariants}
-        initial="hidden"
-        animate="visible"
-        exit="exit"
-      >
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px]">
+      <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl shadow-slate-300/30 w-full max-w-md p-6">
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-base font-semibold text-slate-900">{title}</h2>
           <button
@@ -37,8 +23,8 @@ function Modal({ title, onClose, children }) {
           </button>
         </div>
         {children}
-      </motion.div>
-    </motion.div>
+      </div>
+    </div>
   )
 }
 
@@ -125,9 +111,9 @@ export default function UsersPage() {
       title="Users"
       subtitle="Manage user accounts"
       actions={
-        <MotionButton whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} onClick={() => setCreateOpen(true)}>
+        <Button onClick={() => setCreateOpen(true)}>
           + Add User
-        </MotionButton>
+        </Button>
       }
     >
       <div className="max-w-4xl">
@@ -174,13 +160,13 @@ export default function UsersPage() {
             <p className="text-sm text-slate-500 mt-1.5">Check your connection and try again.</p>
           </div>
         ) : users.length === 0 ? (
-          <FadeUp className="py-10 text-center">
+          <div className="py-10 text-center">
             <p className="text-sm text-slate-500">No users found.</p>
-          </FadeUp>
+          </div>
         ) : (
-          <StaggerList className="space-y-2">
+          <div className="space-y-2">
             {users.map((u) => (
-              <StaggerItem key={u._id} className="bg-white border border-slate-200 rounded-2xl px-5 py-3.5 flex items-center justify-between gap-4 transition-all duration-200 hover:border-slate-300 hover:shadow-md">
+              <div key={u._id} className="bg-white border border-slate-200 rounded-2xl px-5 py-3.5 flex items-center justify-between gap-4 transition-all duration-200 hover:border-slate-300 hover:shadow-md">
                 <div className="flex items-center gap-3 min-w-0">
                   <div className={`w-9 h-9 rounded-full flex items-center justify-center font-semibold text-sm select-none shrink-0 ${getAvatarColor(u.name)}`}>
                     {u.name?.[0]?.toUpperCase() || '?'}
@@ -220,39 +206,32 @@ export default function UsersPage() {
                     </Button>
                   )}
                 </div>
-              </StaggerItem>
+              </div>
             ))}
-          </StaggerList>
+          </div>
         )}
       </div>
 
-      <AnimatePresence>
-        {createOpen && (
-          <CreateUserModal
-            key="create-modal"
-            onClose={() => setCreateOpen(false)}
-            onCreated={(user) => { setUsers((prev) => [user, ...prev]); setCreateOpen(false) }}
-          />
-        )}
-      </AnimatePresence>
+      {createOpen && (
+        <CreateUserModal
+          onClose={() => setCreateOpen(false)}
+          onCreated={(user) => { setUsers((prev) => [user, ...prev]); setCreateOpen(false) }}
+        />
+      )}
 
-      <AnimatePresence>
-        {editUser && (
-          <EditUserModal
-            key="edit-modal"
-            user={editUser}
-            onClose={() => setEditUser(null)}
-            onUpdated={(updated) => {
-              setUsers((prev) => prev.map((u) => u._id === updated._id ? updated : u))
-              setEditUser(null)
-            }}
-          />
-        )}
-      </AnimatePresence>
+      {editUser && (
+        <EditUserModal
+          user={editUser}
+          onClose={() => setEditUser(null)}
+          onUpdated={(updated) => {
+            setUsers((prev) => prev.map((u) => u._id === updated._id ? updated : u))
+            setEditUser(null)
+          }}
+        />
+      )}
 
-      <AnimatePresence>
-        {tempPassword && (
-          <Modal key="temp-password-modal" title="Temporary Password" onClose={() => setTempPassword(null)}>
+      {tempPassword && (
+          <Modal title="Temporary Password" onClose={() => setTempPassword(null)}>
             <p className="text-sm text-slate-500 mb-3">
               Share this temporary password with the user. They will be prompted to change it on next login.
             </p>
@@ -261,8 +240,7 @@ export default function UsersPage() {
             </div>
             <Button className="w-full mt-4 h-10" onClick={() => setTempPassword(null)}>Done</Button>
           </Modal>
-        )}
-      </AnimatePresence>
+      )}
     </DashboardLayout>
   )
 }

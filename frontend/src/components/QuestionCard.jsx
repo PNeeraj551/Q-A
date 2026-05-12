@@ -239,7 +239,7 @@ export function QuestionCard({ qnaId, question, currentUserId, isAdmin, isClosed
     'bg-emerald-100 text-emerald-700'
 
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-lg hover:border-slate-300 transition-all duration-200">
+    <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:-translate-y-0.5 hover:shadow-lg hover:border-slate-300 transition-all duration-200">
       <div className="flex items-start gap-3">
         <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold shrink-0 ${avatarColor}`}>
           {initial}

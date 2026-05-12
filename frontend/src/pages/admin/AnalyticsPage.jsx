@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import DashboardLayout from '../../components/DashboardLayout'
 import axiosInstance from '../../api/axiosInstance'
-import { StaggerList, StaggerItem } from '../../lib/motion'
 
 function SkeletonBlock({ className }) {
   return <div className={`bg-slate-100 rounded-xl animate-pulse ${className}`} />
@@ -145,17 +144,11 @@ export default function AnalyticsPage() {
         <div className="max-w-5xl space-y-8">
 
           {/* KPI Cards */}
-          <StaggerList className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-            <StaggerItem>
-              <KpiCard label="Total Q&A Boards" value={data?.total_posts} icon={QnaIcon} color="blue" loading={loading} />
-            </StaggerItem>
-            <StaggerItem>
-              <KpiCard label="Total Questions" value={data?.total_questions} icon={QuestionIcon} color="indigo" loading={loading} />
-            </StaggerItem>
-            <StaggerItem>
-              <KpiCard label="Total Replies" value={data?.total_replies} icon={ReplyIcon} color="violet" loading={loading} />
-            </StaggerItem>
-          </StaggerList>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+            <KpiCard label="Total Q&A Boards" value={data?.total_posts} icon={QnaIcon} color="blue" loading={loading} />
+            <KpiCard label="Total Questions" value={data?.total_questions} icon={QuestionIcon} color="indigo" loading={loading} />
+            <KpiCard label="Total Replies" value={data?.total_replies} icon={ReplyIcon} color="violet" loading={loading} />
+          </div>
 
           {/* Visibility breakdown */}
           <div>
@@ -213,9 +206,9 @@ export default function AnalyticsPage() {
                     ))}
                   </div>
                 ) : (
-                  <StaggerList className="divide-y divide-slate-100">
+                  <div className="divide-y divide-slate-100">
                     {data.most_active_topics.map((p, i) => (
-                      <StaggerItem
+                      <div
                         key={p.qna_id}
                         className="px-6 py-4 flex items-center justify-between gap-4 hover:bg-slate-50/60 transition-colors duration-200"
                       >
@@ -236,9 +229,9 @@ export default function AnalyticsPage() {
                             question{p.question_count !== 1 ? 's' : ''}
                           </span>
                         </div>
-                      </StaggerItem>
+                      </div>
                     ))}
-                  </StaggerList>
+                  </div>
                 )}
               </div>
             </div>
