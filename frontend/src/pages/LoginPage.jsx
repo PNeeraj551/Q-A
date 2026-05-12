@@ -1,9 +1,10 @@
 import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { Button } from '@/components/ui/button'
+import { MotionButton } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { inputCls, errorInputCls } from '@/lib/ui'
+import { FadeUp } from '../lib/motion'
 
 export default function LoginPage() {
   const { login } = useAuth()
@@ -68,22 +69,22 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-100 via-blue-50/50 to-indigo-50/40 px-4">
       <div className="w-full max-w-sm">
-        <div className="bg-card rounded-xl shadow-sm border border-border p-8">
-          <div className="mb-6">
-            <div className="w-9 h-9 bg-primary rounded-lg flex items-center justify-center mb-4">
-              <svg className="w-4 h-4 text-primary-foreground" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+        <FadeUp delay={0.1} className="bg-white rounded-2xl shadow-2xl shadow-slate-200/70 border border-slate-200/80 p-8">
+          <div className="mb-7">
+            <div className="w-11 h-11 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center mb-5 shadow-lg">
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
               </svg>
             </div>
-            <h1 className="text-xl font-semibold text-foreground">Welcome back</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">Sign in to continue to Q&A Platform</p>
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Welcome back</h1>
+            <p className="text-[13px] text-slate-500 mt-1.5 leading-relaxed">Sign in to continue to Q&A Platform</p>
           </div>
 
-          <form onSubmit={handleSubmit} noValidate className="space-y-4">
+          <form onSubmit={handleSubmit} noValidate className="space-y-5">
             <div className="space-y-1.5">
-              <Label htmlFor="email">Email address</Label>
+              <Label htmlFor="email" className="text-slate-700 font-medium">Email address</Label>
               <input
                 id="email"
                 type="email"
@@ -94,11 +95,11 @@ export default function LoginPage() {
                 disabled={loading}
                 className={`${inputCls} ${errors.email ? errorInputCls : ''}`}
               />
-              {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
+              {errors.email && <p className="text-xs text-red-500">{errors.email}</p>}
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password" className="text-slate-700 font-medium">Password</Label>
               <div className="relative">
                 <input
                   id="password"
@@ -108,12 +109,12 @@ export default function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   disabled={loading}
-                  className={`${inputCls} pr-9 ${errors.password ? errorInputCls : ''}`}
+                  className={`${inputCls} pr-10 ${errors.password ? errorInputCls : ''}`}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(v => !v)}
-                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground transition-colors"
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 transition-colors duration-200"
                   tabIndex={-1}
                 >
                   {showPassword ? (
@@ -128,11 +129,11 @@ export default function LoginPage() {
                   )}
                 </button>
               </div>
-              {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
+              {errors.password && <p className="text-xs text-red-500">{errors.password}</p>}
             </div>
 
             {serverError && (
-              <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-3 py-2.5 text-sm text-destructive flex items-center gap-2">
+              <div className="rounded-xl bg-red-50 border border-red-200 px-3 py-2.5 text-sm text-red-600 flex items-center gap-2">
                 <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                   <circle cx="12" cy="12" r="10" /><path strokeLinecap="round" d="M12 8v4m0 4h.01" />
                 </svg>
@@ -140,15 +141,22 @@ export default function LoginPage() {
               </div>
             )}
 
-            <Button type="submit" className="w-full">
-              Sign in
-            </Button>
+            <MotionButton
+              type="submit"
+              className="w-full h-10 font-semibold"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.97 }}
+            >
+              {loading ? 'Signing in…' : 'Sign in'}
+            </MotionButton>
           </form>
-        </div>
 
-        <p className="text-center text-xs text-muted-foreground mt-5">
-          &copy; {new Date().getFullYear()} AthivaTech. All rights reserved.
-        </p>
+          <div className="border-t border-slate-100 mt-6 pt-4">
+            <p className="text-center text-xs text-slate-400">
+              &copy; {new Date().getFullYear()} AthivaTech. All rights reserved.
+            </p>
+          </div>
+        </FadeUp>
       </div>
     </div>
   )

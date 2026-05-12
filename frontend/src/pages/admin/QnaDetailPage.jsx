@@ -1,13 +1,44 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import DashboardLayout from '../../components/DashboardLayout'
-import { Badge } from '@/components/ui/badge'
 import { useAuth } from '../../context/AuthContext'
 import { getQna } from '../../api/qna'
 import { listQuestions, createQuestion } from '../../api/questions'
 import { QuestionCard } from '../../components/QuestionCard'
 import { useQnaSocket } from '../../hooks/useQnaSocket'
 import toast from 'react-hot-toast'
+import { StaggerList, StaggerItem, FadeUp } from '../../lib/motion'
+
+function VisibilityBadge({ visibility }) {
+  if (visibility === 'PUBLIC') {
+    return (
+      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+        Public
+      </span>
+    )
+  }
+  return (
+    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
+      Private
+    </span>
+  )
+}
+
+function StatusBadge({ status }) {
+  if (status === 'OPEN') {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+        Open
+      </span>
+    )
+  }
+  return (
+    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+      Closed
+    </span>
+  )
+}
 
 export default function QnaDetailPage() {
   const { id } = useParams()
@@ -148,14 +179,14 @@ export default function QnaDetailPage() {
   if (loading) {
     return (
       <DashboardLayout title="Q&A">
-        <div className="max-w-3xl space-y-2">
+        <div className="max-w-3xl space-y-3">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="bg-card border border-border rounded-xl p-5 space-y-3">
+            <div key={i} className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3">
               <div className="flex gap-3">
-                <div className="w-8 h-8 rounded-full bg-muted animate-pulse shrink-0" />
+                <div className="w-9 h-9 rounded-full bg-slate-100 animate-pulse shrink-0" />
                 <div className="flex-1 space-y-2">
-                  <div className="h-3 bg-muted rounded animate-pulse w-24" />
-                  <div className="h-4 bg-muted rounded animate-pulse w-3/4" />
+                  <div className="h-3 bg-slate-100 rounded-xl animate-pulse w-24" />
+                  <div className="h-4 bg-slate-100 rounded-xl animate-pulse w-3/4" />
                 </div>
               </div>
             </div>
@@ -169,14 +200,14 @@ export default function QnaDetailPage() {
     return (
       <DashboardLayout title="Q&A" onBack={() => navigate('/admin/qna')}>
         <div className="flex flex-col items-center justify-center py-24 text-center">
-          <div className="w-10 h-10 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
-            <svg className="w-5 h-5 text-destructive" fill="none" stroke="currentColor" strokeWidth="1.75" viewBox="0 0 24 24">
+          <div className="w-12 h-12 rounded-2xl bg-red-50 border border-red-200 flex items-center justify-center mb-4">
+            <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" strokeWidth="1.75" viewBox="0 0 24 24">
               <circle cx="12" cy="12" r="10" /><path strokeLinecap="round" d="M12 8v4m0 4h.01" />
             </svg>
           </div>
-          <p className="text-sm font-medium text-foreground">Failed to load this Q&A</p>
-          <p className="text-sm text-muted-foreground mt-1">It may have been removed or you may not have access.</p>
-          <button onClick={() => navigate('/admin/qna')} className="mt-4 text-sm text-primary hover:underline">
+          <p className="text-base font-bold text-slate-900">Failed to load this Q&A</p>
+          <p className="text-sm text-slate-500 mt-1.5">It may have been removed or you may not have access.</p>
+          <button onClick={() => navigate('/admin/qna')} className="mt-5 text-sm text-blue-600 hover:text-blue-700 font-semibold transition-colors duration-200">
             Back to Q&A
           </button>
         </div>
@@ -188,8 +219,8 @@ export default function QnaDetailPage() {
   const isClosed = post.status === 'CLOSED' || autoClosedByTimer || (post.end_at && new Date() >= new Date(post.end_at))
 
   const questionForm = isClosed ? (
-    <div className="flex items-center gap-2 text-sm text-muted-foreground px-1">
-      <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+    <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-[13px] text-slate-500">
+      <svg className="w-4 h-4 shrink-0 text-slate-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
         <rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path strokeLinecap="round" strokeLinejoin="round" d="M7 11V7a5 5 0 0110 0v4" />
       </svg>
       This Q&A board is closed. No new questions can be posted.
@@ -197,11 +228,11 @@ export default function QnaDetailPage() {
   ) : (
     <form
       onSubmit={handleSubmitQuestion}
-      className="flex items-center gap-3 bg-background border border-border rounded-lg px-4 py-2"
+      className="flex items-center gap-3 bg-white border border-slate-200 rounded-2xl px-4 py-3 shadow-sm hover:border-slate-300 transition-all duration-200"
     >
       <input
         ref={inputRef}
-        className="flex-1 bg-transparent text-sm placeholder:text-muted-foreground focus:outline-none disabled:opacity-50"
+        className="flex-1 bg-transparent text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none disabled:opacity-50"
         value={questionText}
         onChange={(e) => setQuestionText(e.target.value)}
         placeholder="Post a question..."
@@ -216,7 +247,7 @@ export default function QnaDetailPage() {
       />
       <button
         type="submit"
-        className="shrink-0 w-7 h-7 rounded-md bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 transition-colors"
+        className="shrink-0 w-8 h-8 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white flex items-center justify-center hover:from-blue-700 hover:to-indigo-700 hover:shadow-md active:scale-95 transition-all duration-200"
       >
         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
@@ -232,35 +263,40 @@ export default function QnaDetailPage() {
       onBack={() => navigate('/admin/qna')}
       actions={
         <div className="flex items-center gap-2">
-          <Badge variant={post.visibility === 'PUBLIC' ? 'default' : 'secondary'}>
-            {post.visibility === 'PUBLIC' ? 'Public' : 'Private'}
-          </Badge>
-          <Badge variant={post.status === 'OPEN' ? 'default' : 'secondary'}>
-            {post.status === 'OPEN' ? 'Open' : 'Closed'}
-          </Badge>
+          <VisibilityBadge visibility={post.visibility} />
+          <StatusBadge status={isClosed ? 'CLOSED' : 'OPEN'} />
         </div>
       }
       bottomBar={questionForm}
     >
       <div className="max-w-3xl">
         {questions.length === 0 ? (
-          <div className="text-center py-16 text-muted-foreground text-sm">No questions posted yet.</div>
+          <FadeUp className="flex flex-col items-center justify-center py-20 text-center">
+            <div className="w-14 h-14 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center mb-4">
+              <svg className="w-7 h-7 text-slate-400" fill="none" stroke="currentColor" strokeWidth="1.75" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+            </div>
+            <p className="text-base font-bold text-slate-900">No questions yet</p>
+            <p className="text-sm text-slate-500 mt-1.5">Be the first to post a question below.</p>
+          </FadeUp>
         ) : (
-          <div className="space-y-2">
+          <StaggerList className="space-y-4">
             {questions.map((q) => (
-              <QuestionCard
-                key={q._id}
-                qnaId={id}
-                question={q}
-                currentUserId={currentUserId}
-                isAdmin={true}
-                isClosed={isClosed}
-                onUpdate={handleUpdate}
-                onDelete={handleDelete}
-                socketRef={socketRef}
-              />
+              <StaggerItem key={q._id}>
+                <QuestionCard
+                  qnaId={id}
+                  question={q}
+                  currentUserId={currentUserId}
+                  isAdmin={true}
+                  isClosed={isClosed}
+                  onUpdate={handleUpdate}
+                  onDelete={handleDelete}
+                  socketRef={socketRef}
+                />
+              </StaggerItem>
             ))}
-          </div>
+          </StaggerList>
         )}
       </div>
     </DashboardLayout>

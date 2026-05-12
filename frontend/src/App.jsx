@@ -1,44 +1,56 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { AuthProvider } from './context/AuthContext'
-import LoginPage from './pages/LoginPage'
-import ChangePasswordPage from './pages/ChangePasswordPage'
 import ProtectedRoute from './components/ProtectedRoute'
 import AdminRoute from './components/AdminRoute'
-import QnaDashboard from './pages/admin/QnaDashboard'
-import QnaCreatePage from './pages/admin/QnaCreatePage'
-import QnaEditPage from './pages/admin/QnaEditPage'
-import QnaDetailPage from './pages/admin/QnaDetailPage'
-import UsersPage from './pages/admin/UsersPage'
-import AnalyticsPage from './pages/admin/AnalyticsPage'
-import QnaListPage from './pages/user/QnaListPage'
-import QnaFeedPage from './pages/user/QnaFeedPage'
+
+const LoginPage          = lazy(() => import('./pages/LoginPage'))
+const ChangePasswordPage = lazy(() => import('./pages/ChangePasswordPage'))
+const QnaDashboard       = lazy(() => import('./pages/admin/QnaDashboard'))
+const QnaCreatePage      = lazy(() => import('./pages/admin/QnaCreatePage'))
+const QnaEditPage        = lazy(() => import('./pages/admin/QnaEditPage'))
+const QnaDetailPage      = lazy(() => import('./pages/admin/QnaDetailPage'))
+const UsersPage          = lazy(() => import('./pages/admin/UsersPage'))
+const AnalyticsPage      = lazy(() => import('./pages/admin/AnalyticsPage'))
+const QnaListPage        = lazy(() => import('./pages/user/QnaListPage'))
+const QnaFeedPage        = lazy(() => import('./pages/user/QnaFeedPage'))
+
+function PageSkeleton() {
+  return (
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="w-8 h-8 rounded-full border-2 border-slate-200 border-t-blue-500 animate-spin" />
+    </div>
+  )
+}
 
 export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <Routes>
-          <Route path="/" element={<Navigate to="/login" replace />} />
-          <Route path="/login" element={<LoginPage />} />
+        <Suspense fallback={<PageSkeleton />}>
+          <Routes>
+            <Route path="/" element={<Navigate to="/login" replace />} />
+            <Route path="/login" element={<LoginPage />} />
 
-          {/* Admin routes */}
-          <Route path="/admin/qna" element={<AdminRoute><QnaDashboard /></AdminRoute>} />
-          <Route path="/admin/qna/create" element={<AdminRoute><QnaCreatePage /></AdminRoute>} />
-          <Route path="/admin/qna/:id/edit" element={<AdminRoute><QnaEditPage /></AdminRoute>} />
-          <Route path="/admin/qna/:id" element={<AdminRoute><QnaDetailPage /></AdminRoute>} />
-          <Route path="/admin/users" element={<AdminRoute><UsersPage /></AdminRoute>} />
-          <Route path="/admin/analytics" element={<AdminRoute><AnalyticsPage /></AdminRoute>} />
+            {/* Admin routes */}
+            <Route path="/admin/qna" element={<AdminRoute><QnaDashboard /></AdminRoute>} />
+            <Route path="/admin/qna/create" element={<AdminRoute><QnaCreatePage /></AdminRoute>} />
+            <Route path="/admin/qna/:id/edit" element={<AdminRoute><QnaEditPage /></AdminRoute>} />
+            <Route path="/admin/qna/:id" element={<AdminRoute><QnaDetailPage /></AdminRoute>} />
+            <Route path="/admin/users" element={<AdminRoute><UsersPage /></AdminRoute>} />
+            <Route path="/admin/analytics" element={<AdminRoute><AnalyticsPage /></AdminRoute>} />
 
-          {/* User routes */}
-          <Route path="/user/qna" element={<ProtectedRoute><QnaListPage /></ProtectedRoute>} />
-          <Route path="/user/qna/:id" element={<ProtectedRoute><QnaFeedPage /></ProtectedRoute>} />
+            {/* User routes */}
+            <Route path="/user/qna" element={<ProtectedRoute><QnaListPage /></ProtectedRoute>} />
+            <Route path="/user/qna/:id" element={<ProtectedRoute><QnaFeedPage /></ProtectedRoute>} />
 
-          {/* Shared */}
-          <Route path="/change-password" element={<ProtectedRoute><ChangePasswordPage /></ProtectedRoute>} />
+            {/* Shared */}
+            <Route path="/change-password" element={<ProtectedRoute><ChangePasswordPage /></ProtectedRoute>} />
 
-          <Route path="*" element={<Navigate to="/login" replace />} />
-        </Routes>
+            <Route path="*" element={<Navigate to="/login" replace />} />
+          </Routes>
+        </Suspense>
       </AuthProvider>
       <Toaster position="bottom-right" toastOptions={{ duration: 3500 }} />
     </BrowserRouter>

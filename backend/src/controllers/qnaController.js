@@ -97,6 +97,14 @@ const createQna = async (req, res) => {
       );
     }
 
+    if (end_at != null) {
+      const endDate = new Date(end_at);
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      if (isNaN(endDate.getTime()) || endDate < today) {
+        return error(res, 'Close date cannot be in the past.', 400);
+      }
+    }
+
     const post = await QnaPost.create({
       title: title.trim(),
       description: (description || '').trim(),
@@ -152,7 +160,16 @@ const updateQna = async (req, res) => {
     }
 
     if (end_at !== undefined) {
-      post.end_at = end_at ? new Date(end_at) : null;
+      if (end_at != null) {
+        const endDate = new Date(end_at);
+        const createdDay = new Date(post.created_at); createdDay.setHours(0, 0, 0, 0);
+        if (isNaN(endDate.getTime()) || endDate < createdDay) {
+          return error(res, 'Close date cannot be before the Q&A creation date.', 400);
+        }
+        post.end_at = endDate;
+      } else {
+        post.end_at = null;
+      }
     }
 
     post.updated_at = new Date();
