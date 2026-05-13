@@ -6,7 +6,7 @@ import { useAuth } from '../../context/AuthContext'
 import DashboardLayout from '@/layouts/DashboardLayout'
 import { listQna } from '../../api/qna'
 import { useDebounce } from '../../hooks/useDebounce'
-import { VisibilityBadge } from '@/components/Badges'
+import { VisibilityBadge, StatusBadge } from '@/components/Badges'
 import { Pagination } from '@/components/qna/Pagination'
 import { EmptyState } from '@/components/feedback/EmptyState'
 import { Skeleton } from '@/components/feedback/Skeleton'
@@ -206,6 +206,7 @@ export default function QnaListPage() {
                           {post.title}
                         </span>
                         <VisibilityBadge visibility={post.visibility} />
+                        <StatusBadge isClosed={post.status === 'CLOSED' || (post.end_at && new Date() >= new Date(post.end_at))} />
                       </div>
                       {post.description && (
                         <Text className="line-clamp-2 mb-1.5">{post.description}</Text>
