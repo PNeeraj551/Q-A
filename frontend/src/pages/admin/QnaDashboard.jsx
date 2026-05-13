@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { io } from 'socket.io-client'
+import { SOCKET_URL } from '../../lib/socket'
 import DashboardLayout from '@/layouts/DashboardLayout'
 import { Button } from '@/components/Button'
 import { listQna, deleteQna } from '../../api/qna'
@@ -33,6 +35,37 @@ export default function QnaDashboard() {
   const [total, setTotal] = useState(0)
 
   const debouncedSearch = useDebounce(search, 800)
+  const pageRef = useRef(page)
+  useEffect(() => { pageRef.current = page }, [page])
+
+  // Real-time board list updates
+  useEffect(() => {
+    const token = localStorage.getItem('jwt')
+    const socket = io(SOCKET_URL, { auth: { token }, transports: ['websocket', 'polling'] })
+
+    socket.on('qna:new', ({ post }) => {
+      if (pageRef.current !== 1) return
+      setPosts((prev) => {
+        if (prev.some((p) => p._id === post._id)) return prev
+        return [post, ...prev]
+      })
+      setTotal((t) => t + 1)
+    })
+
+    socket.on('qna:deleted', ({ qna_id }) => {
+      setPosts((prev) => {
+        const exists = prev.some((p) => String(p._id) === String(qna_id))
+        if (exists) setTotal((t) => Math.max(0, t - 1))
+        return prev.filter((p) => String(p._id) !== String(qna_id))
+      })
+    })
+
+    socket.on('qna:updated', ({ post }) => {
+      setPosts((prev) => prev.map((p) => String(p._id) === String(post._id) ? { ...p, ...post } : p))
+    })
+
+    return () => { socket.disconnect() }
+  }, [])
 
   const fetchPosts = useCallback((params) => {
     setLoading(true)

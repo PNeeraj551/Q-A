@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState, useCallback } from 'react'
+import { useEffect, useRef, useMemo, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { io } from 'socket.io-client'
 import { SOCKET_URL } from '../../lib/socket'
+import { useAuth } from '../../context/AuthContext'
 import DashboardLayout from '@/layouts/DashboardLayout'
 import { listQna } from '../../api/qna'
 import { useDebounce } from '../../hooks/useDebounce'
@@ -18,6 +19,7 @@ const LIMIT = 10
 
 export default function QnaListPage() {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [posts, setPosts] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -27,6 +29,14 @@ export default function QnaListPage() {
   const [total, setTotal] = useState(0)
 
   const debouncedSearch = useDebounce(search, 800)
+  const pageRef = useRef(page)
+  const searchRef = useRef(debouncedSearch)
+  useEffect(() => { pageRef.current = page }, [page])
+  useEffect(() => { searchRef.current = debouncedSearch }, [debouncedSearch])
+
+  const currentUserId = user?._id || user?.user_id
+  const socketRef = useRef(null)
+  const joinedRoomsRef = useRef(new Set())
 
   const fetchPosts = useCallback((params) => {
     setLoading(true)
@@ -36,7 +46,7 @@ export default function QnaListPage() {
         setTotalPages(res.data.totalPages || 1)
         setTotal(res.data.total || 0)
       })
-      .catch(() => { })
+      .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
 
@@ -46,18 +56,42 @@ export default function QnaListPage() {
     fetchPosts(params)
   }, [debouncedSearch, page, fetchPosts])
 
-  const postIdsKey = useMemo(() => posts.map((p) => p._id).join(','), [posts])
-
+  // Create socket once on mount
   useEffect(() => {
-    if (posts.length === 0) return
-    const ids = posts.map((p) => p._id)
     const token = localStorage.getItem('jwt')
     const socket = io(SOCKET_URL, { auth: { token }, transports: ['websocket', 'polling'] })
+    socketRef.current = socket
 
-    socket.on('connect', () => {
-      ids.forEach((id) => socket.emit('qna:join', { qna_id: id }))
+    // Global board events
+    socket.on('qna:new', ({ post }) => {
+      if (pageRef.current !== 1) return
+      const term = searchRef.current.trim()
+      if (term.length >= 3 && !post.title.toLowerCase().includes(term.toLowerCase())) return
+      if (post.visibility === 'PRIVATE') {
+        const ids = (post.allowed_users || []).map(String)
+        if (!ids.includes(String(currentUserId))) return
+      }
+      setPosts((prev) => {
+        if (prev.some((p) => p._id === post._id)) return prev
+        return [post, ...prev]
+      })
+      setTotal((t) => t + 1)
     })
 
+    socket.on('qna:deleted', ({ qna_id }) => {
+      setPosts((prev) => {
+        const exists = prev.some((p) => String(p._id) === String(qna_id))
+        if (exists) setTotal((t) => Math.max(0, t - 1))
+        return prev.filter((p) => String(p._id) !== String(qna_id))
+      })
+      joinedRoomsRef.current.delete(qna_id)
+    })
+
+    socket.on('qna:updated', ({ post }) => {
+      setPosts((prev) => prev.map((p) => String(p._id) === String(post._id) ? { ...p, ...post } : p))
+    })
+
+    // Per-board question count updates
     socket.on('question:new', (question) => {
       setPosts((prev) =>
         prev.map((p) =>
@@ -69,10 +103,37 @@ export default function QnaListPage() {
     })
 
     return () => {
-      ids.forEach((id) => socket.emit('qna:leave', { qna_id: id }))
       socket.disconnect()
+      socketRef.current = null
+      joinedRoomsRef.current.clear()
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUserId])
+
+  // Join/leave per-board rooms as visible posts change
+  const postIdsKey = useMemo(() => posts.map((p) => p._id).join(','), [posts])
+
+  useEffect(() => {
+    const socket = socketRef.current
+    if (!socket) return
+
+    const newIds = new Set(posts.map((p) => String(p._id)))
+
+    // Leave rooms no longer in view
+    joinedRoomsRef.current.forEach((id) => {
+      if (!newIds.has(id)) {
+        socket.emit('qna:leave', { qna_id: id })
+        joinedRoomsRef.current.delete(id)
+      }
+    })
+
+    // Join new rooms
+    newIds.forEach((id) => {
+      if (!joinedRoomsRef.current.has(id)) {
+        socket.emit('qna:join', { qna_id: id })
+        joinedRoomsRef.current.add(id)
+      }
+    })
   }, [postIdsKey])
 
   function handleSearchChange(e) {

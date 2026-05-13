@@ -4,6 +4,7 @@ const Question = require('../models/Question');
 const Reply = require('../models/Reply');
 const User = require('../models/User');
 const { success, error } = require('../utils/responseUtils');
+const { getIO } = require('../sockets/io');
 
 // GET /api/qna
 // Admin: all posts. User: PUBLIC + assigned PRIVATE.
@@ -114,6 +115,8 @@ const createQna = async (req, res) => {
       created_by: req.user.user_id,
     });
 
+    try { getIO().to('qna_global').emit('qna:new', { post: { ...post.toObject(), question_count: 0 } }) } catch(_) {}
+
     return success(res, { post }, 201);
   } catch (err) {
     return error(res, 'Failed to create Q&A post.', 500);
@@ -175,6 +178,8 @@ const updateQna = async (req, res) => {
     post.updated_at = new Date();
     await post.save();
 
+    try { getIO().to('qna_global').emit('qna:updated', { post: post.toObject() }) } catch(_) {}
+
     return success(res, { post });
   } catch (err) {
     return error(res, 'Failed to update Q&A post.', 500);
@@ -193,6 +198,8 @@ const deleteQna = async (req, res) => {
     await Question.updateMany({ qna_id: qnaId }, { $set: { is_deleted: true } });
     await Reply.updateMany({ qna_id: qnaId }, { $set: { is_deleted: true } });
     await QnaPost.findByIdAndDelete(qnaId);
+
+    try { getIO().to('qna_global').emit('qna:deleted', { qna_id: qnaId.toString() }) } catch(_) {}
 
     return success(res, { message: 'Q&A post deleted' });
   } catch (err) {

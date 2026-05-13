@@ -20,6 +20,8 @@ const initSocketHandler = (io) => {
   });
 
   io.on('connection', (socket) => {
+    socket.join('qna_global')
+
     socket.on('qna:join', ({ qna_id } = {}) => {
       if (qna_id && mongoose.Types.ObjectId.isValid(qna_id)) {
         socket.join(`qna_${qna_id}`);
