@@ -1,52 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
+import toast from 'react-hot-toast'
 import { updateMe } from '../api/auth'
 import { useAuth } from '../context/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-
-function InputField({ id, label, type = 'text', value, onChange, error, disabled, placeholder, autoComplete }) {
-  const [show, setShow] = useState(false)
-  const isPassword = type === 'password'
-  return (
-    <div className="space-y-1.5">
-      <Label htmlFor={id}>{label}</Label>
-      <div className="relative">
-        <Input
-          id={id}
-          type={isPassword && show ? 'text' : type}
-          value={value}
-          onChange={onChange}
-          disabled={disabled}
-          placeholder={placeholder}
-          autoComplete={autoComplete}
-          aria-invalid={!!error}
-          className={isPassword ? 'pr-10' : ''}
-        />
-        {isPassword && (
-          <button
-            type="button"
-            onClick={() => setShow(v => !v)}
-            className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground transition-colors"
-            tabIndex={-1}
-          >
-            {show ? (
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-              </svg>
-            ) : (
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-              </svg>
-            )}
-          </button>
-        )}
-      </div>
-      {error && <p className="text-xs text-destructive">{error}</p>}
-    </div>
-  )
-}
+import { PasswordInput } from './PasswordInput'
 
 export default function ProfileEditPanel({ onClose }) {
   const { user, setUser } = useAuth()
@@ -91,7 +50,7 @@ export default function ProfileEditPanel({ onClose }) {
     if (!name.trim()) errs.name = 'Name is required'
     else if (name.trim().length > 80) errs.name = 'Name must be 80 characters or fewer'
     if (emailDirty) {
-      if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) errs.email = 'A valid email is required'
+      if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) errs.email = 'Enter a valid email address'
     }
     if (changePassword) {
       if (!currentPassword) errs.currentPassword = 'Current password is required'
@@ -121,6 +80,7 @@ export default function ProfileEditPanel({ onClose }) {
       }
       const res = await updateMe(payload)
       setUser(res.data.data ?? res.data)
+      toast.success('Profile updated.')
       handleClose()
     } catch (err) {
       setServerError(err.response?.data?.error || err.response?.data?.message || 'Failed to save changes.')
@@ -151,16 +111,16 @@ export default function ProfileEditPanel({ onClose }) {
         role="dialog"
         aria-modal="true"
         aria-label="Edit Profile"
-        className={`fixed inset-y-0 right-0 z-50 w-full max-w-md bg-card border-l border-border shadow-2xl flex flex-col transition-transform duration-250 ease-out ${open ? 'translate-x-0' : 'translate-x-full'}`}
+        className={`fixed inset-y-0 right-0 z-50 w-full max-w-md bg-white border-l border-slate-200 shadow-2xl flex flex-col transition-transform duration-250 ease-out ${open ? 'translate-x-0' : 'translate-x-full'}`}
       >
-        <div className="px-6 py-5 border-b border-border flex items-center justify-between shrink-0">
+        <div className="px-6 py-5 border-b border-slate-200 flex items-center justify-between shrink-0">
           <div>
-            <h2 className="text-base font-semibold text-foreground">Edit Profile</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">Update your personal information</p>
+            <h2 className="text-base font-semibold text-slate-900">Edit Profile</h2>
+            <p className="text-xs text-slate-400 mt-0.5">Update your personal information</p>
           </div>
           <button
             onClick={handleClose}
-            className="w-7 h-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+            className="w-7 h-7 flex items-center justify-center rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
             aria-label="Close"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
@@ -170,55 +130,61 @@ export default function ProfileEditPanel({ onClose }) {
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
-          <div className="flex items-center gap-4 pb-5 border-b border-border">
-            <div className="w-14 h-14 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-xl select-none shrink-0">
+          <div className="flex items-center gap-4 pb-5 border-b border-slate-200">
+            <div className="w-14 h-14 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xl select-none shrink-0">
               {(name || user?.name)?.[0]?.toUpperCase() || '?'}
             </div>
             <div>
-              <p className="text-sm font-semibold text-foreground">{name || user?.name}</p>
-              <p className="text-xs text-muted-foreground capitalize">{user?.role}</p>
-              {memberSince && <p className="text-xs text-muted-foreground mt-0.5">Member since {memberSince}</p>}
+              <p className="text-sm font-semibold text-slate-900">{name || user?.name}</p>
+              <p className="text-xs text-slate-400 capitalize">{user?.role}</p>
+              {memberSince && <p className="text-xs text-slate-400 mt-0.5">Member since {memberSince}</p>}
             </div>
           </div>
 
           {serverError && (
-            <div className="flex items-center gap-2.5 bg-destructive/10 border border-destructive/20 rounded-lg px-4 py-3">
-              <svg className="w-4 h-4 text-destructive shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <div className="flex items-center gap-2.5 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
+              <svg className="w-4 h-4 text-red-500 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <circle cx="12" cy="12" r="10" /><path strokeLinecap="round" d="M12 8v4m0 4h.01" />
               </svg>
-              <p className="text-xs text-destructive">{serverError}</p>
+              <p className="text-xs text-red-600">{serverError}</p>
             </div>
           )}
 
           <form id="profile-form" onSubmit={handleSubmit} noValidate className="space-y-4">
-            <InputField
-              id="profile-name"
-              label="Full Name"
-              value={name}
-              onChange={e => { setName(e.target.value); setErrors(p => ({ ...p, name: '' })) }}
-              error={errors.name}
-              disabled={loading}
-              placeholder="Your full name"
-              autoComplete="name"
-            />
+            <div className="space-y-1.5">
+              <Label htmlFor="profile-name">Name</Label>
+              <Input
+                id="profile-name"
+                value={name}
+                onChange={e => { setName(e.target.value); setErrors(p => ({ ...p, name: '' })) }}
+                disabled={loading}
+                placeholder="Full name"
+                autoComplete="name"
+                aria-invalid={!!errors.name}
+              />
+              {errors.name && <p className="text-xs text-red-500">{errors.name}</p>}
+            </div>
 
-            <InputField
-              id="profile-email"
-              label="Email Address"
-              type="email"
-              value={email}
-              onChange={e => { setEmail(e.target.value); setEmailDirty(true); setErrors(p => ({ ...p, email: '' })) }}
-              error={errors.email}
-              disabled={loading}
-              placeholder="you@example.com"
-              autoComplete="email"
-            />
+            <div className="space-y-1.5">
+              <Label htmlFor="profile-email">Email address</Label>
+              <Input
+                id="profile-email"
+                type="email"
+                value={email}
+                onChange={e => { setEmail(e.target.value); setEmailDirty(true); setErrors(p => ({ ...p, email: '' })) }}
+                disabled={loading}
+                placeholder="email@company.com"
+                autoComplete="email"
+                aria-invalid={!!errors.email}
+              />
+              {errors.email && <p className="text-xs text-red-500">{errors.email}</p>}
+            </div>
 
-            <div className="pt-2 border-t border-border">
+            <div className="pt-2 border-t border-slate-200">
               <button
                 type="button"
                 onClick={() => { setChangePassword(v => !v); setErrors({}); setCurrentPassword(''); setNewPassword(''); setConfirmPassword('') }}
-                className="flex items-center gap-2 text-xs font-semibold text-primary hover:text-primary/80 transition-colors"
+                className="flex items-center gap-2 text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors"
               >
                 <svg className={`w-3.5 h-3.5 transition-transform duration-200 ${changePassword ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -228,46 +194,49 @@ export default function ProfileEditPanel({ onClose }) {
 
               {changePassword && (
                 <div className="mt-4 space-y-4">
-                  <InputField
-                    id="profile-current-password"
-                    label="Current Password"
-                    type="password"
-                    value={currentPassword}
-                    onChange={e => { setCurrentPassword(e.target.value); setErrors(p => ({ ...p, currentPassword: '' })) }}
-                    error={errors.currentPassword}
-                    disabled={loading}
-                    placeholder="••••••••"
-                    autoComplete="current-password"
-                  />
-                  <InputField
-                    id="profile-new-password"
-                    label="New Password"
-                    type="password"
-                    value={newPassword}
-                    onChange={e => { setNewPassword(e.target.value); setErrors(p => ({ ...p, newPassword: '' })) }}
-                    error={errors.newPassword}
-                    disabled={loading}
-                    placeholder="Min 6 characters"
-                    autoComplete="new-password"
-                  />
-                  <InputField
-                    id="profile-confirm-password"
-                    label="Confirm New Password"
-                    type="password"
-                    value={confirmPassword}
-                    onChange={e => { setConfirmPassword(e.target.value); setErrors(p => ({ ...p, confirmPassword: '' })) }}
-                    error={errors.confirmPassword}
-                    disabled={loading}
-                    placeholder="Re-enter new password"
-                    autoComplete="new-password"
-                  />
+                  <div className="space-y-1.5">
+                    <Label htmlFor="profile-current-password">Current password</Label>
+                    <PasswordInput
+                      id="profile-current-password"
+                      value={currentPassword}
+                      onChange={e => { setCurrentPassword(e.target.value); setErrors(p => ({ ...p, currentPassword: '' })) }}
+                      error={errors.currentPassword}
+                      disabled={loading}
+                      placeholder="••••••••"
+                      autoComplete="current-password"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="profile-new-password">New password</Label>
+                    <PasswordInput
+                      id="profile-new-password"
+                      value={newPassword}
+                      onChange={e => { setNewPassword(e.target.value); setErrors(p => ({ ...p, newPassword: '' })) }}
+                      error={errors.newPassword}
+                      disabled={loading}
+                      placeholder="Minimum 6 characters"
+                      autoComplete="new-password"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="profile-confirm-password">Confirm new password</Label>
+                    <PasswordInput
+                      id="profile-confirm-password"
+                      value={confirmPassword}
+                      onChange={e => { setConfirmPassword(e.target.value); setErrors(p => ({ ...p, confirmPassword: '' })) }}
+                      error={errors.confirmPassword}
+                      disabled={loading}
+                      placeholder="Re-enter new password"
+                      autoComplete="new-password"
+                    />
+                  </div>
                 </div>
               )}
             </div>
           </form>
         </div>
 
-        <div className="shrink-0 px-6 py-4 border-t border-border bg-muted/30 flex gap-3">
+        <div className="shrink-0 px-6 py-4 border-t border-slate-200 bg-slate-50 flex gap-3">
           <Button type="button" variant="outline" onClick={handleClose} className="flex-1">
             Cancel
           </Button>

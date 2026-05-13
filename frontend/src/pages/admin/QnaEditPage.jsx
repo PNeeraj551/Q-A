@@ -1,12 +1,18 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import DashboardLayout from '../../components/DashboardLayout'
+import DashboardLayout from '@/layouts/DashboardLayout'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { inputCls, textareaCls, errorInputCls } from '@/lib/ui'
 import { getQna, updateQna, getQnaUsers, addQnaUser, removeQnaUser } from '../../api/qna'
 import { getUsers } from '../../api/users'
 import { useDebounce } from '../../hooks/useDebounce'
+import toast from 'react-hot-toast'
+import { UserTag } from '@/components/UserTag'
+import { Surface } from '@/components/Surface'
+import { Stack } from '@/components/Stack'
+import { Text } from '@/components/Text'
+import { Skeleton } from '@/components/feedback/Skeleton'
 
 export default function QnaEditPage() {
   const { id } = useParams()
@@ -85,7 +91,7 @@ export default function QnaEditPage() {
     else if (title.trim().length > 120) errs.title = 'Title must be 120 characters or fewer'
     const createdAtMin = createdAt ? new Date(createdAt).toISOString().slice(0, 10) + 'T00:00' : ''
     if (endAt && createdAtMin && new Date(endAt) < new Date(createdAtMin))
-      errs.endAt = 'Close date cannot be before the Q&A creation date'
+      errs.endAt = 'Close date must be after the board creation date.'
     return errs
   }
 
@@ -105,9 +111,10 @@ export default function QnaEditPage() {
         status,
         end_at: endAt ? new Date(endAt).toISOString() : null,
       })
+      toast.success('Changes saved.')
       navigate('/admin/qna')
     } catch (err) {
-      setErrors({ submit: err.response?.data?.error || 'Failed to update Q&A.' })
+      setErrors({ submit: err.response?.data?.error || 'Failed to save changes.' })
     } finally {
       submittingRef.current = false
       setSubmitting(false)
@@ -116,28 +123,30 @@ export default function QnaEditPage() {
 
   if (loading) {
     return (
-      <DashboardLayout title="Edit Q&A Post" onBack={() => navigate('/admin/qna')}>
+      <DashboardLayout title="Edit Q&A Board" onBack={() => navigate('/admin/qna')}>
         <div className="max-w-2xl">
-          <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm space-y-5">
+          <Surface className="p-8 shadow-sm">
+            <Stack gap={5}>
             {[...Array(4)].map((_, i) => (
-              <div key={i} className="space-y-2">
-                <div className="h-3 bg-slate-100 rounded-xl animate-pulse w-24" />
-                <div className="h-10 bg-slate-100 rounded-xl animate-pulse w-full" />
-              </div>
+              <Stack key={i} gap={2}>
+                <Skeleton className="h-3 w-24" />
+                <Skeleton className="h-10 w-full" />
+              </Stack>
             ))}
-          </div>
+            </Stack>
+          </Surface>
         </div>
       </DashboardLayout>
     )
   }
 
   return (
-    <DashboardLayout title="Edit Q&A Post" onBack={() => navigate('/admin/qna')}>
+    <DashboardLayout title="Edit Q&A Board" onBack={() => navigate('/admin/qna')}>
       <div className="max-w-2xl">
-        <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
-          <form onSubmit={handleSubmit} className="space-y-6">
+        <Surface className="p-8 shadow-sm">
+          <Stack as="form" gap={6} onSubmit={handleSubmit}>
 
-            <div className="space-y-1.5">
+            <Stack gap={1.5}>
               <Label htmlFor="title" className="text-slate-700 font-medium">
                 Title <span className="text-red-500">*</span>
               </Label>
@@ -150,9 +159,9 @@ export default function QnaEditPage() {
                 disabled={submitting}
               />
               {errors.title && <p className="text-xs text-red-500">{errors.title}</p>}
-            </div>
+            </Stack>
 
-            <div className="space-y-1.5">
+            <Stack gap={1.5}>
               <Label htmlFor="description" className="text-slate-700 font-medium">
                 Description <span className="text-slate-400 font-normal">(optional)</span>
               </Label>
@@ -165,38 +174,27 @@ export default function QnaEditPage() {
                 rows={3}
                 disabled={submitting}
               />
-            </div>
+            </Stack>
 
-            <div className="space-y-2">
-              <Label className="text-slate-700 font-medium">Visibility</Label>
-              <div className="flex gap-2">
-                {['PUBLIC', 'PRIVATE'].map((v) => (
-                  <button
-                    key={v}
-                    type="button"
-                    onClick={() => setVisibility(v)}
-                    className={`flex-1 flex items-center justify-center gap-2 h-11 rounded-xl border text-sm font-medium transition-all duration-200 ${
-                      visibility === v
-                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-transparent shadow-sm'
-                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100 hover:border-slate-300'
-                    }`}
-                  >
-                    {v === 'PUBLIC' ? (
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                        <circle cx="12" cy="12" r="10" /><path strokeLinecap="round" strokeLinejoin="round" d="M2 12h20M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20" />
-                      </svg>
-                    ) : (
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                        <rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path strokeLinecap="round" strokeLinejoin="round" d="M7 11V7a5 5 0 0110 0v4" />
-                      </svg>
-                    )}
-                    {v === 'PUBLIC' ? 'Public' : 'Private'}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <Stack gap={1.5}>
+              <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={visibility === 'PRIVATE'}
+                  onChange={(e) => setVisibility(e.target.checked ? 'PRIVATE' : 'PUBLIC')}
+                  disabled={submitting}
+                  className="w-4 h-4 rounded border-slate-300 accent-blue-600 cursor-pointer disabled:opacity-50"
+                />
+                <span className="text-sm font-medium text-slate-700">Private</span>
+              </label>
+              <Text size="xs" color="muted" className="pl-[26px]">
+                {visibility === 'PRIVATE'
+                  ? 'Only assigned users can see this Q&A board.'
+                  : 'All users can see and join this Q&A board.'}
+              </Text>
+            </Stack>
 
-            <div className="space-y-2">
+            <Stack gap={2}>
               <Label className="text-slate-700 font-medium">Status</Label>
               <div className="flex gap-2">
                 {['OPEN', 'CLOSED'].map((s) => (
@@ -221,14 +219,14 @@ export default function QnaEditPage() {
                   </button>
                 ))}
               </div>
-              <p className="text-xs text-slate-400">
+              <Text size="xs" color="muted">
                 {status === 'OPEN'
                   ? 'Users can ask questions and post replies.'
-                  : 'Q&A is read-only. Users can view but not interact.'}
-              </p>
-            </div>
+                  : 'This Q&A board is read-only. Users can view but cannot post.'}
+              </Text>
+            </Stack>
 
-            <div className="space-y-1.5">
+            <Stack gap={1.5}>
               <Label className="text-slate-700 font-medium">
                 Auto-close at <span className="text-slate-400 font-normal">(optional)</span>
               </Label>
@@ -250,30 +248,23 @@ export default function QnaEditPage() {
                   Clear
                 </button>
               )}
-              <p className="text-xs text-slate-400">
-                If set, the Q&A will automatically close at this date and time.
-              </p>
-            </div>
+              <Text size="xs" color="muted">
+                If set, this Q&A board will automatically close at this date and time.
+              </Text>
+            </Stack>
 
             {visibility === 'PRIVATE' && (
-              <div className="space-y-2">
+              <Stack gap={2}>
                 <Label className="text-slate-700 font-medium">Manage Users</Label>
                 {assignedUsers.length > 0 && (
                   <div className="flex flex-wrap gap-1.5">
                     {assignedUsers.map((u) => (
-                      <span
+                      <UserTag
                         key={u._id}
-                        className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-700 border border-blue-200 text-xs px-3 py-1 rounded-full font-medium"
-                      >
-                        {u.name}
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveUser(u._id)}
-                          className="text-blue-400 hover:text-red-500 transition-colors duration-200 leading-none"
-                        >
-                          ✕
-                        </button>
-                      </span>
+                        label={u.name}
+                        onRemove={() => handleRemoveUser(u._id)}
+                        disabled={submitting}
+                      />
                     ))}
                   </div>
                 )}
@@ -281,7 +272,7 @@ export default function QnaEditPage() {
                   className={inputCls}
                   value={userSearch}
                   onChange={(e) => setUserSearch(e.target.value)}
-                  placeholder="Search to add users..."
+                  placeholder="Search users by name or email..."
                 />
                 {userResults.filter((u) => !assignedUsers.find((a) => a._id === u._id)).length > 0 && (
                   <div className="border border-slate-200 rounded-2xl shadow-lg divide-y divide-slate-100 max-h-48 overflow-y-auto bg-white">
@@ -300,21 +291,21 @@ export default function QnaEditPage() {
                       ))}
                   </div>
                 )}
-              </div>
+              </Stack>
             )}
 
             {errors.submit && <p className="text-sm text-red-500">{errors.submit}</p>}
 
             <div className="flex gap-3 pt-2">
-              <Button type="submit" className="h-10">
-                Save Changes
+              <Button type="submit" className="h-10" disabled={submitting}>
+                {submitting ? 'Saving…' : 'Save Changes'}
               </Button>
               <Button type="button" variant="outline" className="h-10" onClick={() => navigate('/admin/qna')}>
                 Cancel
               </Button>
             </div>
-          </form>
-        </div>
+          </Stack>
+        </Surface>
       </div>
     </DashboardLayout>
   )

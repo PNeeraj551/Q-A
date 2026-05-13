@@ -10,8 +10,6 @@ export const updateQna = (id, payload) => axiosInstance.patch(`/qna/${id}`, payl
 
 export const deleteQna = (id) => axiosInstance.delete(`/qna/${id}`)
 
-export const setQnaStatus = (id, status) => axiosInstance.patch(`/qna/${id}`, { status })
-
 export const getQnaUsers = (id) => axiosInstance.get(`/qna/${id}/users`)
 
 export const addQnaUser = (id, userId) =>

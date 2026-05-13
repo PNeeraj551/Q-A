@@ -4,6 +4,11 @@ import { useAuth } from '../context/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { inputCls, errorInputCls } from '@/lib/ui'
+import { FormError } from '@/components/feedback/FormError'
+import { Heading } from '@/components/Heading'
+import { Text } from '@/components/Text'
+import { Stack } from '@/components/Stack'
+import { PasswordInput } from '@/components/PasswordInput'
 
 export default function LoginPage() {
   const { login } = useAuth()
@@ -11,7 +16,6 @@ export default function LoginPage() {
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
   const [errors, setErrors] = useState({})
   const [serverError, setServerError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -77,12 +81,12 @@ export default function LoginPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
               </svg>
             </div>
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Welcome back</h1>
-            <p className="text-[13px] text-slate-500 mt-1.5 leading-relaxed">Sign in to continue to Q&A Platform</p>
+            <Heading level={1}>Welcome back</Heading>
+            <Text size="13" className="mt-1.5 leading-relaxed">Sign in to access Q&A Platform</Text>
           </div>
 
-          <form onSubmit={handleSubmit} noValidate className="space-y-5">
-            <div className="space-y-1.5">
+          <Stack as="form" gap={5} onSubmit={handleSubmit} noValidate>
+            <Stack gap={1.5}>
               <Label htmlFor="email" className="text-slate-700 font-medium">Email address</Label>
               <input
                 id="email"
@@ -90,55 +94,27 @@ export default function LoginPage() {
                 autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@company.com"
+                placeholder="email@company.com"
                 disabled={loading}
                 className={`${inputCls} ${errors.email ? errorInputCls : ''}`}
               />
               {errors.email && <p className="text-xs text-red-500">{errors.email}</p>}
-            </div>
+            </Stack>
 
-            <div className="space-y-1.5">
+            <Stack gap={1.5}>
               <Label htmlFor="password" className="text-slate-700 font-medium">Password</Label>
-              <div className="relative">
-                <input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  disabled={loading}
-                  className={`${inputCls} pr-10 ${errors.password ? errorInputCls : ''}`}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(v => !v)}
-                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 transition-colors duration-200"
-                  tabIndex={-1}
-                >
-                  {showPassword ? (
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                    </svg>
-                  ) : (
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>
-                  )}
-                </button>
-              </div>
-              {errors.password && <p className="text-xs text-red-500">{errors.password}</p>}
-            </div>
+              <PasswordInput
+                id="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                disabled={loading}
+                error={errors.password}
+                autoComplete="current-password"
+              />
+            </Stack>
 
-            {serverError && (
-              <div className="rounded-xl bg-red-50 border border-red-200 px-3 py-2.5 text-sm text-red-600 flex items-center gap-2">
-                <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                  <circle cx="12" cy="12" r="10" /><path strokeLinecap="round" d="M12 8v4m0 4h.01" />
-                </svg>
-                {serverError}
-              </div>
-            )}
+            <FormError message={serverError} />
 
             <Button
               type="submit"
@@ -146,12 +122,12 @@ export default function LoginPage() {
             >
               {loading ? 'Signing in…' : 'Sign in'}
             </Button>
-          </form>
+          </Stack>
 
           <div className="border-t border-slate-100 mt-6 pt-4">
-            <p className="text-center text-xs text-slate-400">
+            <Text size="xs" color="muted" className="text-center">
               &copy; {new Date().getFullYear()} AthivaTech. All rights reserved.
-            </p>
+            </Text>
           </div>
         </div>
       </div>

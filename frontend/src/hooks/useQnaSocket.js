@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { io } from 'socket.io-client'
-
-const SOCKET_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5300/api').replace('/api', '')
+import { SOCKET_URL } from '../lib/socket'
 
 export function useQnaSocket(qnaId, {
   onQuestionNew,

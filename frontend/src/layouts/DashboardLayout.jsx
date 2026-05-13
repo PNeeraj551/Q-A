@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
-import ProfileEditPanel from './ProfileEditPanel'
+import ProfileEditPanel from '../components/ProfileEditPanel'
 
 function SidebarLink({ to, label, icon, end }) {
   return (
@@ -18,7 +18,7 @@ function SidebarLink({ to, label, icon, end }) {
     >
       {({ isActive }) => (
         <>
-          <span className={`w-[18px] h-[18px] shrink-0 transition-opacity duration-200 ${isActive ? 'opacity-100' : 'opacity-40'}`}>
+          <span className={`w-[18px] h-[18px] shrink-0 transition-opacity duration-200 ${isActive ? 'opacity-100' : 'opacity-65'}`}>
             {icon}
           </span>
           <span>{label}</span>
@@ -82,7 +82,7 @@ export default function DashboardLayout({ children, title, subtitle, actions, on
               <p className="px-3 pt-1 pb-2.5 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400/80">
                 Navigation
               </p>
-              <SidebarLink to="/admin/qna" label="Q&A Boards" icon={QnaIcon} end />
+              <SidebarLink to="/admin/qna" label="Q&A Boards" icon={QnaIcon} />
               <SidebarLink to="/admin/users" label="Users" icon={UsersIcon} />
               <SidebarLink to="/admin/analytics" label="Analytics" icon={AnalyticsIcon} />
             </>
@@ -91,7 +91,7 @@ export default function DashboardLayout({ children, title, subtitle, actions, on
               <p className="px-3 pt-1 pb-2.5 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400/80">
                 Navigation
               </p>
-              <SidebarLink to="/user/qna" label="Q&A Boards" icon={QnaIcon} end />
+              <SidebarLink to="/user/qna" label="Q&A Boards" icon={QnaIcon} />
             </>
           )}
         </nav>

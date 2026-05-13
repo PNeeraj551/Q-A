@@ -29,6 +29,13 @@ desktop.ini
 # Internal Claude agent config and memory
 .claude/
 
+# Claude Code project config (local only)
+CLAUDE.md
+.Claudeignore
+
+# Dev progress notes
+Progress.md
+
 # Internal spec / design documents (not for public repo)
 *.docx
 CTO_Master_Execution_Blueprint.md

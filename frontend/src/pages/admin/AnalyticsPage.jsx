@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
-import DashboardLayout from '../../components/DashboardLayout'
+import DashboardLayout from '@/layouts/DashboardLayout'
 import axiosInstance from '../../api/axiosInstance'
-
-function SkeletonBlock({ className }) {
-  return <div className={`bg-slate-100 rounded-xl animate-pulse ${className}`} />
-}
+import { PageError } from '@/components/feedback/PageError'
+import { Skeleton } from '@/components/feedback/Skeleton'
+import { Surface } from '@/components/Surface'
+import { Stack } from '@/components/Stack'
+import { Heading } from '@/components/Heading'
+import { Text } from '@/components/Text'
 
 const QnaIcon = (
   <svg fill="none" stroke="currentColor" strokeWidth="1.75" viewBox="0 0 24 24" className="w-5 h-5">
@@ -45,13 +47,13 @@ function KpiCard({ label, value, icon, color, loading }) {
   const c = colorMap[color] || colorMap.blue
 
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl px-6 py-6 shadow-sm hover:shadow-md transition-all duration-200 group">
+    <Surface className="px-6 py-6 shadow-sm hover:shadow-md transition-all duration-200 group">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-[0.08em]">{label}</p>
+          <p className="text-xs font-semibold text-slate-600 tracking-[0.08em]">{label}</p>
           <div className="mt-3">
             {loading ? (
-              <SkeletonBlock className="h-10 w-20" />
+              <Skeleton className="h-10 w-20" />
             ) : (
               <p className="text-4xl font-bold text-slate-900 tracking-tight tabular-nums">
                 {value ?? '—'}
@@ -63,7 +65,7 @@ function KpiCard({ label, value, icon, color, loading }) {
           {icon}
         </div>
       </div>
-    </div>
+    </Surface>
   )
 }
 
@@ -78,7 +80,7 @@ function VisibilityBar({ label, count, pct, variant }) {
         </div>
         <div className="flex items-center gap-2.5 text-sm">
           <span className="font-semibold text-slate-900 tabular-nums">{count}</span>
-          <span className="text-slate-400 font-medium">post{count !== 1 ? 's' : ''}</span>
+          <span className="text-slate-400 font-medium">Board{count !== 1 ? 's' : ''}</span>
           <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${isPublic ? 'bg-blue-50 text-blue-700' : 'bg-slate-100 text-slate-600'}`}>
             {pct}%
           </span>
@@ -91,12 +93,6 @@ function VisibilityBar({ label, count, pct, variant }) {
         />
       </div>
     </div>
-  )
-}
-
-function SectionHeader({ children }) {
-  return (
-    <h2 className="text-base font-bold text-slate-900 tracking-tight">{children}</h2>
   )
 }
 
@@ -125,25 +121,11 @@ export default function AnalyticsPage() {
   return (
     <DashboardLayout title="Analytics" subtitle="Platform usage and content overview">
       {error ? (
-        <div className="flex flex-col items-center justify-center py-28 text-center">
-          <div className="w-14 h-14 rounded-2xl bg-red-50 border border-red-200 flex items-center justify-center mb-5">
-            <svg className="w-7 h-7 text-red-500" fill="none" stroke="currentColor" strokeWidth="1.75" viewBox="0 0 24 24">
-              <circle cx="12" cy="12" r="10" /><path strokeLinecap="round" d="M12 8v4m0 4h.01" />
-            </svg>
-          </div>
-          <p className="text-base font-bold text-slate-900">Failed to load analytics</p>
-          <p className="text-sm text-slate-500 mt-1.5">Check your connection and try again.</p>
-          <button
-            onClick={load}
-            className="mt-5 text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors duration-200"
-          >
-            Retry
-          </button>
-        </div>
+        <PageError heading="Failed to load analytics" action={{ label: 'Retry', onClick: load }} />
       ) : (
-        <div className="max-w-5xl space-y-8">
+        <Stack gap={8} className="max-w-5xl">
 
-          {/* KPI Cards */}
+          {/* KPI Surfaces */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
             <KpiCard label="Total Q&A Boards" value={data?.total_posts} icon={QnaIcon} color="blue" loading={loading} />
             <KpiCard label="Total Questions" value={data?.total_questions} icon={QuestionIcon} color="indigo" loading={loading} />
@@ -153,24 +135,24 @@ export default function AnalyticsPage() {
           {/* Visibility breakdown */}
           <div>
             <div className="flex items-center justify-between mb-4">
-              <SectionHeader>Visibility Breakdown</SectionHeader>
+              <Heading level={2}>Visibility Breakdown</Heading>
               {!loading && (
                 <span className="text-xs font-semibold text-slate-400 bg-slate-100 px-2.5 py-1 rounded-full">
                   {totalPosts} total
                 </span>
               )}
             </div>
-            <div className="bg-white border border-slate-200 rounded-2xl px-7 py-6 shadow-sm space-y-6">
+            <Surface className="px-7 py-6 shadow-sm"><Stack gap={6}>
               {loading ? (
                 <>
-                  <div className="space-y-2">
-                    <SkeletonBlock className="h-4 w-40" />
-                    <SkeletonBlock className="h-2.5 w-full" />
-                  </div>
-                  <div className="space-y-2">
-                    <SkeletonBlock className="h-4 w-36" />
-                    <SkeletonBlock className="h-2.5 w-full" />
-                  </div>
+                  <Stack gap={2}>
+                    <Skeleton className="h-4 w-40" />
+                    <Skeleton className="h-2.5 w-full" />
+                  </Stack>
+                  <Stack gap={2}>
+                    <Skeleton className="h-4 w-36" />
+                    <Skeleton className="h-2.5 w-full" />
+                  </Stack>
                 </>
               ) : (
                 <>
@@ -178,30 +160,30 @@ export default function AnalyticsPage() {
                   <VisibilityBar label="Private" count={privateCount} pct={privatePct} variant="private" />
                 </>
               )}
-            </div>
+            </Stack></Surface>
           </div>
 
           {/* Most active Q&A */}
           {(loading || (data?.most_active_topics?.length > 0)) && (
             <div>
               <div className="flex items-center justify-between mb-4">
-                <SectionHeader>Most Active Q&A</SectionHeader>
+                <Heading level={2}>Most Active Q&A Boards</Heading>
                 {!loading && data?.most_active_topics?.length > 0 && (
                   <span className="text-xs font-semibold text-slate-400 bg-slate-100 px-2.5 py-1 rounded-full">
                     Top {data.most_active_topics.length}
                   </span>
                 )}
               </div>
-              <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+              <Surface className="shadow-sm overflow-hidden">
                 {loading ? (
                   <div className="divide-y divide-slate-100">
                     {[...Array(4)].map((_, i) => (
                       <div key={i} className="px-6 py-4 flex items-center justify-between gap-4">
                         <div className="flex items-center gap-4 flex-1">
-                          <SkeletonBlock className="h-6 w-6 rounded-lg" />
-                          <SkeletonBlock className="h-4 w-48" />
+                          <Skeleton className="h-6 w-6 rounded-lg" />
+                          <Skeleton className="h-4 w-48" />
                         </div>
-                        <SkeletonBlock className="h-4 w-20" />
+                        <Skeleton className="h-4 w-20" />
                       </div>
                     ))}
                   </div>
@@ -225,18 +207,18 @@ export default function AnalyticsPage() {
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           <span className="text-sm font-bold text-slate-900 tabular-nums">{p.question_count}</span>
-                          <span className="text-xs text-slate-400 font-medium">
-                            question{p.question_count !== 1 ? 's' : ''}
-                          </span>
+                          <Text as="span" size="xs" color="muted" className="font-medium">
+                            Question{p.question_count !== 1 ? 's' : ''}
+                          </Text>
                         </div>
                       </div>
                     ))}
                   </div>
                 )}
-              </div>
+              </Surface>
             </div>
           )}
-        </div>
+        </Stack>
       )}
     </DashboardLayout>
   )

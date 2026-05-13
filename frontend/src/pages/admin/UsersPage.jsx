@@ -1,17 +1,25 @@
-import { useEffect, useRef, useState } from 'react'
-import DashboardLayout from '../../components/DashboardLayout'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import DashboardLayout from '@/layouts/DashboardLayout'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { inputCls, errorInputCls } from '@/lib/ui'
 import { getUsers, createUser, updateUser, deleteUser, resetUserPassword } from '../../api/users'
 import { useDebounce } from '../../hooks/useDebounce'
 import toast from 'react-hot-toast'
+import { InlineConfirm } from '@/components/InlineConfirm'
+import { PageError } from '@/components/feedback/PageError'
+import { EmptyState } from '@/components/feedback/EmptyState'
+import { Skeleton } from '@/components/feedback/Skeleton'
+import { SearchInput } from '@/components/qna/SearchInput'
+import { Surface } from '@/components/Surface'
+import { Stack } from '@/components/Stack'
+import { Text } from '@/components/Text'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 function Modal({ title, onClose, children }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
       <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl shadow-slate-300/30 w-full max-w-md p-6">
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-base font-semibold text-slate-900">{title}</h2>
@@ -31,13 +39,13 @@ function Modal({ title, onClose, children }) {
 function RoleBadge({ role }) {
   if (role === 'admin') {
     return (
-      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide bg-indigo-50 text-indigo-700 border border-indigo-200">
+      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wide bg-indigo-50 text-indigo-700 border border-indigo-200">
         Admin
       </span>
     )
   }
   return (
-    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide bg-slate-100 text-slate-600 border border-slate-200">
+    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wide bg-slate-100 text-slate-600 border border-slate-200">
       User
     </span>
   )
@@ -71,7 +79,7 @@ export default function UsersPage() {
 
   const debouncedSearch = useDebounce(search, 400)
 
-  useEffect(() => {
+  const load = useCallback(() => {
     setLoading(true)
     setFetchError(false)
     getUsers(debouncedSearch.trim().length >= 3 ? debouncedSearch.trim() : '')
@@ -79,6 +87,8 @@ export default function UsersPage() {
       .catch(() => setFetchError(true))
       .finally(() => setLoading(false))
   }, [debouncedSearch])
+
+  useEffect(() => { load() }, [load])
 
   async function handleDelete(id) {
     if (deletingRef.current.has(id)) return
@@ -101,7 +111,9 @@ export default function UsersPage() {
     try {
       const res = await resetUserPassword(id)
       setTempPassword(res.data.temporaryPassword)
-    } catch { /* ignore */ } finally {
+    } catch {
+      toast.error('Failed to reset password. Please try again.')
+    } finally {
       resetRef.current.delete(id)
     }
   }
@@ -118,55 +130,40 @@ export default function UsersPage() {
     >
       <div className="max-w-4xl">
         <div className="mb-4">
-          <div className="relative max-w-sm">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <circle cx="11" cy="11" r="8" /><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35" />
-            </svg>
-            <input
-              className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 focus-visible:border-blue-400 transition-all duration-200"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name or email..."
-            />
-          </div>
+          <SearchInput
+            className="max-w-sm"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by name or email..."
+          />
         </div>
 
         {loading ? (
-          <div className="space-y-2">
+          <Stack gap={2}>
             {[...Array(4)].map((_, i) => (
-              <div key={i} className="bg-white border border-slate-200 rounded-2xl px-5 py-3.5 flex items-center justify-between gap-4">
+              <Surface key={i} className="px-5 py-3.5 flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-slate-100 animate-pulse shrink-0" />
-                  <div className="space-y-2">
-                    <div className="h-4 bg-slate-100 rounded-xl animate-pulse w-32" />
-                    <div className="h-3 bg-slate-100 rounded-xl animate-pulse w-48" />
-                  </div>
+                  <Skeleton className="w-9 h-9 rounded-full shrink-0" />
+                  <Stack gap={2}>
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-3 w-48" />
+                  </Stack>
                 </div>
                 <div className="flex gap-2">
-                  <div className="h-9 w-14 bg-slate-100 rounded-xl animate-pulse" />
-                  <div className="h-9 w-16 bg-slate-100 rounded-xl animate-pulse" />
+                  <Skeleton className="h-9 w-14" />
+                  <Skeleton className="h-9 w-16" />
                 </div>
-              </div>
+              </Surface>
             ))}
-          </div>
+          </Stack>
         ) : fetchError ? (
-          <div className="flex flex-col items-center justify-center py-24 text-center">
-            <div className="w-12 h-12 rounded-2xl bg-red-50 border border-red-200 flex items-center justify-center mb-4">
-              <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" strokeWidth="1.75" viewBox="0 0 24 24">
-                <circle cx="12" cy="12" r="10" /><path strokeLinecap="round" d="M12 8v4m0 4h.01" />
-              </svg>
-            </div>
-            <p className="text-base font-bold text-slate-900">Failed to load users</p>
-            <p className="text-sm text-slate-500 mt-1.5">Check your connection and try again.</p>
-          </div>
+          <PageError heading="Failed to load users" action={{ label: 'Retry', onClick: load }} />
         ) : users.length === 0 ? (
-          <div className="py-10 text-center">
-            <p className="text-sm text-slate-500">No users found.</p>
-          </div>
+          <EmptyState heading="No users found" description="Try a different search term." />
         ) : (
-          <div className="space-y-2">
+          <Stack gap={2}>
             {users.map((u) => (
-              <div key={u._id} className="bg-white border border-slate-200 rounded-2xl px-5 py-3.5 flex items-center justify-between gap-4 transition-all duration-200 hover:border-slate-300 hover:shadow-md">
+              <Surface key={u._id} className="px-5 py-3.5 flex items-center justify-between gap-4 transition-all duration-200 hover:border-slate-300 hover:shadow-md">
                 <div className="flex items-center gap-3 min-w-0">
                   <div className={`w-9 h-9 rounded-full flex items-center justify-center font-semibold text-sm select-none shrink-0 ${getAvatarColor(u.name)}`}>
                     {u.name?.[0]?.toUpperCase() || '?'}
@@ -176,7 +173,7 @@ export default function UsersPage() {
                       <p className="text-sm font-semibold text-slate-900">{u.name}</p>
                       <RoleBadge role={u.role} />
                     </div>
-                    <p className="text-xs text-slate-400 mt-0.5 truncate">{u.email}</p>
+                    <Text size="xs" color="muted" className="mt-0.5 truncate">{u.email}</Text>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
@@ -184,18 +181,7 @@ export default function UsersPage() {
                     Edit
                   </Button>
                   {confirmDeleteId === u._id ? (
-                    <div className="flex items-center gap-1.5 bg-red-50 border border-red-200 rounded-xl px-2 py-1">
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleDelete(u._id)}
-                      >
-                        Confirm
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => setConfirmDeleteId(null)}>
-                        Cancel
-                      </Button>
-                    </div>
+                    <InlineConfirm onConfirm={() => handleDelete(u._id)} onCancel={() => setConfirmDeleteId(null)} />
                   ) : (
                     <Button
                       variant="destructive"
@@ -206,9 +192,9 @@ export default function UsersPage() {
                     </Button>
                   )}
                 </div>
-              </div>
+              </Surface>
             ))}
-          </div>
+          </Stack>
         )}
       </div>
 
@@ -232,9 +218,9 @@ export default function UsersPage() {
 
       {tempPassword && (
           <Modal title="Temporary Password" onClose={() => setTempPassword(null)}>
-            <p className="text-sm text-slate-500 mb-3">
-              Share this temporary password with the user. They will be prompted to change it on next login.
-            </p>
+            <Text className="mb-3">
+              Share this temporary password with the user. They will be prompted to change it on their next login.
+            </Text>
             <div className="bg-slate-50 rounded-xl px-4 py-4 font-mono text-slate-900 text-center text-lg tracking-widest select-all cursor-text border border-slate-200">
               {tempPassword}
             </div>
@@ -253,7 +239,7 @@ function CreateUserModal({ onClose, onCreated }) {
   function validate() {
     const errs = {}
     if (!form.name.trim() || form.name.trim().length < 2) errs.name = 'Name must be at least 2 characters'
-    if (!form.email.trim() || !EMAIL_RE.test(form.email.trim())) errs.email = 'Valid email required'
+    if (!form.email.trim() || !EMAIL_RE.test(form.email.trim())) errs.email = 'Enter a valid email address'
     if (!form.password || form.password.length < 6) errs.password = 'Password must be at least 6 characters'
     return errs
   }
@@ -273,7 +259,7 @@ function CreateUserModal({ onClose, onCreated }) {
         role: form.role,
       })
       onCreated(res.data.user)
-      toast.success('User created successfully.')
+      toast.success('User created.')
     } catch (err) {
       setErrors({ submit: err.response?.data?.error || 'Failed to create user.' })
     } finally {
@@ -283,8 +269,8 @@ function CreateUserModal({ onClose, onCreated }) {
 
   return (
     <Modal title="Add User" onClose={onClose}>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-1.5">
+      <Stack as="form" gap={4} onSubmit={handleSubmit}>
+        <Stack gap={1.5}>
           <Label className="text-slate-700 font-medium">Name</Label>
           <input
             className={`${inputCls} ${errors.name ? errorInputCls : ''}`}
@@ -293,8 +279,8 @@ function CreateUserModal({ onClose, onCreated }) {
             placeholder="Full name"
           />
           {errors.name && <p className="text-xs text-red-500">{errors.name}</p>}
-        </div>
-        <div className="space-y-1.5">
+        </Stack>
+        <Stack gap={1.5}>
           <Label className="text-slate-700 font-medium">Email</Label>
           <input
             type="email"
@@ -304,8 +290,8 @@ function CreateUserModal({ onClose, onCreated }) {
             placeholder="email@company.com"
           />
           {errors.email && <p className="text-xs text-red-500">{errors.email}</p>}
-        </div>
-        <div className="space-y-1.5">
+        </Stack>
+        <Stack gap={1.5}>
           <Label className="text-slate-700 font-medium">Password</Label>
           <input
             type="password"
@@ -315,8 +301,8 @@ function CreateUserModal({ onClose, onCreated }) {
             placeholder="Minimum 6 characters"
           />
           {errors.password && <p className="text-xs text-red-500">{errors.password}</p>}
-        </div>
-        <div className="space-y-1.5">
+        </Stack>
+        <Stack gap={1.5}>
           <Label className="text-slate-700 font-medium">Role</Label>
           <select
             className={inputCls}
@@ -326,7 +312,7 @@ function CreateUserModal({ onClose, onCreated }) {
             <option value="user">User</option>
             <option value="admin">Admin</option>
           </select>
-        </div>
+        </Stack>
         {errors.submit && <p className="text-sm text-red-500">{errors.submit}</p>}
         <div className="flex gap-2 pt-1">
           <Button type="submit" className="flex-1">
@@ -334,7 +320,7 @@ function CreateUserModal({ onClose, onCreated }) {
           </Button>
           <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
         </div>
-      </form>
+      </Stack>
     </Modal>
   )
 }
@@ -348,7 +334,7 @@ function EditUserModal({ user, onClose, onUpdated }) {
   function validate() {
     const errs = {}
     if (!name.trim() || name.trim().length < 2) errs.name = 'Name must be at least 2 characters'
-    if (!email.trim() || !EMAIL_RE.test(email.trim())) errs.email = 'Valid email required'
+    if (!email.trim() || !EMAIL_RE.test(email.trim())) errs.email = 'Enter a valid email address'
     return errs
   }
 
@@ -362,7 +348,7 @@ function EditUserModal({ user, onClose, onUpdated }) {
     try {
       const res = await updateUser(user._id, { name: name.trim(), email: email.trim().toLowerCase() })
       onUpdated(res.data.user)
-      toast.success('User updated successfully.')
+      toast.success('User updated.')
     } catch (err) {
       setErrors({ submit: err.response?.data?.error || 'Failed to update user.' })
     } finally {
@@ -372,8 +358,8 @@ function EditUserModal({ user, onClose, onUpdated }) {
 
   return (
     <Modal title="Edit User" onClose={onClose}>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-1.5">
+      <Stack as="form" gap={4} onSubmit={handleSubmit}>
+        <Stack gap={1.5}>
           <Label className="text-slate-700 font-medium">Name</Label>
           <input
             className={`${inputCls} ${errors.name ? errorInputCls : ''}`}
@@ -381,8 +367,8 @@ function EditUserModal({ user, onClose, onUpdated }) {
             onChange={(e) => setName(e.target.value)}
           />
           {errors.name && <p className="text-xs text-red-500">{errors.name}</p>}
-        </div>
-        <div className="space-y-1.5">
+        </Stack>
+        <Stack gap={1.5}>
           <Label className="text-slate-700 font-medium">Email</Label>
           <input
             type="email"
@@ -391,7 +377,7 @@ function EditUserModal({ user, onClose, onUpdated }) {
             onChange={(e) => setEmail(e.target.value)}
           />
           {errors.email && <p className="text-xs text-red-500">{errors.email}</p>}
-        </div>
+        </Stack>
         {errors.submit && <p className="text-sm text-red-500">{errors.submit}</p>}
         <div className="flex gap-2 pt-1">
           <Button type="submit" className="flex-1">
@@ -399,7 +385,7 @@ function EditUserModal({ user, onClose, onUpdated }) {
           </Button>
           <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
         </div>
-      </form>
+      </Stack>
     </Modal>
   )
 }

@@ -2,8 +2,9 @@ import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { AuthProvider } from './context/AuthContext'
-import ProtectedRoute from './components/ProtectedRoute'
-import AdminRoute from './components/AdminRoute'
+import ProtectedRoute from './components/auth/ProtectedRoute'
+import AdminRoute from './components/auth/AdminRoute'
+import { ErrorBoundary } from './components/ErrorBoundary'
 
 const LoginPage          = lazy(() => import('./pages/LoginPage'))
 const ChangePasswordPage = lazy(() => import('./pages/ChangePasswordPage'))
@@ -28,6 +29,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <ErrorBoundary>
         <Suspense fallback={<PageSkeleton />}>
           <Routes>
             <Route path="/" element={<Navigate to="/login" replace />} />
@@ -51,6 +53,7 @@ export default function App() {
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
         </Suspense>
+        </ErrorBoundary>
       </AuthProvider>
       <Toaster position="bottom-right" toastOptions={{ duration: 3500 }} />
     </BrowserRouter>

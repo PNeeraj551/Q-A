@@ -2,13 +2,17 @@ import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { textareaCls } from '@/lib/ui'
 import { getRelativeTime } from '@/lib/utils'
-import { listReplies, createReply, updateReply, deleteReply } from '../api/replies'
-import { updateQuestion, deleteQuestion, toggleLike } from '../api/questions'
+import { listReplies, createReply, updateReply, deleteReply } from '../../api/replies'
+import { updateQuestion, deleteQuestion, toggleLike } from '../../api/questions'
+import { InlineConfirm } from '../InlineConfirm'
+import toast from 'react-hot-toast'
 
 // ───────────────────────── REPLY THREAD ─────────────────────────
 export function ReplyThread({ qnaId, question, currentUserId, isAdmin, isClosed, socketRef }) {
   const [replies, setReplies] = useState([])
   const [loaded, setLoaded] = useState(false)
+  const [loadError, setLoadError] = useState(false)
+  const [retryCount, setRetryCount] = useState(0)
   const [replyText, setReplyText] = useState('')
   const submittingRef = useRef(false)
   const [editingId, setEditingId] = useState(null)
@@ -19,9 +23,9 @@ export function ReplyThread({ qnaId, question, currentUserId, isAdmin, isClosed,
   useEffect(() => {
     listReplies(qnaId, question._id)
       .then((res) => setReplies(res.data.replies || []))
-      .catch(() => {})
+      .catch(() => setLoadError(true))
       .finally(() => setLoaded(true))
-  }, [qnaId, question._id])
+  }, [qnaId, question._id, retryCount])
 
   useEffect(() => {
     if (!socketRef) return
@@ -58,6 +62,7 @@ export function ReplyThread({ qnaId, question, currentUserId, isAdmin, isClosed,
     } catch {
       setReplies((prev) => prev.filter((r) => r._id !== tempId))
       setReplyText(text)
+      toast.error('Failed to post reply.')
     } finally {
       submittingRef.current = false
     }
@@ -72,6 +77,7 @@ export function ReplyThread({ qnaId, question, currentUserId, isAdmin, isClosed,
       await deleteReply(qnaId, question._id, rId)
     } catch {
       if (backup) setReplies((prev) => [...prev, backup].sort((a, b) => new Date(a.created_at) - new Date(b.created_at)))
+      toast.error('Failed to delete reply.')
     } finally {
       deletingRepliesRef.current.delete(rId)
     }
@@ -87,8 +93,10 @@ export function ReplyThread({ qnaId, question, currentUserId, isAdmin, isClosed,
     try {
       const res = await updateReply(qnaId, question._id, rId, text)
       setReplies((prev) => prev.map((r) => (r._id === rId ? res.data.reply : r)))
+      toast.success('Reply updated.')
     } catch {
       if (original) setReplies((prev) => prev.map((r) => (r._id === rId ? original : r)))
+      toast.error('Failed to update reply.')
     } finally {
       savingRepliesRef.current.delete(rId)
     }
@@ -96,13 +104,28 @@ export function ReplyThread({ qnaId, question, currentUserId, isAdmin, isClosed,
 
   if (!loaded) return <p className="text-xs text-slate-400 pt-3">Loading replies...</p>
 
+  if (loaded && loadError) {
+    return (
+      <div className="mt-4 pt-4 border-t border-slate-100">
+        <p className="text-xs text-slate-400 pl-1">
+          Failed to load replies.{' '}
+          <button
+            className="text-blue-500 hover:underline"
+            onClick={() => { setLoadError(false); setLoaded(false); setRetryCount((c) => c + 1) }}
+          >
+            Retry
+          </button>
+        </p>
+      </div>
+    )
+  }
+
   return (
     <div className="mt-4 pt-4 border-t border-slate-100 space-y-3">
       {replies.length === 0 && (
         <p className="text-xs text-slate-400 pl-1">No replies yet.</p>
       )}
 
-      {/* Threaded replies with visual left border */}
       {replies.length > 0 && (
         <div className="border-l-2 border-slate-100 ml-1 pl-4 space-y-3">
           {replies.map((r) => (
@@ -162,7 +185,7 @@ export function ReplyThread({ qnaId, question, currentUserId, isAdmin, isClosed,
       {!isClosed && (
         <form onSubmit={handleSubmitReply} className="flex gap-2 pt-1 ml-1">
           <input
-            className="flex-1 h-9 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-900 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 focus-visible:border-blue-400 transition-all duration-200"
+            className="flex-1 h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 focus-visible:border-blue-400 disabled:opacity-50 transition-all duration-200"
             value={replyText}
             onChange={(e) => setReplyText(e.target.value)}
             placeholder="Write a reply..."
@@ -210,8 +233,10 @@ export function QuestionCard({ qnaId, question, currentUserId, isAdmin, isClosed
     try {
       const res = await updateQuestion(qnaId, question._id, text)
       onUpdate(res.data.question)
+      toast.success('Question updated.')
     } catch {
       onUpdate({ ...question, text: original })
+      toast.error('Failed to update question.')
     } finally {
       savingRef.current = false
     }
@@ -223,14 +248,17 @@ export function QuestionCard({ qnaId, question, currentUserId, isAdmin, isClosed
     onDelete(question._id)
     try {
       await deleteQuestion(qnaId, question._id)
-    } catch { /* already removed optimistically */ }
+      toast.success('Question deleted.')
+    } catch {
+      toast.error('Failed to delete question.')
+    }
   }
 
   const canModify = question.author_id === currentUserId || isAdmin
   const replyLabel =
     question.reply_count === 0 ? 'Reply' :
-    question.reply_count === 1 ? '1 reply' :
-    `${question.reply_count} replies`
+    question.reply_count === 1 ? '1 Reply' :
+    `${question.reply_count} Replies`
 
   const initial = question.author_name?.[0]?.toUpperCase() || '?'
   const avatarColor =
@@ -275,6 +303,7 @@ export function QuestionCard({ qnaId, question, currentUserId, isAdmin, isClosed
           <div className="flex items-center gap-4 mt-3">
             <button
               onClick={!isClosed ? handleLike : undefined}
+              aria-label={question.liked_by_me ? 'Unlike question' : 'Like question'}
               className={`flex items-center gap-1.5 text-sm transition-all duration-200 ${
                 isClosed
                   ? 'text-slate-400 cursor-default'
@@ -295,6 +324,7 @@ export function QuestionCard({ qnaId, question, currentUserId, isAdmin, isClosed
 
             <button
               onClick={() => setShowReplies(v => !v)}
+              aria-label={showReplies ? 'Hide replies' : 'Show replies'}
               className="text-sm text-slate-400 hover:text-slate-700 transition-colors duration-200"
             >
               {showReplies ? 'Hide replies' : replyLabel}
@@ -310,28 +340,15 @@ export function QuestionCard({ qnaId, question, currentUserId, isAdmin, isClosed
                     Edit
                   </button>
                 )}
-                {!confirmDelete ? (
+                {confirmDelete ? (
+                  <InlineConfirm onConfirm={handleDelete} onCancel={() => setConfirmDelete(false)} />
+                ) : (
                   <button
                     onClick={() => setConfirmDelete(true)}
                     className="text-xs text-slate-400 hover:text-red-500 transition-colors duration-200"
                   >
                     Delete
                   </button>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={handleDelete}
-                      className="text-xs text-red-600 font-medium hover:text-red-700 transition-colors duration-200"
-                    >
-                      Confirm
-                    </button>
-                    <button
-                      onClick={() => setConfirmDelete(false)}
-                      className="text-xs text-slate-400 hover:text-slate-700 transition-colors duration-200"
-                    >
-                      Cancel
-                    </button>
-                  </div>
                 )}
               </div>
             )}

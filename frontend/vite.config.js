@@ -21,8 +21,6 @@ export default defineConfig({
           if (id.includes('node_modules/react-dom') || id.includes('node_modules/react/')) return 'react-vendor'
           if (id.includes('node_modules/react-router')) return 'router'
 if (
-            id.includes('node_modules/@base-ui') ||
-            id.includes('node_modules/class-variance-authority') ||
             id.includes('node_modules/clsx') ||
             id.includes('node_modules/tailwind-merge')
           ) return 'ui'
