@@ -12,7 +12,7 @@ const sizes = {
   sm:      "h-9 gap-1 px-4 text-sm",
 }
 
-function Button({ className, variant = "default", size = "default", ...props }) {
+export function Button({ className, variant = "default", size = "default", ...props }) {
   return (
     <button
       className={cn(
@@ -25,5 +25,3 @@ function Button({ className, variant = "default", size = "default", ...props }) 
     />
   )
 }
-
-export { Button }

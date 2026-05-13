@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Button } from '@/components/ui/button'
+import { Button } from '@/components/Button'
 import { textareaCls } from '@/lib/ui'
 import { getRelativeTime } from '@/lib/utils'
 import { listReplies, createReply, updateReply, deleteReply } from '../../api/replies'

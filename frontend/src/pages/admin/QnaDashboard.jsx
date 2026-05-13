@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import DashboardLayout from '@/layouts/DashboardLayout'
-import { Button } from '@/components/ui/button'
+import { Button } from '@/components/Button'
 import { listQna, deleteQna } from '../../api/qna'
 import { useDebounce } from '../../hooks/useDebounce'
 import toast from 'react-hot-toast'

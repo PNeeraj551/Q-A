@@ -1,8 +1,6 @@
 @import "tailwindcss";
 @import "@fontsource-variable/inter";
 
-@custom-variant dark (&:is(.dark *));
-
 *, *::before, *::after {
   box-sizing: border-box;
 }
@@ -24,13 +22,6 @@ body {
   --border: oklch(0.928 0.006 247);
   --ring: oklch(0.484 0.242 264.4);
   --radius: 0.75rem;
-}
-
-.dark {
-  --background: oklch(0.148 0.004 228.8);
-  --foreground: oklch(0.987 0.002 197.1);
-  --border: oklch(1 0 0 / 10%);
-  --ring: oklch(0.56 0.021 213.5);
 }
 
 @theme inline {
