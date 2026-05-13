@@ -82,7 +82,7 @@ export default function LoginPage() {
               </svg>
             </div>
             <Heading level={1}>Welcome back</Heading>
-            <Text size="13" className="mt-1.5 leading-relaxed">Sign in to access Q&A Platform</Text>
+            <Text size="sm" className="mt-1.5 leading-relaxed">Sign in to access Q&A Platform</Text>
           </div>
 
           <Stack as="form" gap={5} onSubmit={handleSubmit} noValidate>

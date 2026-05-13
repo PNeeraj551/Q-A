@@ -52,7 +52,6 @@ body {
   }
   body {
     @apply bg-background text-foreground;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
   button:not(:disabled), [role="button"]:not(:disabled) {
     cursor: pointer;
@@ -61,8 +60,9 @@ body {
     @apply font-sans;
     scroll-behavior: smooth;
     -webkit-text-size-adjust: 100%;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
-  h1, h2, h3, h4, h5, h6 {
+  h1, h2, h3 {
     letter-spacing: -0.025em;
   }
   ::-webkit-scrollbar {

@@ -70,7 +70,7 @@ export default function DashboardLayout({ children, title, subtitle, actions, on
             </div>
             <div>
               <p className="text-sm font-bold text-slate-900 leading-tight tracking-tight">Q&A Platform</p>
-              <p className="text-[11px] text-slate-400 leading-tight font-medium">AthivaTech</p>
+              <p className="text-xs text-slate-400 leading-tight font-medium">AthivaTech</p>
             </div>
           </div>
         </div>
@@ -107,7 +107,7 @@ export default function DashboardLayout({ children, title, subtitle, actions, on
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-slate-900 truncate leading-tight">{user?.name || ''}</p>
-              <p className="text-[11px] text-slate-400 capitalize leading-tight font-medium">{user?.role}</p>
+              <p className="text-xs text-slate-400 capitalize leading-tight font-medium">{user?.role}</p>
             </div>
             <svg className="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-400 transition-colors shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />

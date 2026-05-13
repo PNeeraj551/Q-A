@@ -50,7 +50,7 @@ function KpiCard({ label, value, icon, color, loading }) {
     <Surface className="px-6 py-6 shadow-sm hover:shadow-md transition-all duration-200 group">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold text-slate-600 tracking-[0.08em]">{label}</p>
+          <p className="text-xs font-semibold text-slate-600 tracking-wider">{label}</p>
           <div className="mt-3">
             {loading ? (
               <Skeleton className="h-10 w-20" />

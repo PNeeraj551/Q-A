@@ -3,8 +3,8 @@ import toast from 'react-hot-toast'
 import { updateMe } from '../api/auth'
 import { useAuth } from '../context/AuthContext'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { inputCls } from '@/lib/ui'
 import { PasswordInput } from './PasswordInput'
 
 export default function ProfileEditPanel({ onClose }) {
@@ -153,8 +153,9 @@ export default function ProfileEditPanel({ onClose }) {
           <form id="profile-form" onSubmit={handleSubmit} noValidate className="space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="profile-name">Name</Label>
-              <Input
+              <input
                 id="profile-name"
+                className={inputCls}
                 value={name}
                 onChange={e => { setName(e.target.value); setErrors(p => ({ ...p, name: '' })) }}
                 disabled={loading}
@@ -167,9 +168,10 @@ export default function ProfileEditPanel({ onClose }) {
 
             <div className="space-y-1.5">
               <Label htmlFor="profile-email">Email address</Label>
-              <Input
+              <input
                 id="profile-email"
                 type="email"
+                className={inputCls}
                 value={email}
                 onChange={e => { setEmail(e.target.value); setEmailDirty(true); setErrors(p => ({ ...p, email: '' })) }}
                 disabled={loading}

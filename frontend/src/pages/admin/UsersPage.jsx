@@ -39,13 +39,13 @@ function Modal({ title, onClose, children }) {
 function RoleBadge({ role }) {
   if (role === 'admin') {
     return (
-      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wide bg-indigo-50 text-indigo-700 border border-indigo-200">
+      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
         Admin
       </span>
     )
   }
   return (
-    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wide bg-slate-100 text-slate-600 border border-slate-200">
+    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200">
       User
     </span>
   )

@@ -5,6 +5,7 @@ dns.setServers(['8.8.8.8', '8.8.4.4']);
 
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const User = require('../src/models/User');
 
 const MONGO_URI = process.env.MONGO_URI;
 
@@ -12,21 +13,6 @@ if (!MONGO_URI) {
   console.error('[seed] MONGO_URI is not set. Aborting.');
   process.exit(1);
 }
-
-const userSchema = new mongoose.Schema(
-  {
-    name: { type: String, required: true, trim: true },
-    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
-    password: { type: String, required: true },
-    role: { type: String, enum: ['admin', 'user'], required: true },
-    is_active: { type: Boolean, default: true },
-    must_change_password: { type: Boolean, default: false },
-    created_at: { type: Date, default: Date.now },
-  },
-  { timestamps: false, versionKey: false }
-);
-
-const User = mongoose.models.User || mongoose.model('User', userSchema);
 
 const SEED_USERS = [
   { name: 'Admin', email: 'admin@companyname.com', password: 'Admin@123', role: 'admin' },

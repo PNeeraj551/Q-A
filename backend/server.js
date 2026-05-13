@@ -151,7 +151,7 @@ const startServer = async () => {
   try {
     await connectDB();
     httpServer.listen(PORT, () => {
-      console.log(`[server] Running on port ${PORT} in ${NODE_ENV} mode`);
+      console.log(`[server] Running on port ${PORT}`);
     });
   } catch (err) {
     console.error('[startup error]', err);
