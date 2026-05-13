@@ -35,6 +35,8 @@ export default function QnaDashboard() {
   const [total, setTotal] = useState(0)
 
   const debouncedSearch = useDebounce(search, 800)
+  const hasActiveSearch = debouncedSearch.trim().length >= 3
+  const isSearchClearing = search.trim().length < 3 && hasActiveSearch
   const pageRef = useRef(page)
   useEffect(() => { pageRef.current = page }, [page])
 
@@ -166,7 +168,7 @@ export default function QnaDashboard() {
           </div>
 
           {/* Results count */}
-          {!loading && (
+          {!loading && !isSearchClearing && (
             <Text size="xs" color="muted">
               {total === 0 ? 'No results' : `${total} board${total !== 1 ? 's' : ''}`}
               {(debouncedSearch.trim().length >= 3 || visibility) ? ' matching your filters' : ''}
@@ -174,7 +176,7 @@ export default function QnaDashboard() {
           )}
 
           {/* List */}
-          {loading ? (
+          {loading || isSearchClearing ? (
             <Stack gap={2}>
               {[...Array(5)].map((_, i) => (
                 <Surface key={i} className="px-5 py-4 flex items-center justify-between gap-4">
