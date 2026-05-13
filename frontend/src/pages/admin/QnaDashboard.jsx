@@ -13,7 +13,7 @@ import { EmptyState } from '@/components/feedback/EmptyState'
 import { PageError } from '@/components/feedback/PageError'
 import { InlineConfirm } from '@/components/InlineConfirm'
 import { Skeleton } from '@/components/feedback/Skeleton'
-import { SearchInput } from '@/components/qna/SearchInput'
+import { QnaFilters } from '@/components/qna/QnaFilters'
 import { Surface } from '@/components/Surface'
 import { Stack } from '@/components/Stack'
 import { Text } from '@/components/Text'
@@ -30,6 +30,8 @@ export default function QnaDashboard() {
 
   const [search, setSearch] = useState('')
   const [visibility, setVisibility] = useState('')
+  const [fromDate, setFromDate] = useState('')
+  const [toDate, setToDate] = useState('')
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [total, setTotal] = useState(0)
@@ -37,6 +39,7 @@ export default function QnaDashboard() {
   const debouncedSearch = useDebounce(search, 800)
   const hasActiveSearch = debouncedSearch.trim().length >= 3
   const isSearchClearing = search.trim().length < 3 && hasActiveSearch
+  const hasActiveFilters = hasActiveSearch || !!visibility || !!fromDate || !!toDate
   const pageRef = useRef(page)
   useEffect(() => { pageRef.current = page }, [page])
 
@@ -96,18 +99,16 @@ export default function QnaDashboard() {
     const params = { page, limit: LIMIT }
     if (debouncedSearch.trim().length >= 3) params.search = debouncedSearch.trim()
     if (visibility) params.visibility = visibility
+    if (fromDate) params.fromDate = fromDate
+    if (toDate) params.toDate = toDate
     fetchPosts(params)
-  }, [debouncedSearch, visibility, page, fetchPosts])
+  }, [debouncedSearch, visibility, fromDate, toDate, page, fetchPosts])
 
-  function handleSearchChange(e) {
-    setSearch(e.target.value)
-    setPage(1)
-  }
-
-  function handleVisibilityChange(v) {
-    setVisibility(v)
-    setPage(1)
-  }
+  function handleSetSearch(v) { setSearch(v); setPage(1) }
+  function handleSetVisibility(v) { setVisibility(v); setPage(1) }
+  function handleSetFromDate(v) { setFromDate(v); if (toDate && v > toDate) setToDate(''); setPage(1) }
+  function handleSetToDate(v) { setToDate(v); setPage(1) }
+  function handleClearFilters() { setSearch(''); setVisibility(''); setFromDate(''); setToDate(''); setPage(1) }
 
   async function handleDelete(id) {
     if (deletingRef.current.has(id)) return
@@ -125,12 +126,6 @@ export default function QnaDashboard() {
     }
   }
 
-  const visibilityOptions = [
-    { value: '', label: 'All' },
-    { value: 'PUBLIC', label: 'Public' },
-    { value: 'PRIVATE', label: 'Private' },
-  ]
-
   return (
     <DashboardLayout
         title="Q&A Boards"
@@ -144,34 +139,21 @@ export default function QnaDashboard() {
         <Stack gap={5} className="max-w-5xl">
 
           {/* Search + filter bar */}
-          <div className="flex items-center gap-3">
-            <SearchInput
-              className="flex-1"
-              value={search}
-              onChange={handleSearchChange}
-              placeholder="Search boards..."
-            />
-            <div className="flex items-center gap-1 bg-slate-100 rounded-xl p-1 shrink-0">
-              {visibilityOptions.map((opt) => (
-                <button
-                  key={opt.value}
-                  onClick={() => handleVisibilityChange(opt.value)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${visibility === opt.value
-                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm'
-                      : 'text-slate-500 hover:text-slate-900 hover:bg-white'
-                    }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          </div>
+          <QnaFilters
+            search={search} setSearch={handleSetSearch}
+            visibility={visibility} setVisibility={handleSetVisibility}
+            fromDate={fromDate} setFromDate={handleSetFromDate}
+            toDate={toDate} setToDate={handleSetToDate}
+            hasActiveFilters={hasActiveFilters}
+            onClearFilters={handleClearFilters}
+            role="admin"
+          />
 
           {/* Results count */}
           {!loading && !isSearchClearing && (
             <Text size="xs" color="muted">
               {total === 0 ? 'No results' : `${total} board${total !== 1 ? 's' : ''}`}
-              {(debouncedSearch.trim().length >= 3 || visibility) ? ' matching your filters' : ''}
+              {hasActiveFilters ? ' matching your filters' : ''}
             </Text>
           )}
 
@@ -197,11 +179,11 @@ export default function QnaDashboard() {
               action={{ label: 'Retry', onClick: () => fetchPosts({ page, limit: LIMIT }) }}
             />
           ) : posts.length === 0 ? (
-            debouncedSearch.trim().length >= 3 || visibility ? (
+            hasActiveFilters ? (
               <EmptyState
                 heading="No boards found"
                 description="Try adjusting your search or filters."
-                action={{ label: 'Clear filters', onClick: () => { setSearch(''); setVisibility(''); setPage(1) } }}
+                action={{ label: 'Clear filters', onClick: handleClearFilters }}
               />
             ) : (
               <EmptyState

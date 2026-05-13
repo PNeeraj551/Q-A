@@ -9,10 +9,9 @@ function SidebarLink({ to, label, icon, end }) {
       to={to}
       end={end}
       className={({ isActive }) =>
-        `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
-          isActive
-            ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md'
-            : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+        `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${isActive
+          ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md'
+          : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
         }`
       }
     >
@@ -79,7 +78,7 @@ export default function DashboardLayout({ children, title, subtitle, actions, on
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
           {user?.role === 'admin' ? (
             <>
-              <p className="px-3 pt-1 pb-2.5 text-xs font-semibold uppercase tracking-wider text-slate-400">
+              <p className="px-3 pt-1 pb-2.5 text-xs font-semibold tracking-wider text-slate-400">
                 Navigation
               </p>
               <SidebarLink to="/admin/qna" label="Q&A Boards" icon={QnaIcon} />
@@ -88,7 +87,7 @@ export default function DashboardLayout({ children, title, subtitle, actions, on
             </>
           ) : (
             <>
-              <p className="px-3 pt-1 pb-2.5 text-xs font-semibold uppercase tracking-wider text-slate-400">
+              <p className="px-3 pt-1 pb-2.5 text-xs font-semibold tracking-wider text-slate-400">
                 Navigation
               </p>
               <SidebarLink to="/user/qna" label="Q&A Boards" icon={QnaIcon} />

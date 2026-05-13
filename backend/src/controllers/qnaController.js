@@ -11,7 +11,7 @@ const { getIO } = require('../sockets/io');
 // Query: ?search=&visibility=&page=1&limit=10
 const listQna = async (req, res) => {
   try {
-    const { search, visibility, page = 1, limit = 10 } = req.query;
+    const { search, visibility, page = 1, limit = 10, fromDate, toDate } = req.query;
     const pageNum = Math.max(1, parseInt(page, 10) || 1);
     const limitNum = Math.min(50, Math.max(1, parseInt(limit, 10) || 10));
     const skip = (pageNum - 1) * limitNum;
@@ -33,6 +33,17 @@ const listQna = async (req, res) => {
     }
     if (visibility && ['PUBLIC', 'PRIVATE'].includes(visibility)) {
       andClauses.push({ visibility });
+    }
+    if (fromDate) {
+      const from = new Date(fromDate);
+      if (!isNaN(from.getTime())) andClauses.push({ created_at: { $gte: from } });
+    }
+    if (toDate) {
+      const to = new Date(toDate);
+      if (!isNaN(to.getTime())) {
+        to.setHours(23, 59, 59, 999);
+        andClauses.push({ created_at: { $lte: to } });
+      }
     }
 
     const filter = andClauses.length > 1 ? { $and: andClauses } : andClauses[0] || {};

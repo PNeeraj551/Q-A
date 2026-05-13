@@ -10,7 +10,7 @@ import { VisibilityBadge, StatusBadge } from '@/components/Badges'
 import { Pagination } from '@/components/qna/Pagination'
 import { EmptyState } from '@/components/feedback/EmptyState'
 import { Skeleton } from '@/components/feedback/Skeleton'
-import { SearchInput } from '@/components/qna/SearchInput'
+import { QnaFilters } from '@/components/qna/QnaFilters'
 import { Surface } from '@/components/Surface'
 import { Stack } from '@/components/Stack'
 import { Text } from '@/components/Text'
@@ -24,6 +24,9 @@ export default function QnaListPage() {
   const [loading, setLoading] = useState(true)
 
   const [search, setSearch] = useState('')
+  const [visibility, setVisibility] = useState('')
+  const [fromDate, setFromDate] = useState('')
+  const [toDate, setToDate] = useState('')
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [total, setTotal] = useState(0)
@@ -31,6 +34,7 @@ export default function QnaListPage() {
   const debouncedSearch = useDebounce(search, 800)
   const hasActiveSearch = debouncedSearch.trim().length >= 3
   const isSearchClearing = search.trim().length < 3 && hasActiveSearch
+  const hasActiveFilters = hasActiveSearch || !!visibility || !!fromDate || !!toDate
   const pageRef = useRef(page)
   const searchRef = useRef(debouncedSearch)
   useEffect(() => { pageRef.current = page }, [page])
@@ -55,8 +59,11 @@ export default function QnaListPage() {
   useEffect(() => {
     const params = { page, limit: LIMIT }
     if (debouncedSearch.trim().length >= 3) params.search = debouncedSearch.trim()
+    if (visibility) params.visibility = visibility
+    if (fromDate) params.fromDate = fromDate
+    if (toDate) params.toDate = toDate
     fetchPosts(params)
-  }, [debouncedSearch, page, fetchPosts])
+  }, [debouncedSearch, visibility, fromDate, toDate, page, fetchPosts])
 
   // Create socket once on mount
   useEffect(() => {
@@ -138,27 +145,32 @@ export default function QnaListPage() {
     })
   }, [postIdsKey])
 
-  function handleSearchChange(e) {
-    setSearch(e.target.value)
-    setPage(1)
-  }
+  function handleSetSearch(v) { setSearch(v); setPage(1) }
+  function handleSetVisibility(v) { setVisibility(v); setPage(1) }
+  function handleSetFromDate(v) { setFromDate(v); if (toDate && v > toDate) setToDate(''); setPage(1) }
+  function handleSetToDate(v) { setToDate(v); setPage(1) }
+  function handleClearFilters() { setSearch(''); setVisibility(''); setFromDate(''); setToDate(''); setPage(1) }
 
   return (
     <DashboardLayout title="Q&A Boards" subtitle="Browse and join Q&A boards">
-      <Stack gap={4} className="max-w-3xl">
+      <Stack gap={4} className="max-w-5xl">
 
-        {/* Search bar */}
-        <SearchInput
-          value={search}
-          onChange={handleSearchChange}
-          placeholder="Search boards..."
+        {/* Search + filter bar */}
+        <QnaFilters
+          search={search} setSearch={handleSetSearch}
+          visibility={visibility} setVisibility={handleSetVisibility}
+          fromDate={fromDate} setFromDate={handleSetFromDate}
+          toDate={toDate} setToDate={handleSetToDate}
+          hasActiveFilters={hasActiveFilters}
+          onClearFilters={handleClearFilters}
+          role="participant"
         />
 
         {/* Results count */}
         {!loading && !isSearchClearing && (
           <Text size="xs" color="muted">
             {total === 0 ? 'No results' : `${total} board${total !== 1 ? 's' : ''}`}
-            {debouncedSearch.trim().length >= 3 ? ' matching your search' : ''}
+            {hasActiveFilters ? ' matching your filters' : ''}
           </Text>
         )}
 
@@ -179,11 +191,11 @@ export default function QnaListPage() {
             ))}
           </Stack>
         ) : posts.length === 0 ? (
-          debouncedSearch.trim().length >= 3 ? (
+          hasActiveFilters ? (
             <EmptyState
               heading="No boards found"
-              description="Try a different search term."
-              action={{ label: 'Clear search', onClick: () => { setSearch(''); setPage(1) } }}
+              description="Try adjusting your search or filters."
+              action={{ label: 'Clear filters', onClick: handleClearFilters }}
             />
           ) : (
             <EmptyState
