@@ -18,7 +18,7 @@ function SidebarLink({ to, label, icon, end }) {
     >
       {({ isActive }) => (
         <>
-          <span className={`w-[18px] h-[18px] shrink-0 transition-opacity duration-200 ${isActive ? 'opacity-100' : 'opacity-65'}`}>
+          <span className={`w-[18px] h-[18px] shrink-0 transition-opacity duration-200 ${isActive ? 'opacity-100' : 'opacity-75'}`}>
             {icon}
           </span>
           <span>{label}</span>
@@ -70,7 +70,7 @@ export default function DashboardLayout({ children, title, subtitle, actions, on
             </div>
             <div>
               <p className="text-sm font-bold text-slate-900 leading-tight tracking-tight">Q&A Platform</p>
-              <p className="text-xs text-slate-400 leading-tight font-medium">AthivaTech</p>
+              <p className="text-xs text-slate-500 leading-tight font-medium">AthivaTech</p>
             </div>
           </div>
         </div>
@@ -79,7 +79,7 @@ export default function DashboardLayout({ children, title, subtitle, actions, on
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
           {user?.role === 'admin' ? (
             <>
-              <p className="px-3 pt-1 pb-2.5 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400/80">
+              <p className="px-3 pt-1 pb-2.5 text-xs font-semibold uppercase tracking-wider text-slate-400">
                 Navigation
               </p>
               <SidebarLink to="/admin/qna" label="Q&A Boards" icon={QnaIcon} />
@@ -88,7 +88,7 @@ export default function DashboardLayout({ children, title, subtitle, actions, on
             </>
           ) : (
             <>
-              <p className="px-3 pt-1 pb-2.5 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400/80">
+              <p className="px-3 pt-1 pb-2.5 text-xs font-semibold uppercase tracking-wider text-slate-400">
                 Navigation
               </p>
               <SidebarLink to="/user/qna" label="Q&A Boards" icon={QnaIcon} />
@@ -107,7 +107,7 @@ export default function DashboardLayout({ children, title, subtitle, actions, on
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-slate-900 truncate leading-tight">{user?.name || ''}</p>
-              <p className="text-xs text-slate-400 capitalize leading-tight font-medium">{user?.role}</p>
+              <p className="text-xs text-slate-500 capitalize leading-tight font-medium">{user?.role}</p>
             </div>
             <svg className="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-400 transition-colors shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
