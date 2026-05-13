@@ -64,6 +64,16 @@ export default function QnaDashboard() {
       setPosts((prev) => prev.map((p) => String(p._id) === String(post._id) ? { ...p, ...post } : p))
     })
 
+    socket.on('question:count_change', ({ qna_id, delta }) => {
+      setPosts((prev) =>
+        prev.map((p) =>
+          String(p._id) === String(qna_id)
+            ? { ...p, question_count: Math.max(0, (p.question_count || 0) + delta) }
+            : p
+        )
+      )
+    })
+
     return () => { socket.disconnect() }
   }, [])
 

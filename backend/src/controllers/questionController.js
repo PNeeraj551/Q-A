@@ -56,6 +56,7 @@ const createQuestion = async (req, res) => {
     // Broadcast to qna room
     try {
       getIO().to(`qna_${qnaId}`).emit('question:new', result);
+      getIO().to('qna_global').emit('question:count_change', { qna_id: qnaId, delta: 1 });
     } catch (_) {}
 
     return success(res, { question: result }, 201);
@@ -123,6 +124,7 @@ const deleteQuestion = async (req, res) => {
 
     try {
       getIO().to(`qna_${req.params.qnaId}`).emit('question:delete', { question_id: qId });
+      getIO().to('qna_global').emit('question:count_change', { qna_id: req.params.qnaId, delta: -1 });
     } catch (_) {}
 
     return success(res, { message: 'Question deleted' });
