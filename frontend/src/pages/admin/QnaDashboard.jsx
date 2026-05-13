@@ -169,7 +169,7 @@ export default function QnaDashboard() {
           {!loading && (
             <Text size="xs" color="muted">
               {total === 0 ? 'No results' : `${total} board${total !== 1 ? 's' : ''}`}
-              {(search || visibility) ? ' matching your filters' : ''}
+              {(debouncedSearch.trim().length >= 3 || visibility) ? ' matching your filters' : ''}
             </Text>
           )}
 
@@ -195,7 +195,7 @@ export default function QnaDashboard() {
               action={{ label: 'Retry', onClick: () => fetchPosts({ page, limit: LIMIT }) }}
             />
           ) : posts.length === 0 ? (
-            search || visibility ? (
+            debouncedSearch.trim().length >= 3 || visibility ? (
               <EmptyState
                 heading="No boards found"
                 description="Try adjusting your search or filters."

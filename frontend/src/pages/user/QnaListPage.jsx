@@ -156,7 +156,7 @@ export default function QnaListPage() {
         {!loading && (
           <Text size="xs" color="muted">
             {total === 0 ? 'No results' : `${total} board${total !== 1 ? 's' : ''}`}
-            {search ? ' matching your search' : ''}
+            {debouncedSearch.trim().length >= 3 ? ' matching your search' : ''}
           </Text>
         )}
 
@@ -177,7 +177,7 @@ export default function QnaListPage() {
             ))}
           </Stack>
         ) : posts.length === 0 ? (
-          search ? (
+          debouncedSearch.trim().length >= 3 ? (
             <EmptyState
               heading="No boards found"
               description="Try a different search term."
