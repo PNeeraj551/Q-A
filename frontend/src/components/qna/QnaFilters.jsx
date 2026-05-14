@@ -7,7 +7,7 @@ const VISIBILITY_OPTIONS = [
 ]
 
 const dateCls =
-  'h-10 shrink-0 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 ' +
+  'h-10 w-[150px] shrink-0 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 ' +
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/20 ' +
   'focus-visible:border-blue-500 transition-all duration-200 cursor-pointer'
 
@@ -68,19 +68,23 @@ export function QnaFilters({
         aria-label="To date"
       />
 
-      <button
-        type="button"
-        onClick={onClearFilters}
-        aria-label="Clear all filters"
-        className={`flex items-center gap-1.5 h-10 px-3 rounded-full border border-slate-200 bg-white text-xs font-medium text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-all duration-200 shrink-0 shadow-sm ${
-          hasActiveFilters ? 'opacity-100' : 'opacity-0 pointer-events-none'
+      <div
+        className={`overflow-hidden transition-all duration-300 ease-in-out shrink-0 ${
+          hasActiveFilters ? 'max-w-[120px] opacity-100' : 'max-w-0 opacity-0'
         }`}
       >
-        <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-        </svg>
-        Clear
-      </button>
+        <button
+          type="button"
+          onClick={onClearFilters}
+          aria-label="Clear all filters"
+          className="flex items-center gap-1.5 h-10 px-3 rounded-full border border-slate-200 bg-white text-xs font-medium text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors duration-200 shadow-sm whitespace-nowrap"
+        >
+          <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+          Clear
+        </button>
+      </div>
     </div>
   )
 }
