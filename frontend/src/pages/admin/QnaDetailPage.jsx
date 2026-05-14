@@ -27,6 +27,7 @@ export default function QnaDetailPage() {
   const [submitting, setSubmitting] = useState(false)
   const submittingRef = useRef(false)
   const inputRef = useRef(null)
+  const bottomRef = useRef(null)
   const [autoClosedByTimer, setAutoClosedByTimer] = useState(false)
 
   useEffect(() => {
@@ -132,6 +133,8 @@ export default function QnaDetailPage() {
 
     setQuestions((prev) => [...prev, tempQuestion])
     setQuestionText('')
+    if (inputRef.current) inputRef.current.style.height = 'auto'
+    requestAnimationFrame(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }))
     setSubmitting(true)
 
     try {
@@ -154,7 +157,7 @@ export default function QnaDetailPage() {
   if (loading) {
     return (
       <DashboardLayout title="Q&A">
-        <Stack gap={3} className="max-w-3xl">
+        <Stack gap={3} >
           {[...Array(4)].map((_, i) => (
             <Surface key={i} className="p-5">
               <Stack gap={3}>
@@ -196,28 +199,42 @@ export default function QnaDetailPage() {
       This Q&A board is closed. No new questions can be posted.
     </div>
   ) : (
-    <Surface
-      as="form"
-      onSubmit={handleSubmitQuestion}
-      className="flex items-center gap-3 px-4 py-3 shadow-sm hover:border-slate-300 transition-all duration-200"
-    >
-      <input
-        ref={inputRef}
-        className="flex-1 bg-transparent text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none disabled:opacity-50"
-        value={questionText}
-        onChange={(e) => setQuestionText(e.target.value)}
-        placeholder="Ask a question..."
-        maxLength={1000}
-        disabled={submitting}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault()
-            if (questionText.trim() && !submittingRef.current) handleSubmitQuestion(e)
-          }
-        }}
-      />
-      <SendButton disabled={submitting} />
-    </Surface>
+    <div>
+      <form
+        onSubmit={handleSubmitQuestion}
+        className="composer-shell"
+      >
+        <textarea
+          ref={inputRef}
+          rows={1}
+          className="composer-input"
+          style={{ maxHeight: '40vh' }}
+          value={questionText}
+          onChange={(e) => {
+            setQuestionText(e.target.value)
+            e.target.style.height = 'auto'
+            e.target.style.height = `${e.target.scrollHeight}px`
+          }}
+          placeholder="Ask a question..."
+          maxLength={5000}
+          disabled={submitting}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault()
+              if (questionText.trim() && !submittingRef.current) handleSubmitQuestion(e)
+            }
+          }}
+        />
+        <button type="submit" disabled={submitting} aria-label="Post question" className="composer-send">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+          </svg>
+        </button>
+      </form>
+      <p className="mt-1.5 pr-1 text-right text-xs text-slate-400">
+        Enter to post · Shift+Enter for new line
+      </p>
+    </div>
   )
 
   return (
@@ -239,7 +256,7 @@ export default function QnaDetailPage() {
           description="Be the first to ask a question below."
         />
       ) : (
-        <Stack gap={4} className="max-w-3xl">
+        <Stack gap={4} >
           {questions.map((q) => (
             <div key={q._id}>
               <QuestionCard
@@ -256,6 +273,7 @@ export default function QnaDetailPage() {
           ))}
         </Stack>
       )}
+      <div ref={bottomRef} />
     </DashboardLayout>
   )
 }

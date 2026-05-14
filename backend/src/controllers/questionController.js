@@ -36,8 +36,9 @@ const createQuestion = async (req, res) => {
   if (!text || typeof text !== 'string' || !text.trim()) {
     return error(res, 'Question text is required', 400);
   }
-  if (text.trim().length > 1000) {
-    return error(res, 'Question must be 1000 characters or fewer', 400);
+  const sanitized = text.replace(/\0/g, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/\n{4,}/g, '\n\n\n').trim();
+  if (sanitized.length > 5000) {
+    return error(res, 'Question must be 5000 characters or fewer', 400);
   }
   if (isBoardClosed(req.qnaPost)) {
     return error(res, 'This Q&A board is closed. No new questions can be posted.', 403);
@@ -46,7 +47,7 @@ const createQuestion = async (req, res) => {
   try {
     const question = await Question.create({
       qna_id: qnaId,
-      text: text.trim(),
+      text: sanitized,
       author_id: req.user.user_id,
       author_name: req.user.name,
     });
@@ -73,8 +74,9 @@ const updateQuestion = async (req, res) => {
   if (!text || typeof text !== 'string' || !text.trim()) {
     return error(res, 'Question text is required', 400);
   }
-  if (text.trim().length > 1000) {
-    return error(res, 'Question must be 1000 characters or fewer', 400);
+  const sanitized = text.replace(/\0/g, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/\n{4,}/g, '\n\n\n').trim();
+  if (sanitized.length > 5000) {
+    return error(res, 'Question must be 5000 characters or fewer', 400);
   }
 
   try {
@@ -86,7 +88,7 @@ const updateQuestion = async (req, res) => {
       return error(res, 'Not authorized', 403);
     }
 
-    question.text = text.trim();
+    question.text = sanitized;
     question.updated_at = new Date();
     await question.save();
 

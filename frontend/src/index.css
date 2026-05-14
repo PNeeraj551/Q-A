@@ -91,3 +91,50 @@ body {
     color-scheme: light;
   }
 }
+
+@layer components {
+  .composer-shell {
+    @apply relative flex items-end gap-3
+           rounded-2xl
+           border border-slate-200
+           bg-white
+           px-5 py-3
+           shadow-sm
+           transition-all duration-200;
+  }
+
+  .composer-shell:focus-within {
+    @apply border-blue-400 shadow-md ring-2 ring-blue-500/10;
+  }
+
+  .composer-input {
+    @apply flex-1
+           min-w-0
+           bg-transparent
+           border-0
+           outline-none
+           resize-none
+           overflow-y-auto
+           text-[15px]
+           leading-6
+           text-slate-800
+           placeholder:text-slate-400;
+  }
+
+  .composer-send {
+    @apply inline-flex items-center justify-center
+           h-9 w-9
+           shrink-0
+           rounded-full
+           bg-gradient-to-br from-blue-600 to-indigo-600
+           text-white
+           shadow-sm
+           transition-all duration-200
+           hover:from-blue-700 hover:to-indigo-700
+           hover:shadow-md
+           hover:scale-105
+           active:scale-95
+           disabled:opacity-40
+           disabled:cursor-not-allowed;
+  }
+}

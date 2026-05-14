@@ -147,7 +147,7 @@ export function ReplyThread({ qnaId, question, currentUserId, isAdmin, isClosed,
                       rows={2}
                       value={editText}
                       onChange={(e) => setEditText(e.target.value)}
-                      maxLength={1000}
+                      maxLength={5000}
                       autoFocus
                     />
                     <div className="flex gap-2">
@@ -189,7 +189,7 @@ export function ReplyThread({ qnaId, question, currentUserId, isAdmin, isClosed,
             value={replyText}
             onChange={(e) => setReplyText(e.target.value)}
             placeholder="Write a reply..."
-            maxLength={1000}
+            maxLength={5000}
           />
           <Button type="submit" size="sm">
             Reply
@@ -206,9 +206,20 @@ export function QuestionCard({ qnaId, question, currentUserId, isAdmin, isClosed
   const likingRef = useRef(false)
   const savingRef = useRef(false)
   const deletingRef = useRef(false)
+  const editRef = useRef(null)
   const [editMode, setEditMode] = useState(false)
   const [editText, setEditText] = useState(question.text)
   const [confirmDelete, setConfirmDelete] = useState(false)
+
+  useEffect(() => {
+    if (editMode && editRef.current) {
+      const el = editRef.current
+      el.style.height = 'auto'
+      el.style.height = `${el.scrollHeight}px`
+      el.focus()
+      el.setSelectionRange(el.value.length, el.value.length)
+    }
+  }, [editMode])
 
   async function handleLike() {
     if (likingRef.current) return
@@ -267,8 +278,8 @@ export function QuestionCard({ qnaId, question, currentUserId, isAdmin, isClosed
     'bg-emerald-100 text-emerald-700'
 
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:-translate-y-0.5 hover:shadow-lg hover:border-slate-300 transition-all duration-200">
-      <div className="flex items-start gap-3">
+    <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm transition-all duration-200">
+      <div className="flex items-start gap-4">
         <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold shrink-0 ${avatarColor}`}>
           {initial}
         </div>
@@ -284,12 +295,27 @@ export function QuestionCard({ qnaId, question, currentUserId, isAdmin, isClosed
           {editMode ? (
             <div className="space-y-2 mt-2">
               <textarea
+                ref={editRef}
                 className={textareaCls}
-                rows={3}
+                rows={1}
+                style={{ maxHeight: '40vh' }}
                 value={editText}
-                onChange={(e) => setEditText(e.target.value)}
-                maxLength={1000}
-                autoFocus
+                onChange={(e) => {
+                  setEditText(e.target.value)
+                  e.target.style.height = 'auto'
+                  e.target.style.height = `${e.target.scrollHeight}px`
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault()
+                    handleSaveEdit()
+                  }
+                  if (e.key === 'Escape') {
+                    setEditMode(false)
+                    setEditText(question.text)
+                  }
+                }}
+                maxLength={5000}
               />
               <div className="flex gap-2">
                 <Button size="sm" onClick={handleSaveEdit}>Save</Button>
@@ -297,41 +323,43 @@ export function QuestionCard({ qnaId, question, currentUserId, isAdmin, isClosed
               </div>
             </div>
           ) : (
-            <p className="text-sm text-slate-800 leading-relaxed mt-1">{question.text}</p>
+            <p className="mt-2 whitespace-pre-wrap break-words leading-7 text-slate-800">{question.text}</p>
           )}
 
-          <div className="flex items-center gap-4 mt-3">
-            <button
-              onClick={!isClosed ? handleLike : undefined}
-              aria-label={question.liked_by_me ? 'Unlike question' : 'Like question'}
-              className={`flex items-center gap-1.5 text-sm transition-all duration-200 ${
-                isClosed
-                  ? 'text-slate-400 cursor-default'
-                  : `active:scale-95 ${question.liked_by_me ? 'text-blue-600 font-medium' : 'text-slate-400 hover:text-slate-700'}`
-              }`}
-            >
-              <svg
-                className="w-4 h-4"
-                fill={question.liked_by_me ? 'currentColor' : 'none'}
-                stroke="currentColor"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
+          <div className="mt-4 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={!isClosed ? handleLike : undefined}
+                aria-label={question.liked_by_me ? 'Unlike question' : 'Like question'}
+                className={`flex items-center gap-1.5 text-sm transition-all duration-200 ${
+                  isClosed
+                    ? 'text-slate-400 cursor-default'
+                    : `active:scale-95 ${question.liked_by_me ? 'text-blue-600 font-medium' : 'text-slate-400 hover:text-slate-700'}`
+                }`}
               >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
-              </svg>
-              {question.likes_count}
-            </button>
+                <svg
+                  className="w-4 h-4"
+                  fill={question.liked_by_me ? 'currentColor' : 'none'}
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
+                </svg>
+                {question.likes_count}
+              </button>
 
-            <button
-              onClick={() => setShowReplies(v => !v)}
-              aria-label={showReplies ? 'Hide replies' : 'Show replies'}
-              className="text-sm text-slate-400 hover:text-slate-700 transition-colors duration-200"
-            >
-              {showReplies ? 'Hide replies' : replyLabel}
-            </button>
+              <button
+                onClick={() => setShowReplies(v => !v)}
+                aria-label={showReplies ? 'Hide replies' : 'Show replies'}
+                className="text-sm text-slate-400 hover:text-slate-700 transition-colors duration-200"
+              >
+                {showReplies ? 'Hide replies' : replyLabel}
+              </button>
+            </div>
 
             {!isClosed && canModify && !editMode && (
-              <div className="flex items-center gap-3 ml-auto">
+              <div className="flex items-center gap-3">
                 {question.author_id === currentUserId && (
                   <button
                     onClick={() => { setEditMode(true); setEditText(question.text) }}

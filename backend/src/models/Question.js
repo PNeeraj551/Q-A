@@ -11,7 +11,7 @@ const questionSchema = new mongoose.Schema(
       type: String,
       required: [true, 'Question text is required'],
       trim: true,
-      maxlength: [1000, 'Question must be 1000 characters or fewer'],
+      maxlength: [5000, 'Question must be 5000 characters or fewer'],
     },
     author_id: {
       type: mongoose.Schema.Types.ObjectId,
