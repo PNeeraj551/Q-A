@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { Button } from '@/components/Button'
-import { textareaCls } from '@/lib/ui'
-import { getRelativeTime } from '@/lib/utils'
+import { Button } from '@/components/common/Button'
+import { textareaCls } from '@/utils/ui'
+import { getRelativeTime } from '@/utils/utils'
 import { listReplies, createReply, updateReply, deleteReply } from '../../api/replies'
 import { updateQuestion, deleteQuestion, toggleLike } from '../../api/questions'
-import { InlineConfirm } from '../InlineConfirm'
+import { InlineConfirm } from '../common/InlineConfirm'
 import toast from 'react-hot-toast'
 
 // ───────────────────────── REPLY THREAD ─────────────────────────

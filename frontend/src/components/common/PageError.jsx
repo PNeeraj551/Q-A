@@ -12,7 +12,7 @@ export function PageError({
           <circle cx="12" cy="12" r="10" /><path strokeLinecap="round" d="M12 8v4m0 4h.01" />
         </svg>
       </div>
-      <p className="text-base font-bold text-slate-900">{heading}</p>
+      <h3 className="text-base font-bold text-slate-900">{heading}</h3>
       <p className="text-sm text-slate-500 mt-1.5">{description}</p>
       {action && (
         <button

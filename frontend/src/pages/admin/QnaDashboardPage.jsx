@@ -1,26 +1,26 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { io } from 'socket.io-client'
-import { SOCKET_URL } from '../../lib/socket'
-import DashboardLayout from '@/layouts/DashboardLayout'
-import { Button } from '@/components/Button'
+import { SOCKET_URL } from '../../utils/socket'
+import DashboardLayout from '@/components/layout/DashboardLayout'
+import { Button } from '@/components/common/Button'
 import { listQna, deleteQna } from '../../api/qna'
 import { useDebounce } from '../../hooks/useDebounce'
 import toast from 'react-hot-toast'
-import { VisibilityBadge, StatusBadge } from '@/components/Badges'
+import { VisibilityBadge, StatusBadge } from '@/components/common/Badges'
 import { Pagination } from '@/components/qna/Pagination'
-import { EmptyState } from '@/components/feedback/EmptyState'
-import { PageError } from '@/components/feedback/PageError'
-import { InlineConfirm } from '@/components/InlineConfirm'
-import { Skeleton } from '@/components/feedback/Skeleton'
+import { EmptyState } from '@/components/common/EmptyState'
+import { PageError } from '@/components/common/PageError'
+import { InlineConfirm } from '@/components/common/InlineConfirm'
+import { Skeleton } from '@/components/common/Skeleton'
 import { QnaFilters } from '@/components/qna/QnaFilters'
-import { Surface } from '@/components/Surface'
-import { Stack } from '@/components/Stack'
-import { Text } from '@/components/Text'
+import { Surface } from '@/components/common/Surface'
+import { Stack } from '@/components/common/Stack'
+import { Text } from '@/components/common/Text'
 
 const LIMIT = 10
 
-export default function QnaDashboard() {
+export default function QnaDashboardPage() {
   const navigate = useNavigate()
   const [posts, setPosts] = useState([])
   const [loading, setLoading] = useState(true)

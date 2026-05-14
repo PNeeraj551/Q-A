@@ -1,4 +1,4 @@
-import { Button } from '@/components/Button'
+import { Button } from '@/components/common/Button'
 
 const ChatIcon = (
   <svg className="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" strokeWidth="1.75" viewBox="0 0 24 24">
@@ -16,7 +16,7 @@ export function EmptyState({ icon = ChatIcon, heading, description, action, clas
           {icon}
         </div>
       )}
-      <p className="text-base font-bold text-slate-900">{heading}</p>
+      <h3 className="text-base font-bold text-slate-900">{heading}</h3>
       {description && <p className="text-sm text-slate-500 mt-1.5">{description}</p>}
       {action && (
         action.primary ? (

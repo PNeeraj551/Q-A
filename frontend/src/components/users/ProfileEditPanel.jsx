@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
 import toast from 'react-hot-toast'
-import { updateMe } from '../api/auth'
-import { useAuth } from '../context/AuthContext'
-import { Button } from '@/components/Button'
-import { Label } from '@/components/Label'
-import { inputCls } from '@/lib/ui'
-import { PasswordInput } from './PasswordInput'
+import { updateMe } from '../../api/auth'
+import { useAuth } from '../../context/AuthContext'
+import { Button } from '@/components/common/Button'
+import { Label } from '@/components/common/Label'
+import { inputCls } from '@/utils/ui'
+import { PasswordInput } from '../common/PasswordInput'
 
 export default function ProfileEditPanel({ onClose }) {
   const { user, setUser } = useAuth()

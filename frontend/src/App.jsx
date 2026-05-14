@@ -2,20 +2,20 @@ import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { AuthProvider } from './context/AuthContext'
-import ProtectedRoute from './components/auth/ProtectedRoute'
-import AdminRoute from './components/auth/AdminRoute'
-import { ErrorBoundary } from './components/ErrorBoundary'
+import ProtectedRoute from './components/common/ProtectedRoute'
+import AdminRoute from './components/common/AdminRoute'
+import { ErrorBoundary } from './components/common/ErrorBoundary'
 
-const LoginPage          = lazy(() => import('./pages/LoginPage'))
-const ChangePasswordPage = lazy(() => import('./pages/ChangePasswordPage'))
-const QnaDashboard       = lazy(() => import('./pages/admin/QnaDashboard'))
+const LoginPage          = lazy(() => import('./pages/auth/LoginPage'))
+const ChangePasswordPage = lazy(() => import('./pages/auth/ChangePasswordPage'))
+const QnaDashboard       = lazy(() => import('./pages/admin/QnaDashboardPage'))
 const QnaCreatePage      = lazy(() => import('./pages/admin/QnaCreatePage'))
 const QnaEditPage        = lazy(() => import('./pages/admin/QnaEditPage'))
 const QnaDetailPage      = lazy(() => import('./pages/admin/QnaDetailPage'))
 const UsersPage          = lazy(() => import('./pages/admin/UsersPage'))
 const AnalyticsPage      = lazy(() => import('./pages/admin/AnalyticsPage'))
 const QnaListPage        = lazy(() => import('./pages/user/QnaListPage'))
-const QnaFeedPage        = lazy(() => import('./pages/user/QnaFeedPage'))
+const QnaFeedPage        = lazy(() => import('./pages/user/QnaDetailPage'))
 
 function PageSkeleton() {
   return (

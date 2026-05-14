@@ -2,6 +2,7 @@ const Question = require('../models/Question');
 const Reply = require('../models/Reply');
 const { getIO } = require('../sockets/io');
 const { success, error } = require('../utils/responseUtils');
+const { isBoardClosed } = require('../utils/boardUtils');
 
 // GET /api/qna/:qnaId/questions/:qId/replies
 const listReplies = async (req, res) => {
@@ -31,8 +32,7 @@ const createReply = async (req, res) => {
   }
 
   try {
-    const qnaPost = req.qnaPost
-    if (qnaPost?.status === 'CLOSED' || (qnaPost?.end_at && new Date() >= new Date(qnaPost.end_at))) {
+    if (isBoardClosed(req.qnaPost)) {
       return error(res, 'This Q&A board is closed.', 403);
     }
 

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { io } from 'socket.io-client'
-import { SOCKET_URL } from '../lib/socket'
+import { SOCKET_URL } from '../utils/socket'
 
 export function useQnaSocket(qnaId, {
   onQuestionNew,

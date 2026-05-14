@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
-import DashboardLayout from '@/layouts/DashboardLayout'
+import DashboardLayout from '@/components/layout/DashboardLayout'
 import axiosInstance from '../../api/axiosInstance'
-import { PageError } from '@/components/feedback/PageError'
-import { Skeleton } from '@/components/feedback/Skeleton'
-import { Surface } from '@/components/Surface'
-import { Stack } from '@/components/Stack'
-import { Heading } from '@/components/Heading'
-import { Text } from '@/components/Text'
+import { PageError } from '@/components/common/PageError'
+import { Skeleton } from '@/components/common/Skeleton'
+import { Surface } from '@/components/common/Surface'
+import { Stack } from '@/components/common/Stack'
+import { Heading } from '@/components/common/Heading'
+import { Text } from '@/components/common/Text'
 
 const QnaIcon = (
   <svg fill="none" stroke="currentColor" strokeWidth="1.75" viewBox="0 0 24 24" className="w-5 h-5">
@@ -104,7 +104,7 @@ export default function AnalyticsPage() {
   function load() {
     setError(false)
     setLoading(true)
-    axiosInstance.get('/admin/analytics')
+    axiosInstance.get('/qna/analytics')
       .then((res) => setData(res.data))
       .catch(() => setError(true))
       .finally(() => setLoading(false))

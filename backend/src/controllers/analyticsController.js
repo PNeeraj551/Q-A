@@ -3,7 +3,7 @@ const Question = require('../models/Question');
 const Reply = require('../models/Reply');
 const { success, error } = require('../utils/responseUtils');
 
-// GET /api/admin/analytics
+// GET /api/qna/analytics
 const getAnalytics = async (req, res) => {
   try {
     const [totalPosts, totalQuestions, totalReplies, visibilityBreakdown, mostActiveTopics] =

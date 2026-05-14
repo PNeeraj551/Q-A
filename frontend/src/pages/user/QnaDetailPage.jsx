@@ -1,21 +1,21 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import DashboardLayout from '@/layouts/DashboardLayout'
+import DashboardLayout from '@/components/layout/DashboardLayout'
 import { useAuth } from '../../context/AuthContext'
 import { getQna } from '../../api/qna'
 import { listQuestions, createQuestion } from '../../api/questions'
 import { QuestionCard } from '@/components/qna/QuestionCard'
 import { useQnaSocket } from '../../hooks/useQnaSocket'
 import toast from 'react-hot-toast'
-import { VisibilityBadge, StatusBadge } from '@/components/Badges'
-import { EmptyState } from '@/components/feedback/EmptyState'
-import { PageError } from '@/components/feedback/PageError'
-import { Skeleton } from '@/components/feedback/Skeleton'
-import { SendButton } from '@/components/SendButton'
-import { Surface } from '@/components/Surface'
-import { Stack } from '@/components/Stack'
+import { VisibilityBadge, StatusBadge } from '@/components/common/Badges'
+import { EmptyState } from '@/components/common/EmptyState'
+import { PageError } from '@/components/common/PageError'
+import { Skeleton } from '@/components/common/Skeleton'
+import { SendButton } from '@/components/common/SendButton'
+import { Surface } from '@/components/common/Surface'
+import { Stack } from '@/components/common/Stack'
 
-export default function QnaFeedPage() {
+export default function QnaDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { user } = useAuth()

@@ -164,30 +164,4 @@ const deleteUser = async (req, res) => {
   }
 };
 
-const TEMP_PASSWORD = 'Temp@1234';
-
-// PATCH /api/users/:id/reset-password  — admin sets temp password
-const adminResetPassword = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    if (!id.match(/^[a-fA-F0-9]{24}$/)) {
-      return error(res, 'Invalid user ID', 400);
-    }
-
-    const user = await User.findById(id);
-    if (!user || !user.is_active) return error(res, 'User not found', 404);
-    if (user.role !== 'user') return error(res, 'Can only reset password for users', 400);
-
-    user.password = await bcrypt.hash(TEMP_PASSWORD, 10);
-    user.must_change_password = true;
-    await user.save();
-
-    return success(res, { temporaryPassword: TEMP_PASSWORD });
-  } catch (err) {
-    if (err.name === 'CastError') return error(res, 'Invalid user ID', 400);
-    return error(res, 'Failed to reset password.', 500);
-  }
-};
-
-module.exports = { getUsers, createUser, updateUser, deleteUser, adminResetPassword };
+module.exports = { getUsers, createUser, updateUser, deleteUser };

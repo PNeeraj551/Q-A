@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router({ mergeParams: true });
-const authMiddleware = require('../middleware/authMiddleware');
-const qnaAccessGuard = require('../middleware/qnaAccessGuard');
+const authMiddleware = require('../middlewares/authMiddleware');
+const qnaAccessGuard = require('../middlewares/qnaAccessGuard');
 const { listReplies, createReply, updateReply, deleteReply } = require('../controllers/replyController');
 
 const withAccess = [authMiddleware, qnaAccessGuard];

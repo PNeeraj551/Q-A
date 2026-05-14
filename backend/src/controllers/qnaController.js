@@ -29,7 +29,8 @@ const listQna = async (req, res) => {
     const andClauses = [];
     if (Object.keys(accessFilter).length) andClauses.push(accessFilter);
     if (search && search.trim()) {
-      andClauses.push({ title: { $regex: search.trim(), $options: 'i' } });
+      const escaped = search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      andClauses.push({ title: { $regex: escaped, $options: 'i' } });
     }
     if (visibility && ['PUBLIC', 'PRIVATE'].includes(visibility)) {
       andClauses.push({ visibility });
@@ -61,7 +62,11 @@ const listQna = async (req, res) => {
     const countMap = {};
     counts.forEach((c) => { countMap[c._id.toString()] = c.count; });
 
-    const result = posts.map((p) => ({ ...p, question_count: countMap[p._id.toString()] || 0 }));
+    const result = posts.map((p) => ({
+      ...p,
+      question_count: countMap[p._id.toString()] || 0,
+      is_effectively_closed: p.status === 'CLOSED' || (p.end_at && new Date() >= new Date(p.end_at)),
+    }));
 
     return success(res, {
       posts: result,
@@ -81,7 +86,13 @@ const getQna = async (req, res) => {
 
     const question_count = await Question.countDocuments({ qna_id: post._id, is_deleted: false });
 
-    return success(res, { post: { ...post, question_count } });
+    return success(res, {
+      post: {
+        ...post,
+        question_count,
+        is_effectively_closed: post.status === 'CLOSED' || (post.end_at && new Date() >= new Date(post.end_at)),
+      },
+    });
   } catch (err) {
     return error(res, 'Failed to load Q&A post.', 500);
   }
@@ -243,13 +254,14 @@ const addUser = async (req, res) => {
   }
 
   try {
-    const post = await QnaPost.findById(req.params.id);
-    if (!post) return error(res, 'Q&A not found', 404);
-
-    const user = await User.findOne({ _id: userId, is_active: true }).select('_id').lean();
+    const [existingPost, user] = await Promise.all([
+      QnaPost.findById(req.params.id).lean(),
+      User.findOne({ _id: userId, is_active: true }).select('_id').lean(),
+    ]);
+    if (!existingPost) return error(res, 'Q&A not found', 404);
     if (!user) return error(res, 'User not found', 404);
 
-    await QnaPost.findByIdAndUpdate(post._id, {
+    await QnaPost.findByIdAndUpdate(req.params.id, {
       $addToSet: { allowed_users: userId },
       $set: { updated_at: new Date() },
     });
@@ -269,13 +281,15 @@ const removeUser = async (req, res) => {
   }
 
   try {
-    const post = await QnaPost.findById(req.params.id);
-    if (!post) return error(res, 'Q&A not found', 404);
-
-    await QnaPost.findByIdAndUpdate(post._id, {
-      $pull: { allowed_users: new mongoose.Types.ObjectId(userId) },
-      $set: { updated_at: new Date() },
-    });
+    const updated = await QnaPost.findByIdAndUpdate(
+      req.params.id,
+      {
+        $pull: { allowed_users: new mongoose.Types.ObjectId(userId) },
+        $set: { updated_at: new Date() },
+      },
+      { new: true }
+    );
+    if (!updated) return error(res, 'Q&A not found', 404);
 
     return success(res, { message: 'User removed' });
   } catch (err) {

@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
-import { useAuth } from '../context/AuthContext'
-import ProfileEditPanel from '../components/ProfileEditPanel'
+import { useAuth } from '../../context/AuthContext'
+import ProfileEditPanel from '../users/ProfileEditPanel'
 
 function SidebarLink({ to, label, icon, end }) {
   return (

@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const authMiddleware = require('../middleware/authMiddleware');
-const roleGuard = require('../middleware/roleGuard');
-const qnaAccessGuard = require('../middleware/qnaAccessGuard');
+const authMiddleware = require('../middlewares/authMiddleware');
+const roleGuard = require('../middlewares/roleGuard');
+const qnaAccessGuard = require('../middlewares/qnaAccessGuard');
 const {
   listQna,
   getQna,
@@ -13,6 +13,7 @@ const {
   addUser,
   removeUser,
 } = require('../controllers/qnaController');
+const { getAnalytics } = require('../controllers/analyticsController');
 
 const adminOnly = [authMiddleware, roleGuard('admin')];
 const authenticated = [authMiddleware];
@@ -25,5 +26,6 @@ router.delete('/:id', adminOnly, deleteQna);
 router.get('/:id/users', adminOnly, getUsers);
 router.post('/:id/users', adminOnly, addUser);
 router.delete('/:id/users/:userId', adminOnly, removeUser);
+router.get('/analytics', adminOnly, getAnalytics);
 
 module.exports = router;

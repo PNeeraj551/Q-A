@@ -1,14 +1,14 @@
 import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
-import { changePassword, getMe } from '../api/auth'
-import { Button } from '@/components/Button'
-import { Label } from '@/components/Label'
-import { FormError } from '@/components/feedback/FormError'
-import { Heading } from '@/components/Heading'
-import { Text } from '@/components/Text'
-import { Stack } from '@/components/Stack'
-import { PasswordInput } from '@/components/PasswordInput'
+import { useAuth } from '../../context/AuthContext'
+import { changePassword, getMe } from '../../api/auth'
+import { Button } from '@/components/common/Button'
+import { Label } from '@/components/common/Label'
+import { FormError } from '@/components/common/FormError'
+import { Heading } from '@/components/common/Heading'
+import { Text } from '@/components/common/Text'
+import { Stack } from '@/components/common/Stack'
+import { PasswordInput } from '@/components/common/PasswordInput'
 
 export default function ChangePasswordPage() {
   const { user, setUser, logout } = useAuth()

@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Question = require('../models/Question');
 const { getIO } = require('../sockets/io');
 const { success, error } = require('../utils/responseUtils');
+const { isBoardClosed } = require('../utils/boardUtils');
 
 // GET /api/qna/:qnaId/questions
 const listQuestions = async (req, res) => {
@@ -10,6 +11,7 @@ const listQuestions = async (req, res) => {
 
     const questions = await Question.find({ qna_id: qnaId, is_deleted: false })
       .sort({ likes_count: -1, created_at: 1 })
+      .limit(200)
       .lean();
 
     // Mark which questions the current user has liked
@@ -37,9 +39,7 @@ const createQuestion = async (req, res) => {
   if (text.trim().length > 1000) {
     return error(res, 'Question must be 1000 characters or fewer', 400);
   }
-  const post = req.qnaPost
-  const effectivelyClosed = post?.status === 'CLOSED' || (post?.end_at && new Date() >= new Date(post.end_at))
-  if (effectivelyClosed) {
+  if (isBoardClosed(req.qnaPost)) {
     return error(res, 'This Q&A board is closed. No new questions can be posted.', 403);
   }
 
@@ -139,8 +139,7 @@ const toggleLike = async (req, res) => {
   const userId = req.user.user_id;
 
   try {
-    const qnaPost = req.qnaPost
-    if (qnaPost?.status === 'CLOSED' || (qnaPost?.end_at && new Date() >= new Date(qnaPost.end_at))) {
+    if (isBoardClosed(req.qnaPost)) {
       return error(res, 'This Q&A board is closed.', 403);
     }
 

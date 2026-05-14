@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { inputCls, errorInputCls } from '@/lib/ui'
+import { inputCls, errorInputCls } from '@/utils/ui'
 
 export function PasswordInput({ id, value, onChange, disabled, placeholder, autoComplete, error, className = '' }) {
   const [show, setShow] = useState(false)

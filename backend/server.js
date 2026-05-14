@@ -3,7 +3,6 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const mongoSanitize = require('express-mongo-sanitize');
-const rateLimit = require('express-rate-limit');
 const { Server } = require('socket.io');
 
 const connectDB = require('./src/config/db');
@@ -17,7 +16,9 @@ const userRoutes = require('./src/routes/userRoutes');
 const qnaRoutes = require('./src/routes/qnaRoutes');
 const questionRoutes = require('./src/routes/questionRoutes');
 const replyRoutes = require('./src/routes/replyRoutes');
-const adminRoutes = require('./src/routes/adminRoutes');
+
+const errorMiddleware = require('./src/middlewares/errorMiddleware');
+const { globalLimiter, authLimiter } = require('./src/middlewares/rateLimitMiddleware');
 
 const app = express();
 
@@ -61,22 +62,6 @@ app.use(mongoSanitize({ replaceWith: '_' }));
 
 /* RATE LIMITING */
 
-const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: NODE_ENV === 'production' ? 100 : 1000,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { success: false, error: 'Too many requests. Please try again later.' },
-});
-
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: NODE_ENV === 'production' ? 20 : 100,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { success: false, error: 'Too many authentication attempts. Please try again later.' },
-});
-
 app.use(globalLimiter);
 
 /* ROOT ROUTES */
@@ -106,7 +91,6 @@ app.use('/api/users', userRoutes);
 app.use('/api/qna', qnaRoutes);
 app.use('/api/qna/:qnaId/questions', questionRoutes);
 app.use('/api/qna/:qnaId/questions/:qId/replies', replyRoutes);
-app.use('/api/admin', adminRoutes);
 
 /* 404 HANDLER */
 
@@ -116,14 +100,7 @@ app.use('*', (req, res) =>
 
 /* GLOBAL ERROR HANDLER */
 
-app.use((err, req, res, next) => {
-  if (NODE_ENV !== 'production') console.error('[error]', err);
-  const statusCode = err.statusCode || err.status || 500;
-  return res.status(statusCode).json({
-    success: false,
-    error: NODE_ENV === 'production' ? 'Internal server error' : err.message,
-  });
-});
+app.use(errorMiddleware);
 
 /* PROCESS HANDLERS */
 

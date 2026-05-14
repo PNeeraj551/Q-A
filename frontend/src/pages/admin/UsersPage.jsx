@@ -1,19 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import DashboardLayout from '@/layouts/DashboardLayout'
-import { Button } from '@/components/Button'
-import { Label } from '@/components/Label'
-import { inputCls, errorInputCls } from '@/lib/ui'
-import { getUsers, createUser, updateUser, deleteUser, resetUserPassword } from '../../api/users'
+import DashboardLayout from '@/components/layout/DashboardLayout'
+import { Button } from '@/components/common/Button'
+import { Label } from '@/components/common/Label'
+import { inputCls, errorInputCls } from '@/utils/ui'
+import { getUsers, createUser, updateUser, deleteUser } from '../../api/users'
 import { useDebounce } from '../../hooks/useDebounce'
 import toast from 'react-hot-toast'
-import { InlineConfirm } from '@/components/InlineConfirm'
-import { PageError } from '@/components/feedback/PageError'
-import { EmptyState } from '@/components/feedback/EmptyState'
-import { Skeleton } from '@/components/feedback/Skeleton'
+import { InlineConfirm } from '@/components/common/InlineConfirm'
+import { PageError } from '@/components/common/PageError'
+import { EmptyState } from '@/components/common/EmptyState'
+import { Skeleton } from '@/components/common/Skeleton'
 import { SearchInput } from '@/components/qna/SearchInput'
-import { Surface } from '@/components/Surface'
-import { Stack } from '@/components/Stack'
-import { Text } from '@/components/Text'
+import { Surface } from '@/components/common/Surface'
+import { Stack } from '@/components/common/Stack'
+import { Text } from '@/components/common/Text'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -71,10 +71,8 @@ export default function UsersPage() {
   const [search, setSearch] = useState('')
   const [createOpen, setCreateOpen] = useState(false)
   const [editUser, setEditUser] = useState(null)
-  const [tempPassword, setTempPassword] = useState(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState(null)
   const deletingRef = useRef(new Set())
-  const resetRef = useRef(new Set())
   const [fetchError, setFetchError] = useState(false)
 
   const debouncedSearch = useDebounce(search, 400)
@@ -102,19 +100,6 @@ export default function UsersPage() {
     } finally {
       deletingRef.current.delete(id)
       setConfirmDeleteId(null)
-    }
-  }
-
-  async function handleResetPassword(id) {
-    if (resetRef.current.has(id)) return
-    resetRef.current.add(id)
-    try {
-      const res = await resetUserPassword(id)
-      setTempPassword(res.data.temporaryPassword)
-    } catch {
-      toast.error('Failed to reset password. Please try again.')
-    } finally {
-      resetRef.current.delete(id)
     }
   }
 
@@ -216,17 +201,6 @@ export default function UsersPage() {
         />
       )}
 
-      {tempPassword && (
-          <Modal title="Temporary Password" onClose={() => setTempPassword(null)}>
-            <Text className="mb-3">
-              Share this temporary password with the user. They will be prompted to change it on their next login.
-            </Text>
-            <div className="bg-slate-50 rounded-xl px-4 py-4 font-mono text-slate-900 text-center text-lg tracking-widest select-all cursor-text border border-slate-200">
-              {tempPassword}
-            </div>
-            <Button className="w-full mt-4 h-10" onClick={() => setTempPassword(null)}>Done</Button>
-          </Modal>
-      )}
     </DashboardLayout>
   )
 }
