@@ -75,12 +75,12 @@ export default function UsersPage() {
   const deletingRef = useRef(new Set())
   const [fetchError, setFetchError] = useState(false)
 
-  const debouncedSearch = useDebounce(search, 400)
+  const debouncedSearch = useDebounce(search, 800)
 
   const load = useCallback(() => {
     setLoading(true)
     setFetchError(false)
-    getUsers(debouncedSearch.trim().length >= 3 ? debouncedSearch.trim() : '')
+    getUsers(debouncedSearch.trim().length >= 1 ? debouncedSearch.trim() : '')
       .then((res) => setUsers(res.data.users || []))
       .catch(() => setFetchError(true))
       .finally(() => setLoading(false))

@@ -20,12 +20,12 @@ const authenticated = [authMiddleware];
 
 router.get('/', authenticated, listQna);
 router.post('/', adminOnly, createQna);
+router.get('/analytics', adminOnly, getAnalytics);
 router.get('/:id', authenticated, qnaAccessGuard, getQna);
 router.patch('/:id', adminOnly, updateQna);
 router.delete('/:id', adminOnly, deleteQna);
 router.get('/:id/users', adminOnly, getUsers);
 router.post('/:id/users', adminOnly, addUser);
 router.delete('/:id/users/:userId', adminOnly, removeUser);
-router.get('/analytics', adminOnly, getAnalytics);
 
 module.exports = router;

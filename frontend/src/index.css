@@ -94,7 +94,7 @@ body {
 
 @layer components {
   .composer-shell {
-    @apply relative flex items-end gap-3
+    @apply relative flex items-center gap-3
            rounded-2xl
            border border-slate-200
            bg-white
@@ -118,7 +118,8 @@ body {
            text-[15px]
            leading-6
            text-slate-800
-           placeholder:text-slate-400;
+           placeholder:text-slate-400
+           py-0;
   }
 
   .composer-send {
