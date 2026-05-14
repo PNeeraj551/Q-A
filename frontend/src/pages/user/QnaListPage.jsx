@@ -32,8 +32,8 @@ export default function QnaListPage() {
   const [total, setTotal] = useState(0)
 
   const debouncedSearch = useDebounce(search, 800)
-  const hasActiveSearch = debouncedSearch.trim().length >= 3
-  const isSearchClearing = search.trim().length < 3 && hasActiveSearch
+  const hasActiveSearch = debouncedSearch.trim().length >= 1
+  const isSearchClearing = search.trim().length < 1 && hasActiveSearch
   const hasActiveFilters = hasActiveSearch || !!visibility || !!fromDate || !!toDate
   const pageRef = useRef(page)
   const searchRef = useRef(debouncedSearch)
@@ -58,7 +58,7 @@ export default function QnaListPage() {
 
   useEffect(() => {
     const params = { page, limit: LIMIT }
-    if (debouncedSearch.trim().length >= 3) params.search = debouncedSearch.trim()
+    if (debouncedSearch.trim().length >= 1) params.search = debouncedSearch.trim()
     if (visibility) params.visibility = visibility
     if (fromDate) params.fromDate = fromDate
     if (toDate) params.toDate = toDate
@@ -75,7 +75,7 @@ export default function QnaListPage() {
     socket.on('qna:new', ({ post }) => {
       if (pageRef.current !== 1) return
       const term = searchRef.current.trim()
-      if (term.length >= 3 && !post.title.toLowerCase().includes(term.toLowerCase())) return
+      if (term.length >= 1 && !post.title.toLowerCase().includes(term.toLowerCase())) return
       if (post.visibility === 'PRIVATE') {
         const ids = (post.allowed_users || []).map(String)
         if (!ids.includes(String(currentUserId))) return
