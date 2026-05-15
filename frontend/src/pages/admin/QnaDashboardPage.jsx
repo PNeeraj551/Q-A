@@ -204,13 +204,13 @@ export default function QnaDashboardPage() {
                       className="flex-1 min-w-0 cursor-pointer"
                       onClick={() => navigate(`/admin/qna/${post._id}`)}
                     >
-                      <div className="flex items-center gap-2 mb-1.5">
+                      <div className="flex items-center gap-2 mb-2">
                         <span className="text-sm font-semibold text-slate-900 truncate">{post.title}</span>
                         <VisibilityBadge visibility={post.visibility} />
                         <StatusBadge isClosed={post.status === 'CLOSED' || (post.end_at && new Date() >= new Date(post.end_at))} />
                       </div>
                       {post.description && (
-                        <Text size="xs" className="truncate mb-1">{post.description}</Text>
+                        <Text size="xs" className="truncate mb-1.5">{post.description}</Text>
                       )}
                       <Text size="xs" color="muted">
                         {post.question_count || 0} Question{post.question_count !== 1 ? 's' : ''}

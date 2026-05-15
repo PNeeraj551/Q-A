@@ -19,7 +19,9 @@ export default function LoginPage() {
   const [errors, setErrors] = useState({})
   const [serverError, setServerError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [slowServer, setSlowServer] = useState(false)
   const loadingRef = useRef(false)
+  const slowTimerRef = useRef(null)
 
   function validate() {
     const errs = {}
@@ -45,6 +47,7 @@ export default function LoginPage() {
     setErrors({})
     loadingRef.current = true
     setLoading(true)
+    slowTimerRef.current = setTimeout(() => setSlowServer(true), 3000)
     try {
       const userData = await login(email.trim(), password)
       if (userData.must_change_password) {
@@ -66,6 +69,8 @@ export default function LoginPage() {
         setServerError(err.response?.data?.message || 'An unexpected error occurred.')
       }
     } finally {
+      clearTimeout(slowTimerRef.current)
+      setSlowServer(false)
       loadingRef.current = false
       setLoading(false)
     }
@@ -122,6 +127,12 @@ export default function LoginPage() {
             >
               {loading ? 'Signing in…' : 'Sign in'}
             </Button>
+
+            {slowServer && (
+              <Text size="xs" color="muted" className="text-center">
+                Server is waking up, please wait…
+              </Text>
+            )}
           </Stack>
 
           <div className="border-t border-slate-100 mt-6 pt-4">

@@ -17,12 +17,20 @@ const login = async (req, res) => {
     return error(res, 'Password must be at least 6 characters', 400);
   }
 
+  const reqId = Date.now();
+  console.time(`login-total-${reqId}`);
+
   try {
+    console.time(`db-query-${reqId}`);
     const user = await User.findOne({ email: email.trim().toLowerCase(), is_active: true });
+    console.timeEnd(`db-query-${reqId}`);
 
     if (!user) return error(res, 'Invalid email or password', 401);
 
+    console.time(`bcrypt-${reqId}`);
     const isMatch = await bcrypt.compare(password, user.password);
+    console.timeEnd(`bcrypt-${reqId}`);
+
     if (!isMatch) return error(res, 'Invalid email or password', 401);
 
     const token = signToken({
@@ -33,6 +41,7 @@ const login = async (req, res) => {
       must_change_password: user.must_change_password,
     });
 
+    console.timeEnd(`login-total-${reqId}`);
     return success(res, {
       token,
       user: {
@@ -44,6 +53,7 @@ const login = async (req, res) => {
       },
     });
   } catch (err) {
+    console.timeEnd(`login-total-${reqId}`);
     return error(res, 'Login failed. Please try again.', 500);
   }
 };
