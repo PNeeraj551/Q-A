@@ -1,6 +1,7 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
+import { requestOtp } from '../../api/auth'
 import { Button } from '@/components/common/Button'
 import { Label } from '@/components/common/Label'
 import { inputCls, errorInputCls } from '@/utils/ui'
@@ -8,72 +9,163 @@ import { FormError } from '@/components/common/FormError'
 import { Heading } from '@/components/common/Heading'
 import { Text } from '@/components/common/Text'
 import { Stack } from '@/components/common/Stack'
-import { PasswordInput } from '@/components/common/PasswordInput'
+
+const ATHIVA_EMAIL = /^[a-zA-Z0-9._%+-]+@athivatech\.com$/i
+const RESEND_COOLDOWN = 60
 
 export default function LoginPage() {
-  const { login } = useAuth()
+  const { verifyOtp } = useAuth()
   const navigate = useNavigate()
 
+  const [step, setStep] = useState('email') // 'email' | 'otp'
   const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [errors, setErrors] = useState({})
+  const [digits, setDigits] = useState(Array(6).fill(''))
+  const [emailError, setEmailError] = useState('')
+  const [otpError, setOtpError] = useState('')
   const [serverError, setServerError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [slowServer, setSlowServer] = useState(false)
+  const [cooldown, setCooldown] = useState(0)
   const loadingRef = useRef(false)
-  const slowTimerRef = useRef(null)
+  const timerRef = useRef(null)
+  const inputRefs = useRef([])
 
-  function validate() {
-    const errs = {}
-    if (!email.trim()) {
-      errs.email = 'Email is required'
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      errs.email = 'Enter a valid email address'
+  const otp = digits.join('')
+
+  useEffect(() => {
+    return () => { if (timerRef.current) clearInterval(timerRef.current) }
+  }, [])
+
+  useEffect(() => {
+    if (step === 'otp') {
+      setTimeout(() => inputRefs.current[0]?.focus(), 50)
     }
-    if (!password) {
-      errs.password = 'Password is required'
-    } else if (password.length < 6) {
-      errs.password = 'Password must be at least 6 characters'
-    }
-    return errs
+  }, [step])
+
+  function startCooldown() {
+    setCooldown(RESEND_COOLDOWN)
+    timerRef.current = setInterval(() => {
+      setCooldown((c) => {
+        if (c <= 1) { clearInterval(timerRef.current); return 0 }
+        return c - 1
+      })
+    }, 1000)
   }
 
-  async function handleSubmit(e) {
+  async function handleSendOtp(e) {
     e.preventDefault()
     setServerError('')
-    const errs = validate()
-    if (Object.keys(errs).length > 0) { setErrors(errs); return }
+    if (!email.trim() || !ATHIVA_EMAIL.test(email.trim())) {
+      setEmailError('Enter a valid email address')
+      return
+    }
+    setEmailError('')
     if (loadingRef.current) return
-    setErrors({})
     loadingRef.current = true
     setLoading(true)
-    slowTimerRef.current = setTimeout(() => setSlowServer(true), 3000)
     try {
-      const userData = await login(email.trim(), password)
-      if (userData.must_change_password) {
-        navigate('/change-password', { replace: true })
-      } else if (userData.role === 'admin') {
+      await requestOtp(email.trim())
+      setStep('otp')
+      startCooldown()
+    } catch (err) {
+      const status = err.response?.status
+      if (status === 429) {
+        setServerError('Too many requests. Please wait a few minutes and try again.')
+      } else if (!err.response) {
+        setServerError('Unable to connect. Please check your internet connection.')
+      } else {
+        setServerError(err.response?.data?.error || 'Failed to send code. Please try again.')
+      }
+    } finally {
+      loadingRef.current = false
+      setLoading(false)
+    }
+  }
+
+  async function handleVerifyOtp(e) {
+    e.preventDefault()
+    setServerError('')
+    if (!otp.trim() || !/^\d{6}$/.test(otp.trim())) {
+      setOtpError('Enter the 6-digit code from your email')
+      return
+    }
+    setOtpError('')
+    if (loadingRef.current) return
+    loadingRef.current = true
+    setLoading(true)
+    try {
+      const userData = await verifyOtp(email.trim(), otp.trim())
+      if (userData.role === 'admin') {
         navigate('/admin/qna', { replace: true })
       } else {
         navigate('/user/qna', { replace: true })
       }
     } catch (err) {
       const status = err.response?.status
-      if (status === 401) {
-        setServerError('Incorrect email or password.')
-      } else if (status === 429) {
-        setServerError('Too many attempts. Please wait a few minutes and try again.')
+      if (status === 429) {
+        setServerError('Too many failed attempts. Please request a new code.')
       } else if (!err.response) {
         setServerError('Unable to connect. Please check your internet connection.')
       } else {
-        setServerError(err.response?.data?.message || 'An unexpected error occurred.')
+        setServerError(err.response?.data?.error || 'Verification failed. Please try again.')
       }
     } finally {
-      clearTimeout(slowTimerRef.current)
-      setSlowServer(false)
       loadingRef.current = false
       setLoading(false)
     }
+  }
+
+  async function handleResend() {
+    if (cooldown > 0 || loadingRef.current) return
+    setServerError('')
+    setDigits(Array(6).fill(''))
+    setOtpError('')
+    loadingRef.current = true
+    setLoading(true)
+    try {
+      await requestOtp(email.trim())
+      startCooldown()
+    } catch (err) {
+      setServerError(err.response?.data?.error || 'Failed to resend code. Please try again.')
+    } finally {
+      loadingRef.current = false
+      setLoading(false)
+    }
+  }
+
+  function handleOtpChange(e, idx) {
+    const val = e.target.value.replace(/\D/g, '')
+    if (!val) return
+    const next = [...digits]
+    next[idx] = val[val.length - 1]
+    setDigits(next)
+    setOtpError('')
+    if (idx < 5) inputRefs.current[idx + 1]?.focus()
+  }
+
+  function handleOtpKeyDown(e, idx) {
+    if (e.key === 'Backspace') {
+      e.preventDefault()
+      if (digits[idx]) {
+        const next = [...digits]; next[idx] = ''; setDigits(next)
+      } else if (idx > 0) {
+        const next = [...digits]; next[idx - 1] = ''; setDigits(next)
+        inputRefs.current[idx - 1]?.focus()
+      }
+    } else if (e.key === 'ArrowLeft' && idx > 0) {
+      inputRefs.current[idx - 1]?.focus()
+    } else if (e.key === 'ArrowRight' && idx < 5) {
+      inputRefs.current[idx + 1]?.focus()
+    }
+  }
+
+  function handleOtpPaste(e) {
+    e.preventDefault()
+    const paste = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6)
+    if (!paste) return
+    const next = [...paste.split(''), ...Array(6).fill('')].slice(0, 6)
+    setDigits(next)
+    setOtpError('')
+    inputRefs.current[Math.min(paste.length, 5)]?.focus()
   }
 
   return (
@@ -82,64 +174,111 @@ export default function LoginPage() {
         <div className="bg-white rounded-2xl shadow-2xl shadow-slate-200/70 border border-slate-200/80 p-8">
           <div className="mb-7">
             <div className="w-11 h-11 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center mb-5 shadow-lg">
-              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
               </svg>
             </div>
-            <Heading level={1}>Welcome back</Heading>
-            <Text size="sm" className="mt-1.5 leading-relaxed">Sign in to access Q&A Platform</Text>
-          </div>
-
-          <Stack as="form" gap={5} onSubmit={handleSubmit} noValidate>
-            <Stack gap={1.5}>
-              <Label htmlFor="email" className="text-slate-700 font-medium">Email address</Label>
-              <input
-                id="email"
-                type="email"
-                autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="email@company.com"
-                disabled={loading}
-                className={`${inputCls} ${errors.email ? errorInputCls : ''}`}
-              />
-              {errors.email && <p className="text-xs text-red-500">{errors.email}</p>}
-            </Stack>
-
-            <Stack gap={1.5}>
-              <Label htmlFor="password" className="text-slate-700 font-medium">Password</Label>
-              <PasswordInput
-                id="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                disabled={loading}
-                error={errors.password}
-                autoComplete="current-password"
-              />
-            </Stack>
-
-            <FormError message={serverError} />
-
-            <Button
-              type="submit"
-              className="w-full h-10 font-semibold"
-            >
-              {loading ? 'Signing in…' : 'Sign in'}
-            </Button>
-
-            {slowServer && (
-              <Text size="xs" color="muted" className="text-center">
-                Server is waking up, please wait…
-              </Text>
-            )}
-          </Stack>
-
-          <div className="border-t border-slate-100 mt-6 pt-4">
-            <Text size="xs" color="muted" className="text-center">
-              &copy; {new Date().getFullYear()} AthivaTech. All rights reserved.
+            <Heading level={1}>
+              {step === 'email' ? 'Welcome back' : 'Check your email'}
+            </Heading>
+            <Text size="sm" className="mt-1.5 leading-relaxed">
+              {step === 'email'
+                ? 'Sign in with your email'
+                : `We sent a 6-digit code to ${email}`}
             </Text>
           </div>
+
+          {step === 'email' ? (
+            <Stack as="form" gap={5} onSubmit={handleSendOtp} noValidate>
+              <Stack gap={1.5}>
+                <Label htmlFor="email" className="text-slate-700 font-medium">Email address</Label>
+                <input
+                  id="email"
+                  type="email"
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => { setEmail(e.target.value); setEmailError('') }}
+                  placeholder="you@athivatech.com"
+                  disabled={loading}
+                  className={`${inputCls} ${emailError ? errorInputCls : ''}`}
+                />
+                {emailError && <p className="text-xs text-red-500">{emailError}</p>}
+              </Stack>
+              <FormError message={serverError} />
+              <Button type="submit" className="w-full h-10 font-semibold" disabled={loading}>
+                {loading ? 'Sending code…' : 'Send code'}
+              </Button>
+            </Stack>
+          ) : (
+            <Stack as="form" gap={4} onSubmit={handleVerifyOtp} noValidate>
+              {/* Segmented OTP boxes */}
+              <Stack gap={2}>
+                <Label className="text-slate-700 font-medium text-center block">Enter your code</Label>
+                <div className="flex gap-2.5 justify-center">
+                  {digits.map((d, i) => (
+                    <input
+                      key={i}
+                      ref={(el) => { inputRefs.current[i] = el }}
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={1}
+                      value={d}
+                      onChange={(e) => handleOtpChange(e, i)}
+                      onKeyDown={(e) => handleOtpKeyDown(e, i)}
+                      onPaste={handleOtpPaste}
+                      onFocus={(e) => e.target.select()}
+                      disabled={loading}
+                      aria-label={`Digit ${i + 1}`}
+                      autoComplete={i === 0 ? 'one-time-code' : 'off'}
+                      className={[
+                        'w-11 h-12 text-center text-lg font-semibold rounded-lg border',
+                        'transition-all duration-150 focus:outline-none',
+                        'focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20',
+                        'disabled:opacity-50 disabled:cursor-not-allowed',
+                        otpError
+                          ? 'border-red-400 bg-red-50 text-red-900'
+                          : d
+                          ? 'border-slate-300 bg-white text-slate-900'
+                          : 'border-slate-200 bg-white text-slate-900',
+                      ].join(' ')}
+                    />
+                  ))}
+                </div>
+                {otpError && <p className="text-xs text-red-500 text-center mt-0.5">{otpError}</p>}
+              </Stack>
+
+              <FormError message={serverError} />
+
+              <Button type="submit" className="w-full h-10 font-semibold" disabled={loading}>
+                {loading ? 'Verifying…' : 'Sign in'}
+              </Button>
+
+              {/* Resend + Back — stacked, centered */}
+              <div className="flex flex-col items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={handleResend}
+                  disabled={cooldown > 0 || loading}
+                  className="text-sm text-blue-600 hover:text-blue-700 disabled:text-slate-400 disabled:cursor-not-allowed transition-colors duration-200"
+                >
+                  {cooldown > 0 ? `Resend code in ${cooldown}s` : 'Resend code'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setStep('email'); setDigits(Array(6).fill('')); setOtpError(''); setServerError('') }}
+                  className="text-xs text-slate-400 hover:text-slate-600 transition-colors duration-200"
+                >
+                  ← Back to email
+                </button>
+              </div>
+            </Stack>
+          )}
+        </div>
+
+        <div className="mt-4 text-center">
+          <Text size="xs" color="muted">
+            &copy; {new Date().getFullYear()} AthivaTech. All rights reserved.
+          </Text>
         </div>
       </div>
     </div>

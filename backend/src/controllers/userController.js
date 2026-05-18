@@ -1,21 +1,20 @@
-const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const { success, error } = require('../utils/responseUtils');
+const logger = require('../utils/logger');
 
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const ATHIVA_EMAIL = /^[a-zA-Z0-9._%+-]+@athivatech\.com$/i;
 
-// Shape a user document into the standard response object (no password)
 const formatUser = (user) => ({
   _id: user._id,
   name: user.name,
   email: user.email,
   role: user.role,
   is_active: user.is_active,
+  is_root: user.is_root,
   created_at: user.created_at,
 });
 
 // GET /api/users
-// Query: ?search=<name_or_email>  (optional, case-insensitive partial)
 const getUsers = async (req, res) => {
   try {
     const { search } = req.query;
@@ -38,31 +37,23 @@ const getUsers = async (req, res) => {
 // POST /api/users
 const createUser = async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, role } = req.body;
 
-    // --- Validation ---
     if (!name || typeof name !== 'string' || name.trim().length < 2 || name.trim().length > 80) {
       return error(res, 'Name is required and must be between 2 and 80 characters', 400);
     }
 
-    if (!email || typeof email !== 'string' || !EMAIL_REGEX.test(email.trim())) {
-      return error(res, 'A valid email address is required', 400);
-    }
-
-    if (!password || typeof password !== 'string' || password.length < 6) {
-      return error(res, 'Password must be at least 6 characters', 400);
+    if (!email || typeof email !== 'string' || !ATHIVA_EMAIL.test(email.trim())) {
+      return error(res, 'A valid @athivatech.com email address is required', 400);
     }
 
     if (!role || !['admin', 'user'].includes(role)) {
       return error(res, 'Role must be either admin or user', 400);
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-
     const user = await User.create({
       name: name.trim(),
       email: email.trim().toLowerCase(),
-      password: hashedPassword,
       role,
       is_active: true,
     });
@@ -76,17 +67,16 @@ const createUser = async (req, res) => {
   }
 };
 
-// PATCH /api/users/:id
+// PATCH /api/users/:id  — name and is_active only; email is immutable
 const updateUser = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Catch invalid ObjectId early
     if (!id.match(/^[a-fA-F0-9]{24}$/)) {
       return error(res, 'Invalid user ID', 400);
     }
 
-    const { name, email, is_active } = req.body;
+    const { name, is_active } = req.body;
     const updates = {};
 
     if (name !== undefined) {
@@ -96,13 +86,6 @@ const updateUser = async (req, res) => {
       updates.name = name.trim();
     }
 
-    if (email !== undefined) {
-      if (typeof email !== 'string' || !EMAIL_REGEX.test(email.trim())) {
-        return error(res, 'A valid email address is required', 400);
-      }
-      updates.email = email.trim().toLowerCase();
-    }
-
     if (is_active !== undefined) {
       if (typeof is_active !== 'boolean') {
         return error(res, 'is_active must be a boolean', 400);
@@ -110,8 +93,24 @@ const updateUser = async (req, res) => {
       updates.is_active = is_active;
     }
 
+    delete updates.is_root;
+
     if (Object.keys(updates).length === 0) {
       return error(res, 'At least one field must be provided', 400);
+    }
+
+    const target = await User.findById(id).select('is_root').lean();
+    if (!target) return error(res, 'User not found', 404);
+
+    if (target.is_root) {
+      if (updates.is_active === false) {
+        logger.warn(`[updateUser] Blocked — attempt to deactivate root admin by user ${req.user.user_id}`);
+        return error(res, 'Root admin account cannot be deactivated', 403);
+      }
+      if (updates.role !== undefined) {
+        logger.warn(`[updateUser] Blocked — attempt to change root admin role by user ${req.user.user_id}`);
+        return error(res, 'Root admin role cannot be changed', 403);
+      }
     }
 
     const user = await User.findByIdAndUpdate(
@@ -126,9 +125,6 @@ const updateUser = async (req, res) => {
 
     return success(res, { user: formatUser(user) });
   } catch (err) {
-    if (err.code === 11000) {
-      return error(res, 'Email already in use', 409);
-    }
     if (err.name === 'CastError') {
       return error(res, 'Invalid user ID', 400);
     }
@@ -136,7 +132,7 @@ const updateUser = async (req, res) => {
   }
 };
 
-// DELETE /api/users/:id  — hard delete
+// DELETE /api/users/:id
 const deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
@@ -149,11 +145,15 @@ const deleteUser = async (req, res) => {
       return error(res, 'You cannot delete your own account', 400);
     }
 
-    const user = await User.findByIdAndDelete(id);
+    const target = await User.findById(id).select('is_root').lean();
+    if (!target) return error(res, 'User not found', 404);
 
-    if (!user) {
-      return error(res, 'User not found', 404);
+    if (target.is_root) {
+      logger.warn(`[deleteUser] Blocked — root admin deletion attempt by user ${req.user.user_id}`);
+      return error(res, 'Root admin account cannot be deleted', 403);
     }
+
+    await User.findByIdAndDelete(id);
 
     return success(res, { message: 'User deleted' });
   } catch (err) {

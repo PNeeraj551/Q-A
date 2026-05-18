@@ -1,12 +1,14 @@
 const express = require('express');
 const router = express.Router();
-const { login, me, logout, updateMe, changePassword } = require('../controllers/authController');
+const { requestOtp, verifyOtp, me, logout, updateMe } = require('../controllers/authController');
 const authMiddleware = require('../middlewares/authMiddleware');
+const roleGuard = require('../middlewares/roleGuard');
+const { otpLimiter } = require('../middlewares/rateLimitMiddleware');
 
-router.post('/login', login);
+router.post('/request-otp', otpLimiter, requestOtp);
+router.post('/verify-otp', verifyOtp);
 router.get('/me', authMiddleware, me);
-router.patch('/me', authMiddleware, updateMe);
+router.patch('/me', authMiddleware, roleGuard('admin'), updateMe);
 router.post('/logout', authMiddleware, logout);
-router.patch('/change-password', authMiddleware, changePassword);
 
 module.exports = router;

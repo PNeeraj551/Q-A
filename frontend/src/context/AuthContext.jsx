@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { login as loginApi, getMe, logout as logoutApi } from '../api/auth'
+import { verifyOtp as verifyOtpApi, getMe, logout as logoutApi } from '../api/auth'
 
 const AuthContext = createContext(null)
 
@@ -37,8 +37,8 @@ export function AuthProvider({ children }) {
       })
   }, [])
 
-  async function login(email, password) {
-    const res = await loginApi(email, password)
+  async function verifyOtp(email, otp) {
+    const res = await verifyOtpApi(email, otp)
     const { token, user: userData } = res.data
     localStorage.setItem('jwt', token)
     setUser(userData)
@@ -56,7 +56,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, setUser, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, setUser, loading, verifyOtp, logout }}>
       {children}
     </AuthContext.Provider>
   )

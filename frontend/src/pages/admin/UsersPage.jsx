@@ -15,7 +15,7 @@ import { Surface } from '@/components/common/Surface'
 import { Stack } from '@/components/common/Stack'
 import { Text } from '@/components/common/Text'
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const ATHIVA_EMAIL = /^[a-zA-Z0-9._%+-]+@athivatech\.com$/i
 
 function Modal({ title, onClose, children }) {
   return (
@@ -206,15 +206,14 @@ export default function UsersPage() {
 }
 
 function CreateUserModal({ onClose, onCreated }) {
-  const [form, setForm] = useState({ name: '', email: '', password: '', role: 'user' })
+  const [form, setForm] = useState({ name: '', email: '', role: 'user' })
   const [errors, setErrors] = useState({})
   const submittingRef = useRef(false)
 
   function validate() {
     const errs = {}
     if (!form.name.trim() || form.name.trim().length < 2) errs.name = 'Name must be at least 2 characters'
-    if (!form.email.trim() || !EMAIL_RE.test(form.email.trim())) errs.email = 'Enter a valid email address'
-    if (!form.password || form.password.length < 6) errs.password = 'Password must be at least 6 characters'
+    if (!form.email.trim() || !ATHIVA_EMAIL.test(form.email.trim())) errs.email = 'Enter a valid @athivatech.com email'
     return errs
   }
 
@@ -229,7 +228,6 @@ function CreateUserModal({ onClose, onCreated }) {
       const res = await createUser({
         name: form.name.trim(),
         email: form.email.trim().toLowerCase(),
-        password: form.password,
         role: form.role,
       })
       onCreated(res.data.user)
@@ -261,20 +259,9 @@ function CreateUserModal({ onClose, onCreated }) {
             className={`${inputCls} ${errors.email ? errorInputCls : ''}`}
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
-            placeholder="email@company.com"
+            placeholder="username@athivatech.com"
           />
           {errors.email && <p className="text-xs text-red-500">{errors.email}</p>}
-        </Stack>
-        <Stack gap={1.5}>
-          <Label className="text-slate-700 font-medium">Password</Label>
-          <input
-            type="password"
-            className={`${inputCls} ${errors.password ? errorInputCls : ''}`}
-            value={form.password}
-            onChange={(e) => setForm({ ...form, password: e.target.value })}
-            placeholder="Minimum 6 characters"
-          />
-          {errors.password && <p className="text-xs text-red-500">{errors.password}</p>}
         </Stack>
         <Stack gap={1.5}>
           <Label className="text-slate-700 font-medium">Role</Label>
@@ -301,26 +288,20 @@ function CreateUserModal({ onClose, onCreated }) {
 
 function EditUserModal({ user, onClose, onUpdated }) {
   const [name, setName] = useState(user.name)
-  const [email, setEmail] = useState(user.email)
   const [errors, setErrors] = useState({})
   const submittingRef = useRef(false)
 
-  function validate() {
-    const errs = {}
-    if (!name.trim() || name.trim().length < 2) errs.name = 'Name must be at least 2 characters'
-    if (!email.trim() || !EMAIL_RE.test(email.trim())) errs.email = 'Enter a valid email address'
-    return errs
-  }
-
   async function handleSubmit(e) {
     e.preventDefault()
-    const errs = validate()
-    if (Object.keys(errs).length) { setErrors(errs); return }
+    if (!name.trim() || name.trim().length < 2) {
+      setErrors({ name: 'Name must be at least 2 characters' })
+      return
+    }
     if (submittingRef.current) return
     setErrors({})
     submittingRef.current = true
     try {
-      const res = await updateUser(user._id, { name: name.trim(), email: email.trim().toLowerCase() })
+      const res = await updateUser(user._id, { name: name.trim() })
       onUpdated(res.data.user)
       toast.success('User updated.')
     } catch (err) {
@@ -341,16 +322,6 @@ function EditUserModal({ user, onClose, onUpdated }) {
             onChange={(e) => setName(e.target.value)}
           />
           {errors.name && <p className="text-xs text-red-500">{errors.name}</p>}
-        </Stack>
-        <Stack gap={1.5}>
-          <Label className="text-slate-700 font-medium">Email</Label>
-          <input
-            type="email"
-            className={`${inputCls} ${errors.email ? errorInputCls : ''}`}
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-          {errors.email && <p className="text-xs text-red-500">{errors.email}</p>}
         </Stack>
         {errors.submit && <p className="text-sm text-red-500">{errors.submit}</p>}
         <div className="flex gap-2 pt-1">

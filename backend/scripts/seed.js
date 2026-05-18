@@ -4,7 +4,6 @@ const dns = require('dns');
 dns.setServers(['8.8.8.8', '8.8.4.4']);
 
 const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
 const User = require('../src/models/User');
 
 const MONGO_URI = process.env.MONGO_URI;
@@ -15,13 +14,8 @@ if (!MONGO_URI) {
 }
 
 const SEED_USERS = [
-  { name: 'Admin', email: 'admin@companyname.com', password: 'Admin@123', role: 'admin' },
-  { name: 'Arun', email: 'arun@companyname.com', password: 'User@123', role: 'user' },
-  { name: 'Divya', email: 'divya@companyname.com', password: 'User@123', role: 'user' },
-  { name: 'Kiran', email: 'kiran@companyname.com', password: 'User@123', role: 'user' },
+  { name: 'Neeraj', email: 'neeraj@athivatech.com', role: 'admin', is_root: true },
 ];
-
-const SALT_ROUNDS = 10;
 
 const seed = async () => {
   try {
@@ -29,17 +23,15 @@ const seed = async () => {
     console.log('[seed] Connected to MongoDB');
 
     for (const userData of SEED_USERS) {
-      const hashedPassword = await bcrypt.hash(userData.password, SALT_ROUNDS);
-
       const result = await User.findOneAndUpdate(
         { email: userData.email },
         {
           $set: {
             name: userData.name,
             email: userData.email,
-            password: hashedPassword,
             role: userData.role,
             is_active: true,
+            is_root: userData.is_root ?? false,
           },
           $setOnInsert: {
             created_at: new Date(),
@@ -47,7 +39,6 @@ const seed = async () => {
         },
         { upsert: true, new: true, runValidators: true }
       );
-
       console.log(`[seed] OK — ${result.email} (${result.role})`);
     }
 

@@ -32,6 +32,7 @@ export default function QnaDashboardPage() {
   const [visibility, setVisibility] = useState('')
   const [fromDate, setFromDate] = useState('')
   const [toDate, setToDate] = useState('')
+  const [datePreset, setDatePreset] = useState('')
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [total, setTotal] = useState(0)
@@ -39,7 +40,7 @@ export default function QnaDashboardPage() {
   const debouncedSearch = useDebounce(search, 800)
   const hasActiveSearch = debouncedSearch.trim().length >= 1
   const isSearchClearing = search.trim().length < 1 && hasActiveSearch
-  const hasActiveFilters = hasActiveSearch || !!visibility || !!fromDate || !!toDate
+  const hasActiveFilters = hasActiveSearch || !!visibility || !!datePreset
   const pageRef = useRef(page)
   useEffect(() => { pageRef.current = page }, [page])
 
@@ -104,11 +105,34 @@ export default function QnaDashboardPage() {
     fetchPosts(params)
   }, [debouncedSearch, visibility, fromDate, toDate, page, fetchPosts])
 
+  function toISO(d) { return d.toISOString().split('T')[0] }
+
+  function handleSetDatePreset(preset) {
+    setDatePreset(preset)
+    const today = new Date()
+    if (preset === 'last24h') {
+      const from = new Date(today); from.setDate(from.getDate() - 1)
+      setFromDate(toISO(from)); setToDate(toISO(today))
+    } else if (preset === 'last7') {
+      const from = new Date(today); from.setDate(from.getDate() - 7)
+      setFromDate(toISO(from)); setToDate(toISO(today))
+    } else if (preset === 'last30') {
+      const from = new Date(today); from.setDate(from.getDate() - 30)
+      setFromDate(toISO(from)); setToDate(toISO(today))
+    } else if (preset === 'thisMonth') {
+      const from = new Date(today.getFullYear(), today.getMonth(), 1)
+      setFromDate(toISO(from)); setToDate(toISO(today))
+    } else if (preset !== 'custom') {
+      setFromDate(''); setToDate('')
+    }
+    setPage(1)
+  }
+
   function handleSetSearch(v) { setSearch(v); setPage(1) }
   function handleSetVisibility(v) { setVisibility(v); setPage(1) }
   function handleSetFromDate(v) { setFromDate(v); if (toDate && v > toDate) setToDate(''); setPage(1) }
   function handleSetToDate(v) { setToDate(v); setPage(1) }
-  function handleClearFilters() { setSearch(''); setVisibility(''); setFromDate(''); setToDate(''); setPage(1) }
+  function handleClearFilters() { setSearch(''); setVisibility(''); setFromDate(''); setToDate(''); setDatePreset(''); setPage(1) }
 
   async function handleDelete(id) {
     if (deletingRef.current.has(id)) return
@@ -144,6 +168,7 @@ export default function QnaDashboardPage() {
             visibility={visibility} setVisibility={handleSetVisibility}
             fromDate={fromDate} setFromDate={handleSetFromDate}
             toDate={toDate} setToDate={handleSetToDate}
+            datePreset={datePreset} setDatePreset={handleSetDatePreset}
             hasActiveFilters={hasActiveFilters}
             onClearFilters={handleClearFilters}
             role="admin"

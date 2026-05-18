@@ -139,3 +139,7 @@ body {
            disabled:cursor-not-allowed;
   }
 }
+
+@media (hover: none) {
+  .action-buttons { opacity: 1 !important; }
+}

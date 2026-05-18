@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink, Link, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import ProfileEditPanel from '../users/ProfileEditPanel'
@@ -49,6 +49,7 @@ export default function DashboardLayout({ children, title, subtitle, actions, on
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [profileOpen, setProfileOpen] = useState(false)
+  const homeRoute = user?.role === 'admin' ? '/admin/qna' : '/user/qna'
 
   async function handleLogout() {
     await logout()
@@ -61,7 +62,7 @@ export default function DashboardLayout({ children, title, subtitle, actions, on
       <aside className="w-60 bg-white border-r border-slate-200/80 flex flex-col shrink-0 fixed inset-y-0 left-0 z-20 shadow-sm">
         {/* Brand */}
         <div className="px-5 py-5 border-b border-slate-100 shrink-0">
-          <div className="flex items-center gap-3">
+          <Link to={homeRoute} className="flex items-center gap-3 hover:opacity-80 transition-opacity duration-200">
             <div className="w-9 h-9 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shrink-0 shadow-md">
               <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth="2.25" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -71,7 +72,7 @@ export default function DashboardLayout({ children, title, subtitle, actions, on
               <p className="text-sm font-bold text-slate-900 leading-tight tracking-tight">Q&A Platform</p>
               <p className="text-xs text-slate-500 leading-tight font-medium">AthivaTech</p>
             </div>
-          </div>
+          </Link>
         </div>
 
         {/* Navigation */}

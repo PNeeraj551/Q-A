@@ -7,7 +7,6 @@ import AdminRoute from './components/common/AdminRoute'
 import { ErrorBoundary } from './components/common/ErrorBoundary'
 
 const LoginPage          = lazy(() => import('./pages/auth/LoginPage'))
-const ChangePasswordPage = lazy(() => import('./pages/auth/ChangePasswordPage'))
 const QnaDashboard       = lazy(() => import('./pages/admin/QnaDashboardPage'))
 const QnaCreatePage      = lazy(() => import('./pages/admin/QnaCreatePage'))
 const QnaEditPage        = lazy(() => import('./pages/admin/QnaEditPage'))
@@ -46,9 +45,6 @@ export default function App() {
             {/* User routes */}
             <Route path="/user/qna" element={<ProtectedRoute><QnaListPage /></ProtectedRoute>} />
             <Route path="/user/qna/:id" element={<ProtectedRoute><QnaFeedPage /></ProtectedRoute>} />
-
-            {/* Shared */}
-            <Route path="/change-password" element={<ProtectedRoute><ChangePasswordPage /></ProtectedRoute>} />
 
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>

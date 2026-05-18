@@ -174,4 +174,54 @@ const toggleLike = async (req, res) => {
   }
 };
 
-module.exports = { listQuestions, createQuestion, updateQuestion, deleteQuestion, toggleLike };
+// PATCH /api/qna/:qnaId/questions/:qId/view
+const trackView = async (req, res) => {
+  const { qId } = req.params;
+  try {
+    const updated = await Question.findByIdAndUpdate(
+      qId,
+      { $inc: { view_count: 1 } },
+      { new: true, select: 'view_count' }
+    );
+    if (!updated) return error(res, 'Question not found', 404);
+    return success(res, { view_count: updated.view_count });
+  } catch (err) {
+    return error(res, 'Failed to track view.', 500);
+  }
+};
+
+// PATCH /api/qna/:qnaId/questions/:qId/accept-reply
+const markAcceptedReply = async (req, res) => {
+  const { qId } = req.params;
+  const { reply_id } = req.body;
+
+  try {
+    const question = await Question.findById(qId);
+    if (!question || question.is_deleted) return error(res, 'Question not found', 404);
+
+    const isOwner = question.author_id.toString() === req.user.user_id;
+    if (!isOwner && req.user.role !== 'admin') {
+      return error(res, 'Not authorized', 403);
+    }
+
+    question.accepted_reply_id = reply_id || null;
+    question.updated_at = new Date();
+    await question.save();
+
+    const result = {
+      ...question.toObject(),
+      liked_by_me: question.likes.some((id) => id.toString() === req.user.user_id),
+      likes: undefined,
+    };
+
+    try {
+      getIO().to(`qna_${req.params.qnaId}`).emit('question:update', result);
+    } catch (_) {}
+
+    return success(res, { question: result });
+  } catch (err) {
+    return error(res, 'Failed to update accepted reply.', 500);
+  }
+};
+
+module.exports = { listQuestions, createQuestion, updateQuestion, deleteQuestion, toggleLike, markAcceptedReply, trackView };

@@ -19,11 +19,11 @@ const authMiddleware = async (req, res, next) => {
   }
 
   try {
-    const user = await User.findOne({ _id: decoded.user_id, is_active: true }).select('_id role').lean();
+    const user = await User.findOne({ _id: decoded.user_id, is_active: true }).select('_id role is_root').lean();
     if (!user) {
       return error(res, 'Account is inactive or not found', 401);
     }
-    req.user = { ...decoded, role: user.role };
+    req.user = { ...decoded, role: user.role, is_root: user.is_root };
     next();
   } catch (err) {
     return error(res, 'Authentication failed', 401);

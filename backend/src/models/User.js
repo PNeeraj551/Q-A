@@ -13,10 +13,7 @@ const userSchema = new mongoose.Schema(
       unique: true,
       lowercase: true,
       trim: true,
-    },
-    password: {
-      type: String,
-      required: [true, 'Password is required'],
+      match: [/^[a-zA-Z0-9._%+-]+@athivatech\.com$/, 'Email must be an @athivatech.com address'],
     },
     role: {
       type: String,
@@ -27,7 +24,7 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
-    must_change_password: {
+    is_root: {
       type: Boolean,
       default: false,
     },

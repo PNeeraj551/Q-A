@@ -12,6 +12,7 @@ import { UserTag } from '@/components/users/UserTag'
 import { Surface } from '@/components/common/Surface'
 import { Stack } from '@/components/common/Stack'
 import { Text } from '@/components/common/Text'
+import AutoCloseField from '../../components/qna/AutoCloseField'
 
 export default function QnaCreatePage() {
   const navigate = useNavigate()
@@ -47,8 +48,7 @@ export default function QnaCreatePage() {
     const errs = {}
     if (!title.trim()) errs.title = 'Title is required'
     else if (title.trim().length > 120) errs.title = 'Title must be 120 characters or fewer'
-    const todayMin = new Date().toISOString().slice(0, 10) + 'T00:00'
-    if (endAt && new Date(endAt) < new Date(todayMin)) errs.endAt = 'Close date cannot be before today'
+    if (endAt && new Date(endAt) < new Date()) errs.endAt = 'Close date and time must be in the future'
     return errs
   }
 
@@ -116,41 +116,45 @@ export default function QnaCreatePage() {
               />
             </Stack>
 
-            <Stack gap={1.5}>
-              <label className="flex items-center gap-2.5 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={visibility === 'PRIVATE'}
-                  onChange={(e) => setVisibility(e.target.checked ? 'PRIVATE' : 'PUBLIC')}
-                  disabled={submitting}
-                  className="w-4 h-4 rounded border-slate-300 accent-blue-600 cursor-pointer disabled:opacity-50"
-                />
-                <span className="text-sm font-medium text-slate-700">Private</span>
-              </label>
-              <Text size="xs" color="muted" className="pl-[26px]">
-                {visibility === 'PRIVATE'
-                  ? 'Only assigned users can see this Q&A board.'
-                  : 'All users can see and join this Q&A board.'}
-              </Text>
-            </Stack>
+            <div className="border border-slate-200 rounded-xl divide-y divide-slate-100">
+              <div className="flex items-center justify-between gap-4 px-4 py-3.5">
+                <div>
+                  <p className="text-sm font-medium text-slate-900">Privacy</p>
+                  <p className="text-xs text-slate-500 mt-0.5">Control who can view this board</p>
+                </div>
+                <div className="flex bg-slate-100 rounded-lg p-0.5 shrink-0">
+                  {[
+                    { value: 'PUBLIC', label: 'Public' },
+                    { value: 'PRIVATE', label: 'Private' },
+                  ].map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      disabled={submitting}
+                      onClick={() => setVisibility(opt.value)}
+                      className={`px-3 h-7 rounded-md text-sm font-medium transition-all duration-150 ${
+                        visibility === opt.value
+                          ? 'bg-white text-slate-900 shadow-sm'
+                          : 'text-slate-500 hover:text-slate-700'
+                      } disabled:opacity-50`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-            <Stack gap={1.5}>
-              <Label className="text-slate-700 font-medium">
-                Auto-close at <span className="text-slate-400 font-normal">(optional)</span>
-              </Label>
-              <input
-                type="datetime-local"
-                className={`${inputCls} ${errors.endAt ? errorInputCls : ''}`}
-                value={endAt}
-                min={new Date().toISOString().slice(0, 10) + 'T00:00'}
-                onChange={(e) => setEndAt(e.target.value)}
-                disabled={submitting}
-              />
-              {errors.endAt && <p className="text-xs text-red-500">{errors.endAt}</p>}
-              <Text size="xs" color="muted">
-                If set, this Q&A board will automatically close at this date and time.
-              </Text>
-            </Stack>
+              <div className="px-4 py-3.5">
+                <AutoCloseField
+                  value={endAt}
+                  onChange={setEndAt}
+                  disabled={submitting}
+                  minDate={new Date().toISOString().slice(0, 10) + 'T00:00'}
+                  showClear={false}
+                  error={errors.endAt}
+                />
+              </div>
+            </div>
 
             {visibility === 'PRIVATE' && (
               <Stack gap={2}>

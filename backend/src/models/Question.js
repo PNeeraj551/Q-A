@@ -36,6 +36,15 @@ const questionSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    accepted_reply_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Reply',
+      default: null,
+    },
+    view_count: {
+      type: Number,
+      default: 0,
+    },
     is_deleted: {
       type: Boolean,
       default: false,

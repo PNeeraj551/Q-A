@@ -1,7 +1,11 @@
 import axiosInstance from './axiosInstance'
 
-export function login(email, password) {
-  return axiosInstance.post('/auth/login', { email, password })
+export function requestOtp(email) {
+  return axiosInstance.post('/auth/request-otp', { email })
+}
+
+export function verifyOtp(email, otp) {
+  return axiosInstance.post('/auth/verify-otp', { email, otp })
 }
 
 export function getMe() {
@@ -14,8 +18,4 @@ export function updateMe(payload) {
 
 export function logout() {
   return axiosInstance.post('/auth/logout')
-}
-
-export function changePassword(currentPassword, newPassword) {
-  return axiosInstance.patch('/auth/change-password', { currentPassword, newPassword })
 }

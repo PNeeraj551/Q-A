@@ -17,4 +17,12 @@ const authLimiter = rateLimit({
   message: { success: false, error: 'Too many authentication attempts. Please try again later.' },
 });
 
-module.exports = { globalLimiter, authLimiter };
+const otpLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: NODE_ENV === 'production' ? 3 : 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many OTP requests. Please wait 15 minutes.' },
+});
+
+module.exports = { globalLimiter, authLimiter, otpLimiter };

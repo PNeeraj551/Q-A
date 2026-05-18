@@ -18,7 +18,10 @@ const questionRoutes = require('./src/routes/questionRoutes');
 const replyRoutes = require('./src/routes/replyRoutes');
 
 const errorMiddleware = require('./src/middlewares/errorMiddleware');
+const errorLogger = require('./src/middlewares/errorLogger');
+const requestLogger = require('./src/middlewares/requestLogger');
 const { globalLimiter, authLimiter } = require('./src/middlewares/rateLimitMiddleware');
+const logger = require('./src/utils/logger');
 
 const app = express();
 
@@ -60,6 +63,10 @@ app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(mongoSanitize({ replaceWith: '_' }));
 
+/* REQUEST LOGGING */
+
+app.use(requestLogger);
+
 /* RATE LIMITING */
 
 app.use(globalLimiter);
@@ -100,17 +107,18 @@ app.use('*', (req, res) =>
 
 /* GLOBAL ERROR HANDLER */
 
+app.use(errorLogger);
 app.use(errorMiddleware);
 
 /* PROCESS HANDLERS */
 
 process.on('uncaughtException', (err) => {
-  console.error('[uncaughtException]', err);
+  logger.error('[uncaughtException]', err);
   process.exit(1);
 });
 
 process.on('unhandledRejection', (reason) => {
-  console.error('[unhandledRejection]', reason);
+  logger.error('[unhandledRejection]', { reason });
   httpServer.close(() => process.exit(1));
 });
 
@@ -128,10 +136,10 @@ const startServer = async () => {
   try {
     await connectDB();
     httpServer.listen(PORT, () => {
-      console.log(`[server] Running on port ${PORT}`);
+      logger.info(`[server] Running on port ${PORT} (${NODE_ENV})`);
     });
   } catch (err) {
-    console.error('[startup error]', err);
+    logger.error('[startup error]', err);
     process.exit(1);
   }
 };

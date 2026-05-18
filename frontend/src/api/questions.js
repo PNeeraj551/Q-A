@@ -14,3 +14,9 @@ export const deleteQuestion = (qnaId, qId) =>
 
 export const toggleLike = (qnaId, qId) =>
   axiosInstance.patch(`/qna/${qnaId}/questions/${qId}/like`)
+
+export const acceptReply = (qnaId, qId, replyId) =>
+  axiosInstance.patch(`/qna/${qnaId}/questions/${qId}/accept-reply`, { reply_id: replyId ?? null })
+
+export const trackView = (qnaId, qId) =>
+  axiosInstance.patch(`/qna/${qnaId}/questions/${qId}/view`)
