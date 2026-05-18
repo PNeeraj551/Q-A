@@ -7,6 +7,7 @@ const { Server } = require('socket.io');
 
 const connectDB = require('./src/config/db');
 const { PORT, CLIENT_URL, NODE_ENV } = require('./src/config/env');
+const { verifySmtp } = require('./src/services/emailService');
 
 const { setIO } = require('./src/sockets/io');
 const { initSocketHandler } = require('./src/sockets/socketHandler');
@@ -135,6 +136,7 @@ process.on('SIGINT', () => {
 const startServer = async () => {
   try {
     await connectDB();
+    verifySmtp();
     httpServer.listen(PORT, () => {
       logger.info(`[server] Running on port ${PORT} (${NODE_ENV})`);
     });
