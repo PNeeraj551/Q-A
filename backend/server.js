@@ -67,11 +67,7 @@ app.use(mongoSanitize({ replaceWith: '_' }));
 
 app.use(requestLogger);
 
-/* RATE LIMITING */
-
-app.use(globalLimiter);
-
-/* ROOT ROUTES */
+/* ROOT ROUTES (before rate limiting so health checks are never throttled) */
 
 app.get('/', (req, res) =>
   res.status(200).json({
@@ -90,6 +86,10 @@ app.get('/health', (req, res) =>
     timestamp: new Date().toISOString(),
   })
 );
+
+/* RATE LIMITING */
+
+app.use(globalLimiter);
 
 /* API ROUTES */
 
