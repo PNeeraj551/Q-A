@@ -46,7 +46,7 @@ const createReply = async (req, res) => {
 
     await db.rpc('increment_reply_count', { p_question_id: qId });
 
-    broadcastToChannel(`qna_${qnaId}`, 'reply:new', { reply, question_id: qId });
+    await broadcastToChannel(`qna_${qnaId}`, 'reply:new', { reply, question_id: qId });
 
     return success(res, { reply }, 201);
   } catch (err) {
@@ -96,7 +96,7 @@ const deleteReply = async (req, res) => {
     await Reply.softDeleteById(rId);
     await db.rpc('decrement_reply_count', { p_question_id: qId });
 
-    broadcastToChannel(`qna_${qnaId}`, 'reply:delete', { reply_id: rId, question_id: qId });
+    await broadcastToChannel(`qna_${qnaId}`, 'reply:delete', { reply_id: rId, question_id: qId });
 
     return success(res, { message: 'Reply deleted' });
   } catch (err) {

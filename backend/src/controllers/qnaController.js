@@ -131,7 +131,7 @@ const createQna = async (req, res) => {
       await QnaPost.setAllowedUsers(post.id, allowed_users);
     }
 
-    broadcastToChannel('qna_global', 'qna:new', { post: { ...post, question_count: 0 } });
+    await broadcastToChannel('qna_global', 'qna:new', { post: { ...post, question_count: 0 } });
 
     return success(res, { post }, 201);
   } catch (err) {
@@ -194,7 +194,7 @@ const updateQna = async (req, res) => {
       await QnaPost.setAllowedUsers(post.id, allowed_users);
     }
 
-    broadcastToChannel('qna_global', 'qna:updated', { post: updated });
+    await broadcastToChannel('qna_global', 'qna:updated', { post: updated });
 
     return success(res, { post: updated });
   } catch (err) {
@@ -212,7 +212,7 @@ const deleteQna = async (req, res) => {
     await Reply.softDeleteByQnaId(post.id);
     await QnaPost.deleteById(post.id);
 
-    broadcastToChannel('qna_global', 'qna:deleted', { qna_id: post.id });
+    await broadcastToChannel('qna_global', 'qna:deleted', { qna_id: post.id });
 
     return success(res, { message: 'Q&A post deleted' });
   } catch (err) {

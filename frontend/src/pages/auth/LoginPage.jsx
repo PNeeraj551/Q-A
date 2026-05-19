@@ -6,6 +6,8 @@ import { Button } from '@/components/common/Button'
 import { Label } from '@/components/common/Label'
 import { inputCls, errorInputCls } from '@/utils/ui'
 import { FormError } from '@/components/common/FormError'
+import { Heading } from '@/components/common/Heading'
+import { Text } from '@/components/common/Text'
 import { Stack } from '@/components/common/Stack'
 
 const ATHIVA_EMAIL = /^[a-zA-Z0-9._%+-]+@athivatech\.com$/i
@@ -53,7 +55,7 @@ export default function LoginPage() {
     e.preventDefault()
     setServerError('')
     if (!email.trim() || !ATHIVA_EMAIL.test(email.trim())) {
-      setEmailError('Access denied. Please use a registered corporate account.')
+      setEmailError('Enter a valid email address')
       return
     }
     setEmailError('')
@@ -167,41 +169,38 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-100 via-blue-50/50 to-indigo-50/40 px-4">
       <div className="w-full max-w-sm">
-        <div className="bg-white rounded-xl shadow-2xl shadow-slate-200/40 ring-1 ring-slate-200/60 px-7 pt-8 pb-6">
-
-          {/* Header — centered */}
-          <div className="mb-6 text-center">
-            <div className="w-11 h-11 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-md shadow-blue-500/20">
-              <span className="text-white text-lg font-bold select-none">A</span>
-            </div>
-            <h1 className="text-[20px] font-semibold tracking-tight text-slate-900 inline-flex items-center gap-1.5">
-              {step === 'email' ? 'Sign in' : 'Check your inbox'}
-              <svg className="w-[14px] h-[14px] text-slate-400 shrink-0" viewBox="0 0 16 16" fill="currentColor">
-                <path fillRule="evenodd" d="M8 1a3.5 3.5 0 00-3.5 3.5V6H3a1 1 0 00-1 1v7a1 1 0 001 1h10a1 1 0 001-1V7a1 1 0 00-1-1h-1.5V4.5A3.5 3.5 0 008 1zm-2 5V4.5a2 2 0 114 0V6H6z" clipRule="evenodd" />
+        <div className="bg-white rounded-2xl shadow-2xl shadow-slate-200/70 border border-slate-200/80 p-8">
+          <div className="mb-7">
+            <div className="w-11 h-11 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center mb-5 shadow-lg">
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
               </svg>
-            </h1>
-            {step === 'otp' && (
-              <p className="text-sm text-slate-500 mt-1.5">
-                {`A 6-digit code was sent to ${email}`}
-              </p>
-            )}
+            </div>
+            <Heading level={1}>
+              {step === 'email' ? 'Welcome back' : 'Check your email'}
+            </Heading>
+            <Text size="sm" className="mt-1.5 leading-relaxed">
+              {step === 'email'
+                ? 'Sign in with your email'
+                : `We sent a 6-digit code to ${email}`}
+            </Text>
           </div>
 
           {step === 'email' ? (
-            <Stack as="form" gap={4} onSubmit={handleSendOtp} noValidate>
-              <Stack gap={1}>
-                <Label htmlFor="email" className="text-slate-700 font-medium">Email</Label>
+            <Stack as="form" gap={5} onSubmit={handleSendOtp} noValidate>
+              <Stack gap={1.5}>
+                <Label htmlFor="email" className="text-slate-700 font-medium">Email address</Label>
                 <input
                   id="email"
                   type="email"
                   autoComplete="email"
                   value={email}
                   onChange={(e) => { setEmail(e.target.value); setEmailError('') }}
-                  placeholder="name@company.com"
+                  placeholder="you@athivatech.com"
                   disabled={loading}
-                  className={`${inputCls} shadow-inner shadow-slate-100 ${emailError ? errorInputCls : ''}`}
+                  className={`${inputCls} ${emailError ? errorInputCls : ''}`}
                 />
                 {emailError && <p className="text-xs text-red-500">{emailError}</p>}
               </Stack>
@@ -212,6 +211,7 @@ export default function LoginPage() {
             </Stack>
           ) : (
             <Stack as="form" gap={4} onSubmit={handleVerifyOtp} noValidate>
+              {/* Segmented OTP boxes */}
               <Stack gap={2}>
                 <Label className="text-slate-700 font-medium text-center block">Enter your code</Label>
                 <div className="flex gap-2.5 justify-center">
@@ -253,6 +253,7 @@ export default function LoginPage() {
                 {loading ? 'Verifying…' : 'Sign in'}
               </Button>
 
+              {/* Resend + Back — stacked, centered */}
               <div className="flex flex-col items-center gap-1.5">
                 <button
                   type="button"
@@ -272,14 +273,12 @@ export default function LoginPage() {
               </div>
             </Stack>
           )}
+        </div>
 
-          {/* Copyright — inside card, very muted */}
-          <div className="mt-6 pt-5 border-t border-slate-100 text-center">
-            <p className="text-[11px] text-slate-300">
-              &copy; {new Date().getFullYear()} AthivaTech
-            </p>
-          </div>
-
+        <div className="mt-4 text-center">
+          <Text size="xs" color="muted">
+            &copy; {new Date().getFullYear()} AthivaTech. All rights reserved.
+          </Text>
         </div>
       </div>
     </div>

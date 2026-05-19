@@ -52,8 +52,10 @@ const createQuestion = async (req, res) => {
 
     const result = { ...question, liked_by_me: false };
 
-    broadcastToChannel(`qna_${qnaId}`, 'question:new', result);
-    broadcastToChannel('qna_global', 'question:count_change', { qna_id: qnaId, delta: 1 });
+    await Promise.all([
+      broadcastToChannel(`qna_${qnaId}`, 'question:new', result),
+      broadcastToChannel('qna_global', 'question:count_change', { qna_id: qnaId, delta: 1 }),
+    ]);
 
     return success(res, { question: result }, 201);
   } catch (err) {
@@ -86,7 +88,7 @@ const updateQuestion = async (req, res) => {
     const likedSet = await Question.getLikedQuestionIds(qnaId, req.user.user_id);
     const result = { ...updated, liked_by_me: likedSet.has(updated.id) };
 
-    broadcastToChannel(`qna_${qnaId}`, 'question:update', result);
+    await broadcastToChannel(`qna_${qnaId}`, 'question:update', result);
 
     return success(res, { question: result });
   } catch (err) {
@@ -108,8 +110,10 @@ const deleteQuestion = async (req, res) => {
 
     await Question.softDeleteById(qId);
 
-    broadcastToChannel(`qna_${qnaId}`, 'question:delete', { question_id: qId });
-    broadcastToChannel('qna_global', 'question:count_change', { qna_id: qnaId, delta: -1 });
+    await Promise.all([
+      broadcastToChannel(`qna_${qnaId}`, 'question:delete', { question_id: qId }),
+      broadcastToChannel('qna_global', 'question:count_change', { qna_id: qnaId, delta: -1 }),
+    ]);
 
     return success(res, { message: 'Question deleted' });
   } catch (err) {
@@ -138,7 +142,7 @@ const toggleLike = async (req, res) => {
 
     const result = data && data[0] ? data[0] : { likes_count: question.likes_count, liked_by_me: false };
 
-    broadcastToChannel(`qna_${qnaId}`, 'question:like', {
+    await broadcastToChannel(`qna_${qnaId}`, 'question:like', {
       question_id: qId,
       likes_count: result.likes_count,
     });
@@ -179,7 +183,7 @@ const markAcceptedReply = async (req, res) => {
     const likedSet = await Question.getLikedQuestionIds(qnaId, req.user.user_id);
     const result = { ...updated, liked_by_me: likedSet.has(updated.id) };
 
-    broadcastToChannel(`qna_${qnaId}`, 'question:update', result);
+    await broadcastToChannel(`qna_${qnaId}`, 'question:update', result);
 
     return success(res, { question: result });
   } catch (err) {
