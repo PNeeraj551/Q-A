@@ -19,8 +19,8 @@ const authMiddleware = async (req, res, next) => {
   }
 
   try {
-    const user = await User.findOne({ _id: decoded.user_id, is_active: true }).select('_id role is_root').lean();
-    if (!user) {
+    const user = await User.findById(decoded.user_id);
+    if (!user || !user.is_active) {
       return error(res, 'Account is inactive or not found', 401);
     }
     req.user = { ...decoded, role: user.role, is_root: user.is_root };

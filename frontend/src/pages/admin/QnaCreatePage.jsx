@@ -39,8 +39,8 @@ export default function QnaCreatePage() {
 
   function toggleUser(user) {
     setSelectedUsers((prev) => {
-      const exists = prev.find((p) => p._id === user._id)
-      return exists ? prev.filter((p) => p._id !== user._id) : [...prev, user]
+      const exists = prev.find((p) => p.id === user.id)
+      return exists ? prev.filter((p) => p.id !== user.id) : [...prev, user]
     })
   }
 
@@ -65,7 +65,7 @@ export default function QnaCreatePage() {
         title: title.trim(),
         description: description.trim(),
         visibility,
-        allowed_users: visibility === 'PRIVATE' ? selectedUsers.map((u) => u._id) : [],
+        allowed_users: visibility === 'PRIVATE' ? selectedUsers.map((u) => u.id) : [],
         end_at: endAt ? new Date(endAt).toISOString() : null,
       })
       toast.success('Q&A board created.')
@@ -163,7 +163,7 @@ export default function QnaCreatePage() {
                   <div className="flex flex-wrap gap-1.5">
                     {selectedUsers.map((u) => (
                       <UserTag
-                        key={u._id}
+                        key={u.id}
                         label={u.name}
                         onRemove={() => toggleUser(u)}
                         disabled={submitting}
@@ -177,13 +177,13 @@ export default function QnaCreatePage() {
                   onChange={(e) => setUserSearch(e.target.value)}
                   placeholder="Search users by name or email..."
                 />
-                {userResults.filter((u) => !selectedUsers.find((p) => p._id === u._id)).length > 0 && (
+                {userResults.filter((u) => !selectedUsers.find((p) => p.id === u.id)).length > 0 && (
                   <div className="border border-slate-200 rounded-2xl shadow-lg divide-y divide-slate-100 max-h-48 overflow-y-auto bg-white">
                     {userResults
-                      .filter((u) => !selectedUsers.find((p) => p._id === u._id))
+                      .filter((u) => !selectedUsers.find((p) => p.id === u.id))
                       .map((u) => (
                         <button
-                          key={u._id}
+                          key={u.id}
                           type="button"
                           onClick={() => toggleUser(u)}
                           className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-slate-50 text-sm text-left transition-colors duration-200"

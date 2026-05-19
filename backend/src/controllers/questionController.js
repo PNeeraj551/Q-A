@@ -1,6 +1,6 @@
-const mongoose = require('mongoose');
+const db = require('../config/supabase');
 const Question = require('../models/Question');
-const { getIO } = require('../sockets/io');
+const { broadcastToChannel } = require('../utils/broadcast');
 const { success, error } = require('../utils/responseUtils');
 const { isBoardClosed } = require('../utils/boardUtils');
 
@@ -8,18 +8,16 @@ const { isBoardClosed } = require('../utils/boardUtils');
 const listQuestions = async (req, res) => {
   try {
     const { qnaId } = req.params;
-
-    const questions = await Question.find({ qna_id: qnaId, is_deleted: false })
-      .sort({ likes_count: -1, created_at: 1 })
-      .limit(200)
-      .lean();
-
-    // Mark which questions the current user has liked
     const userId = req.user.user_id;
+
+    const [questions, likedSet] = await Promise.all([
+      Question.listByQna(qnaId),
+      Question.getLikedQuestionIds(qnaId, userId),
+    ]);
+
     const result = questions.map((q) => ({
       ...q,
-      liked_by_me: q.likes.some((id) => id.toString() === userId),
-      likes: undefined, // don't expose full likes array to client
+      liked_by_me: likedSet.has(q.id),
     }));
 
     return success(res, { questions: result });
@@ -52,13 +50,10 @@ const createQuestion = async (req, res) => {
       author_name: req.user.name,
     });
 
-    const result = { ...question.toObject(), liked_by_me: false, likes: undefined };
+    const result = { ...question, liked_by_me: false };
 
-    // Broadcast to qna room
-    try {
-      getIO().to(`qna_${qnaId}`).emit('question:new', result);
-      getIO().to('qna_global').emit('question:count_change', { qna_id: qnaId, delta: 1 });
-    } catch (_) {}
+    broadcastToChannel(`qna_${qnaId}`, 'question:new', result);
+    broadcastToChannel('qna_global', 'question:count_change', { qna_id: qnaId, delta: 1 });
 
     return success(res, { question: result }, 201);
   } catch (err) {
@@ -69,7 +64,7 @@ const createQuestion = async (req, res) => {
 // PATCH /api/qna/:qnaId/questions/:qId
 const updateQuestion = async (req, res) => {
   const { text } = req.body;
-  const { qId } = req.params;
+  const { qId, qnaId } = req.params;
 
   if (!text || typeof text !== 'string' || !text.trim()) {
     return error(res, 'Question text is required', 400);
@@ -83,24 +78,15 @@ const updateQuestion = async (req, res) => {
     const question = await Question.findById(qId);
     if (!question || question.is_deleted) return error(res, 'Question not found', 404);
 
-    const isOwner = question.author_id.toString() === req.user.user_id;
-    if (!isOwner && req.user.role !== 'admin') {
+    if (question.author_id !== req.user.user_id && req.user.role !== 'admin') {
       return error(res, 'Not authorized', 403);
     }
 
-    question.text = sanitized;
-    question.updated_at = new Date();
-    await question.save();
+    const updated = await Question.updateById(qId, { text: sanitized });
+    const likedSet = await Question.getLikedQuestionIds(qnaId, req.user.user_id);
+    const result = { ...updated, liked_by_me: likedSet.has(updated.id) };
 
-    const result = {
-      ...question.toObject(),
-      liked_by_me: question.likes.some((id) => id.toString() === req.user.user_id),
-      likes: undefined,
-    };
-
-    try {
-      getIO().to(`qna_${req.params.qnaId}`).emit('question:update', result);
-    } catch (_) {}
+    broadcastToChannel(`qna_${qnaId}`, 'question:update', result);
 
     return success(res, { question: result });
   } catch (err) {
@@ -110,24 +96,20 @@ const updateQuestion = async (req, res) => {
 
 // DELETE /api/qna/:qnaId/questions/:qId
 const deleteQuestion = async (req, res) => {
-  const { qId } = req.params;
+  const { qId, qnaId } = req.params;
 
   try {
     const question = await Question.findById(qId);
     if (!question || question.is_deleted) return error(res, 'Question not found', 404);
 
-    const isOwner = question.author_id.toString() === req.user.user_id;
-    if (!isOwner && req.user.role !== 'admin') {
+    if (question.author_id !== req.user.user_id && req.user.role !== 'admin') {
       return error(res, 'Not authorized', 403);
     }
 
-    question.is_deleted = true;
-    await question.save();
+    await Question.softDeleteById(qId);
 
-    try {
-      getIO().to(`qna_${req.params.qnaId}`).emit('question:delete', { question_id: qId });
-      getIO().to('qna_global').emit('question:count_change', { qna_id: req.params.qnaId, delta: -1 });
-    } catch (_) {}
+    broadcastToChannel(`qna_${qnaId}`, 'question:delete', { question_id: qId });
+    broadcastToChannel('qna_global', 'question:count_change', { qna_id: qnaId, delta: -1 });
 
     return success(res, { message: 'Question deleted' });
   } catch (err) {
@@ -137,7 +119,7 @@ const deleteQuestion = async (req, res) => {
 
 // PATCH /api/qna/:qnaId/questions/:qId/like
 const toggleLike = async (req, res) => {
-  const { qId } = req.params;
+  const { qId, qnaId } = req.params;
   const userId = req.user.user_id;
 
   try {
@@ -145,30 +127,23 @@ const toggleLike = async (req, res) => {
       return error(res, 'This Q&A board is closed.', 403);
     }
 
-    const question = await Question.findById(qId).select('likes is_deleted').lean();
+    const question = await Question.findById(qId);
     if (!question || question.is_deleted) return error(res, 'Question not found', 404);
 
-    const alreadyLiked = question.likes.some((id) => id.toString() === userId);
-
-    const updated = await Question.findByIdAndUpdate(
-      qId,
-      alreadyLiked
-        ? { $pull: { likes: new mongoose.Types.ObjectId(userId) }, $inc: { likes_count: -1 } }
-        : { $addToSet: { likes: new mongoose.Types.ObjectId(userId) }, $inc: { likes_count: 1 } },
-      { new: true, select: 'likes_count' }
-    );
-
-    try {
-      getIO().to(`qna_${req.params.qnaId}`).emit('question:like', {
-        question_id: qId,
-        likes_count: updated.likes_count,
-      });
-    } catch (_) {}
-
-    return success(res, {
-      likes_count: updated.likes_count,
-      liked_by_me: !alreadyLiked,
+    const { data, error: rpcErr } = await db.rpc('toggle_question_like', {
+      p_question_id: qId,
+      p_user_id: userId,
     });
+    if (rpcErr) throw rpcErr;
+
+    const result = data && data[0] ? data[0] : { likes_count: question.likes_count, liked_by_me: false };
+
+    broadcastToChannel(`qna_${qnaId}`, 'question:like', {
+      question_id: qId,
+      likes_count: result.likes_count,
+    });
+
+    return success(res, { likes_count: result.likes_count, liked_by_me: result.liked_by_me });
   } catch (err) {
     return error(res, 'Failed to update like.', 500);
   }
@@ -178,13 +153,10 @@ const toggleLike = async (req, res) => {
 const trackView = async (req, res) => {
   const { qId } = req.params;
   try {
-    const updated = await Question.findByIdAndUpdate(
-      qId,
-      { $inc: { view_count: 1 } },
-      { new: true, select: 'view_count' }
-    );
-    if (!updated) return error(res, 'Question not found', 404);
-    return success(res, { view_count: updated.view_count });
+    await db.rpc('increment_view_count', { p_question_id: qId });
+    const question = await Question.findById(qId);
+    if (!question) return error(res, 'Question not found', 404);
+    return success(res, { view_count: question.view_count });
   } catch (err) {
     return error(res, 'Failed to track view.', 500);
   }
@@ -192,31 +164,22 @@ const trackView = async (req, res) => {
 
 // PATCH /api/qna/:qnaId/questions/:qId/accept-reply
 const markAcceptedReply = async (req, res) => {
-  const { qId } = req.params;
+  const { qId, qnaId } = req.params;
   const { reply_id } = req.body;
 
   try {
     const question = await Question.findById(qId);
     if (!question || question.is_deleted) return error(res, 'Question not found', 404);
 
-    const isOwner = question.author_id.toString() === req.user.user_id;
-    if (!isOwner && req.user.role !== 'admin') {
+    if (question.author_id !== req.user.user_id && req.user.role !== 'admin') {
       return error(res, 'Not authorized', 403);
     }
 
-    question.accepted_reply_id = reply_id || null;
-    question.updated_at = new Date();
-    await question.save();
+    const updated = await Question.updateById(qId, { accepted_reply_id: reply_id || null });
+    const likedSet = await Question.getLikedQuestionIds(qnaId, req.user.user_id);
+    const result = { ...updated, liked_by_me: likedSet.has(updated.id) };
 
-    const result = {
-      ...question.toObject(),
-      liked_by_me: question.likes.some((id) => id.toString() === req.user.user_id),
-      likes: undefined,
-    };
-
-    try {
-      getIO().to(`qna_${req.params.qnaId}`).emit('question:update', result);
-    } catch (_) {}
+    broadcastToChannel(`qna_${qnaId}`, 'question:update', result);
 
     return success(res, { question: result });
   } catch (err) {

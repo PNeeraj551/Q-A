@@ -1,7 +1,6 @@
-import { useEffect, useRef, useMemo, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { io } from 'socket.io-client'
-import { SOCKET_URL } from '../../utils/socket'
+import supabase from '../../utils/supabase'
 import { useAuth } from '../../context/AuthContext'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import { listQna } from '../../api/qna'
@@ -40,9 +39,7 @@ export default function QnaListPage() {
   useEffect(() => { pageRef.current = page }, [page])
   useEffect(() => { searchRef.current = debouncedSearch }, [debouncedSearch])
 
-  const currentUserId = user?._id || user?.user_id
-  const socketRef = useRef(null)
-  const joinedRoomsRef = useRef(new Set())
+  const currentUserId = user?.id || user?.user_id
 
   const fetchPosts = useCallback((params) => {
     setLoading(true)
@@ -65,85 +62,48 @@ export default function QnaListPage() {
     fetchPosts(params)
   }, [debouncedSearch, visibility, fromDate, toDate, page, fetchPosts])
 
-  // Create socket once on mount
+  // Real-time board list updates
   useEffect(() => {
-    const token = localStorage.getItem('jwt')
-    const socket = io(SOCKET_URL, { auth: { token }, transports: ['websocket', 'polling'] })
-    socketRef.current = socket
-
-    // Global board events
-    socket.on('qna:new', ({ post }) => {
-      if (pageRef.current !== 1) return
-      const term = searchRef.current.trim()
-      if (term.length >= 1 && !post.title.toLowerCase().includes(term.toLowerCase())) return
-      if (post.visibility === 'PRIVATE') {
-        const ids = (post.allowed_users || []).map(String)
-        if (!ids.includes(String(currentUserId))) return
-      }
-      setPosts((prev) => {
-        if (prev.some((p) => p._id === post._id)) return prev
-        return [post, ...prev]
+    const channel = supabase
+      .channel('qna_global')
+      .on('broadcast', { event: 'qna:new' }, ({ payload: { post } }) => {
+        if (pageRef.current !== 1) return
+        const term = searchRef.current.trim()
+        if (term.length >= 1 && !post.title.toLowerCase().includes(term.toLowerCase())) return
+        if (post.visibility === 'PRIVATE') {
+          const ids = (post.allowed_users || []).map(String)
+          if (!ids.includes(String(currentUserId))) return
+        }
+        setPosts((prev) => {
+          if (prev.some((p) => p.id === post.id)) return prev
+          return [post, ...prev]
+        })
+        setTotal((t) => t + 1)
       })
-      setTotal((t) => t + 1)
-    })
-
-    socket.on('qna:deleted', ({ qna_id }) => {
-      setPosts((prev) => {
-        const exists = prev.some((p) => String(p._id) === String(qna_id))
-        if (exists) setTotal((t) => Math.max(0, t - 1))
-        return prev.filter((p) => String(p._id) !== String(qna_id))
+      .on('broadcast', { event: 'qna:deleted' }, ({ payload: { qna_id } }) => {
+        setPosts((prev) => {
+          const exists = prev.some((p) => String(p.id) === String(qna_id))
+          if (exists) setTotal((t) => Math.max(0, t - 1))
+          return prev.filter((p) => String(p.id) !== String(qna_id))
+        })
       })
-      joinedRoomsRef.current.delete(qna_id)
-    })
-
-    socket.on('qna:updated', ({ post }) => {
-      setPosts((prev) => prev.map((p) => String(p._id) === String(post._id) ? { ...p, ...post } : p))
-    })
-
-    // Per-board question count updates
-    socket.on('question:new', (question) => {
-      setPosts((prev) =>
-        prev.map((p) =>
-          String(p._id) === String(question.qna_id)
-            ? { ...p, question_count: (p.question_count || 0) + 1 }
-            : p
+      .on('broadcast', { event: 'qna:updated' }, ({ payload: { post } }) => {
+        setPosts((prev) => prev.map((p) => String(p.id) === String(post.id) ? { ...p, ...post } : p))
+      })
+      .on('broadcast', { event: 'question:count_change' }, ({ payload: { qna_id, delta } }) => {
+        setPosts((prev) =>
+          prev.map((p) =>
+            String(p.id) === String(qna_id)
+              ? { ...p, question_count: Math.max(0, (p.question_count || 0) + delta) }
+              : p
+          )
         )
-      )
-    })
+      })
+      .subscribe()
 
-    return () => {
-      socket.disconnect()
-      socketRef.current = null
-      joinedRoomsRef.current.clear()
-    }
+    return () => { supabase.removeChannel(channel) }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUserId])
-
-  // Join/leave per-board rooms as visible posts change
-  const postIdsKey = useMemo(() => posts.map((p) => p._id).join(','), [posts])
-
-  useEffect(() => {
-    const socket = socketRef.current
-    if (!socket) return
-
-    const newIds = new Set(posts.map((p) => String(p._id)))
-
-    // Leave rooms no longer in view
-    joinedRoomsRef.current.forEach((id) => {
-      if (!newIds.has(id)) {
-        socket.emit('qna:leave', { qna_id: id })
-        joinedRoomsRef.current.delete(id)
-      }
-    })
-
-    // Join new rooms
-    newIds.forEach((id) => {
-      if (!joinedRoomsRef.current.has(id)) {
-        socket.emit('qna:join', { qna_id: id })
-        joinedRoomsRef.current.add(id)
-      }
-    })
-  }, [postIdsKey])
 
   function handleSetSearch(v) { setSearch(v); setPage(1) }
   function handleSetVisibility(v) { setVisibility(v); setPage(1) }
@@ -209,8 +169,8 @@ export default function QnaListPage() {
               {posts.map((post) => (
                 <Surface
                   as="button"
-                  key={post._id}
-                  onClick={() => navigate(`/user/qna/${post._id}`)}
+                  key={post.id}
+                  onClick={() => navigate(`/user/qna/${post.id}`)}
                   className="w-full px-5 py-4 text-left shadow-sm hover:-translate-y-0.5 hover:shadow-md hover:border-blue-200 transition-all duration-200 group"
                 >
                   <div className="flex items-start justify-between gap-3">

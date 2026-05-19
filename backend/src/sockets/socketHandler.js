@@ -1,4 +1,3 @@
-const mongoose = require('mongoose');
 const { verifyToken } = require('../utils/jwtUtils');
 const User = require('../models/User');
 
@@ -9,7 +8,7 @@ const initSocketHandler = (io) => {
       if (!token) return next(new Error('Unauthorized'));
 
       const decoded = verifyToken(token);
-      const user = await User.findById(decoded.user_id).select('_id name is_active').lean();
+      const user = await User.findById(decoded.user_id);
       if (!user || !user.is_active) return next(new Error('Unauthorized'));
 
       socket.user = { ...decoded, name: user.name };
@@ -20,10 +19,10 @@ const initSocketHandler = (io) => {
   });
 
   io.on('connection', (socket) => {
-    socket.join('qna_global')
+    socket.join('qna_global');
 
     socket.on('qna:join', ({ qna_id } = {}) => {
-      if (qna_id && mongoose.Types.ObjectId.isValid(qna_id)) {
+      if (qna_id && typeof qna_id === 'string' && qna_id.trim()) {
         socket.join(`qna_${qna_id}`);
       }
     });

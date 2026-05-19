@@ -93,7 +93,7 @@ export default function UsersPage() {
     deletingRef.current.add(id)
     try {
       await deleteUser(id)
-      setUsers((prev) => prev.filter((u) => u._id !== id))
+      setUsers((prev) => prev.filter((u) => u.id !== id))
       toast.success('User deleted.')
     } catch {
       toast.error('Failed to delete user. Please try again.')
@@ -148,7 +148,7 @@ export default function UsersPage() {
         ) : (
           <Stack gap={2}>
             {users.map((u) => (
-              <Surface key={u._id} className="px-5 py-3.5 flex items-center justify-between gap-4 transition-all duration-200 hover:border-slate-300 hover:shadow-md">
+              <Surface key={u.id} className="px-5 py-3.5 flex items-center justify-between gap-4 transition-all duration-200 hover:border-slate-300 hover:shadow-md">
                 <div className="flex items-center gap-3 min-w-0">
                   <div className={`w-9 h-9 rounded-full flex items-center justify-center font-semibold text-sm select-none shrink-0 ${getAvatarColor(u.name)}`}>
                     {u.name?.[0]?.toUpperCase() || '?'}
@@ -165,13 +165,13 @@ export default function UsersPage() {
                   <Button variant="outline" size="sm" onClick={() => setEditUser(u)}>
                     Edit
                   </Button>
-                  {confirmDeleteId === u._id ? (
-                    <InlineConfirm onConfirm={() => handleDelete(u._id)} onCancel={() => setConfirmDeleteId(null)} />
+                  {confirmDeleteId === u.id ? (
+                    <InlineConfirm onConfirm={() => handleDelete(u.id)} onCancel={() => setConfirmDeleteId(null)} />
                   ) : (
                     <Button
                       variant="destructive"
                       size="sm"
-                      onClick={() => setConfirmDeleteId(u._id)}
+                      onClick={() => setConfirmDeleteId(u.id)}
                     >
                       Delete
                     </Button>
@@ -195,7 +195,7 @@ export default function UsersPage() {
           user={editUser}
           onClose={() => setEditUser(null)}
           onUpdated={(updated) => {
-            setUsers((prev) => prev.map((u) => u._id === updated._id ? updated : u))
+            setUsers((prev) => prev.map((u) => u.id === updated.id ? updated : u))
             setEditUser(null)
           }}
         />
@@ -301,7 +301,7 @@ function EditUserModal({ user, onClose, onUpdated }) {
     setErrors({})
     submittingRef.current = true
     try {
-      const res = await updateUser(user._id, { name: name.trim() })
+      const res = await updateUser(user.id, { name: name.trim() })
       onUpdated(res.data.user)
       toast.success('User updated.')
     } catch (err) {

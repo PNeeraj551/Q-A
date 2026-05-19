@@ -1,67 +1,68 @@
-const mongoose = require('mongoose');
+const db = require('../config/supabase');
 
-const questionSchema = new mongoose.Schema(
-  {
-    qna_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'QnaPost',
-      required: true,
-    },
-    text: {
-      type: String,
-      required: [true, 'Question text is required'],
-      trim: true,
-      maxlength: [5000, 'Question must be 5000 characters or fewer'],
-    },
-    author_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      required: true,
-    },
-    author_name: {
-      type: String,
-      required: true,
-    },
-    likes: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-      },
-    ],
-    likes_count: {
-      type: Number,
-      default: 0,
-    },
-    reply_count: {
-      type: Number,
-      default: 0,
-    },
-    accepted_reply_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Reply',
-      default: null,
-    },
-    view_count: {
-      type: Number,
-      default: 0,
-    },
-    is_deleted: {
-      type: Boolean,
-      default: false,
-    },
-    created_at: {
-      type: Date,
-      default: Date.now,
-    },
-    updated_at: {
-      type: Date,
-    },
-  },
-  { timestamps: false, versionKey: false }
-);
+const COLS = 'id, qna_id, text, author_id, author_name, likes_count, reply_count, view_count, accepted_reply_id, is_deleted, created_at, updated_at';
 
-// Primary index for sorted feed
-questionSchema.index({ qna_id: 1, is_deleted: 1, likes_count: -1, created_at: -1 });
-questionSchema.index({ qna_id: 1, author_id: 1 });
+async function findById(id) {
+  const { data, error } = await db.from('questions').select(COLS).eq('id', id).maybeSingle();
+  if (error) throw error;
+  return data;
+}
 
-module.exports = mongoose.model('Question', questionSchema);
+async function listByQna(qnaId) {
+  const { data, error } = await db
+    .from('questions')
+    .select(COLS)
+    .eq('qna_id', qnaId)
+    .eq('is_deleted', false)
+    .order('likes_count', { ascending: false })
+    .order('created_at', { ascending: true })
+    .limit(200);
+  if (error) throw error;
+  return data || [];
+}
+
+async function create(data) {
+  const { data: row, error } = await db.from('questions').insert(data).select(COLS).single();
+  if (error) throw error;
+  return row;
+}
+
+async function updateById(id, updates) {
+  const { data, error } = await db.from('questions').update(updates).eq('id', id).select(COLS).single();
+  if (error) throw error;
+  return data;
+}
+
+async function softDeleteById(id) {
+  const { data, error } = await db.from('questions').update({ is_deleted: true }).eq('id', id).select(COLS).single();
+  if (error) throw error;
+  return data;
+}
+
+async function softDeleteByQnaId(qnaId) {
+  const { error } = await db.from('questions').update({ is_deleted: true }).eq('qna_id', qnaId);
+  if (error) throw error;
+}
+
+async function countByQnaId(qnaId) {
+  const { count, error } = await db.from('questions').select('*', { count: 'exact', head: true }).eq('qna_id', qnaId).eq('is_deleted', false);
+  if (error) throw error;
+  return count || 0;
+}
+
+async function getLikedQuestionIds(qnaId, userId) {
+  const { data, error } = await db.from('question_likes').select('question_id').eq('user_id', userId);
+  if (error) throw error;
+  return new Set((data || []).map((r) => r.question_id));
+}
+
+module.exports = {
+  findById,
+  listByQna,
+  create,
+  updateById,
+  softDeleteById,
+  softDeleteByQnaId,
+  countByQnaId,
+  getLikedQuestionIds,
+};

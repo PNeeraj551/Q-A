@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { io } from 'socket.io-client'
-import { SOCKET_URL } from '../../utils/socket'
+import supabase from '../../utils/supabase'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import { Button } from '@/components/common/Button'
 import { listQna, deleteQna } from '../../api/qna'
@@ -46,41 +45,38 @@ export default function QnaDashboardPage() {
 
   // Real-time board list updates
   useEffect(() => {
-    const token = localStorage.getItem('jwt')
-    const socket = io(SOCKET_URL, { auth: { token }, transports: ['websocket', 'polling'] })
-
-    socket.on('qna:new', ({ post }) => {
-      if (pageRef.current !== 1) return
-      setPosts((prev) => {
-        if (prev.some((p) => p._id === post._id)) return prev
-        return [post, ...prev]
+    const channel = supabase
+      .channel('qna_global')
+      .on('broadcast', { event: 'qna:new' }, ({ payload: { post } }) => {
+        if (pageRef.current !== 1) return
+        setPosts((prev) => {
+          if (prev.some((p) => p.id === post.id)) return prev
+          return [post, ...prev]
+        })
+        setTotal((t) => t + 1)
       })
-      setTotal((t) => t + 1)
-    })
-
-    socket.on('qna:deleted', ({ qna_id }) => {
-      setPosts((prev) => {
-        const exists = prev.some((p) => String(p._id) === String(qna_id))
-        if (exists) setTotal((t) => Math.max(0, t - 1))
-        return prev.filter((p) => String(p._id) !== String(qna_id))
+      .on('broadcast', { event: 'qna:deleted' }, ({ payload: { qna_id } }) => {
+        setPosts((prev) => {
+          const exists = prev.some((p) => String(p.id) === String(qna_id))
+          if (exists) setTotal((t) => Math.max(0, t - 1))
+          return prev.filter((p) => String(p.id) !== String(qna_id))
+        })
       })
-    })
-
-    socket.on('qna:updated', ({ post }) => {
-      setPosts((prev) => prev.map((p) => String(p._id) === String(post._id) ? { ...p, ...post } : p))
-    })
-
-    socket.on('question:count_change', ({ qna_id, delta }) => {
-      setPosts((prev) =>
-        prev.map((p) =>
-          String(p._id) === String(qna_id)
-            ? { ...p, question_count: Math.max(0, (p.question_count || 0) + delta) }
-            : p
+      .on('broadcast', { event: 'qna:updated' }, ({ payload: { post } }) => {
+        setPosts((prev) => prev.map((p) => String(p.id) === String(post.id) ? { ...p, ...post } : p))
+      })
+      .on('broadcast', { event: 'question:count_change' }, ({ payload: { qna_id, delta } }) => {
+        setPosts((prev) =>
+          prev.map((p) =>
+            String(p.id) === String(qna_id)
+              ? { ...p, question_count: Math.max(0, (p.question_count || 0) + delta) }
+              : p
+          )
         )
-      )
-    })
+      })
+      .subscribe()
 
-    return () => { socket.disconnect() }
+    return () => { supabase.removeChannel(channel) }
   }, [])
 
   const fetchPosts = useCallback((params) => {
@@ -139,7 +135,7 @@ export default function QnaDashboardPage() {
     deletingRef.current.add(id)
     try {
       await deleteQna(id)
-      setPosts((prev) => prev.filter((p) => p._id !== id))
+      setPosts((prev) => prev.filter((p) => p.id !== id))
       setTotal((t) => t - 1)
       toast.success('Q&A board deleted.')
     } catch {
@@ -222,12 +218,12 @@ export default function QnaDashboardPage() {
               <Stack gap={2}>
                 {posts.map((post) => (
                   <Surface
-                    key={post._id}
+                    key={post.id}
                     className="px-5 py-4 flex items-center justify-between gap-4 hover:border-slate-300 hover:shadow-md transition-all duration-200"
                   >
                     <div
                       className="flex-1 min-w-0 cursor-pointer"
-                      onClick={() => navigate(`/admin/qna/${post._id}`)}
+                      onClick={() => navigate(`/admin/qna/${post.id}`)}
                     >
                       <div className="flex items-center gap-2 mb-2">
                         <span className="text-sm font-semibold text-slate-900 truncate">{post.title}</span>
@@ -248,17 +244,17 @@ export default function QnaDashboardPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => navigate(`/admin/qna/${post._id}/edit`)}
+                        onClick={() => navigate(`/admin/qna/${post.id}/edit`)}
                       >
                         Edit
                       </Button>
-                      {confirmId === post._id ? (
-                        <InlineConfirm onConfirm={() => handleDelete(post._id)} onCancel={() => setConfirmId(null)} />
+                      {confirmId === post.id ? (
+                        <InlineConfirm onConfirm={() => handleDelete(post.id)} onCancel={() => setConfirmId(null)} />
                       ) : (
                         <Button
                           variant="destructive"
                           size="sm"
-                          onClick={() => setConfirmId(post._id)}
+                          onClick={() => setConfirmId(post.id)}
                         >
                           Delete
                         </Button>

@@ -1,6 +1,7 @@
+const db = require('../config/supabase');
 const Question = require('../models/Question');
 const Reply = require('../models/Reply');
-const { getIO } = require('../sockets/io');
+const { broadcastToChannel } = require('../utils/broadcast');
 const { success, error } = require('../utils/responseUtils');
 const { isBoardClosed } = require('../utils/boardUtils');
 
@@ -8,11 +9,7 @@ const { isBoardClosed } = require('../utils/boardUtils');
 const listReplies = async (req, res) => {
   try {
     const { qId } = req.params;
-
-    const replies = await Reply.find({ question_id: qId, is_deleted: false })
-      .sort({ created_at: 1 })
-      .lean();
-
+    const replies = await Reply.listByQuestion(qId);
     return success(res, { replies });
   } catch (err) {
     return error(res, 'Failed to load replies.', 500);
@@ -36,7 +33,7 @@ const createReply = async (req, res) => {
       return error(res, 'This Q&A board is closed.', 403);
     }
 
-    const question = await Question.findById(qId).select('_id is_deleted').lean();
+    const question = await Question.findById(qId);
     if (!question || question.is_deleted) return error(res, 'Question not found', 404);
 
     const reply = await Reply.create({
@@ -47,15 +44,11 @@ const createReply = async (req, res) => {
       author_name: req.user.name,
     });
 
-    // Increment reply_count on question
-    await Question.findByIdAndUpdate(qId, { $inc: { reply_count: 1 } });
+    await db.rpc('increment_reply_count', { p_question_id: qId });
 
-    // Broadcast to qna room
-    try {
-      getIO().to(`qna_${qnaId}`).emit('reply:new', { reply: reply.toObject(), question_id: qId });
-    } catch (_) {}
+    broadcastToChannel(`qna_${qnaId}`, 'reply:new', { reply, question_id: qId });
 
-    return success(res, { reply: reply.toObject() }, 201);
+    return success(res, { reply }, 201);
   } catch (err) {
     return error(res, 'Failed to post reply.', 500);
   }
@@ -77,16 +70,12 @@ const updateReply = async (req, res) => {
     const reply = await Reply.findById(rId);
     if (!reply || reply.is_deleted) return error(res, 'Reply not found', 404);
 
-    const isOwner = reply.author_id.toString() === req.user.user_id;
-    if (!isOwner && req.user.role !== 'admin') {
+    if (reply.author_id !== req.user.user_id && req.user.role !== 'admin') {
       return error(res, 'Not authorized', 403);
     }
 
-    reply.text = text.trim();
-    reply.updated_at = new Date();
-    await reply.save();
-
-    return success(res, { reply: reply.toObject() });
+    const updated = await Reply.updateById(rId, { text: text.trim() });
+    return success(res, { reply: updated });
   } catch (err) {
     return error(res, 'Failed to update reply.', 500);
   }
@@ -94,26 +83,20 @@ const updateReply = async (req, res) => {
 
 // DELETE /api/qna/:qnaId/questions/:qId/replies/:rId
 const deleteReply = async (req, res) => {
-  const { qId, rId } = req.params;
+  const { qId, rId, qnaId } = req.params;
 
   try {
     const reply = await Reply.findById(rId);
     if (!reply || reply.is_deleted) return error(res, 'Reply not found', 404);
 
-    const isOwner = reply.author_id.toString() === req.user.user_id;
-    if (!isOwner && req.user.role !== 'admin') {
+    if (reply.author_id !== req.user.user_id && req.user.role !== 'admin') {
       return error(res, 'Not authorized', 403);
     }
 
-    reply.is_deleted = true;
-    await reply.save();
+    await Reply.softDeleteById(rId);
+    await db.rpc('decrement_reply_count', { p_question_id: qId });
 
-    // Decrement reply_count on question
-    await Question.findByIdAndUpdate(qId, { $inc: { reply_count: -1 } });
-
-    try {
-      getIO().to(`qna_${req.params.qnaId}`).emit('reply:delete', { reply_id: rId, question_id: qId });
-    } catch (_) {}
+    broadcastToChannel(`qna_${qnaId}`, 'reply:delete', { reply_id: rId, question_id: qId });
 
     return success(res, { message: 'Reply deleted' });
   } catch (err) {

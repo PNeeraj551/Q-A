@@ -5,7 +5,7 @@ const logger = require('../utils/logger');
 const ATHIVA_EMAIL = /^[a-zA-Z0-9._%+-]+@athivatech\.com$/i;
 
 const formatUser = (user) => ({
-  _id: user._id,
+  id: user.id,
   name: user.name,
   email: user.email,
   role: user.role,
@@ -18,16 +18,8 @@ const formatUser = (user) => ({
 const getUsers = async (req, res) => {
   try {
     const { search } = req.query;
-
-    let filter = {};
-    if (search && typeof search === 'string' && search.trim().length > 0) {
-      const escaped = search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const regex = new RegExp(escaped, 'i');
-      filter = { $or: [{ name: regex }, { email: regex }] };
-    }
-
-    const users = await User.find(filter).select('-password').lean();
-
+    const searchTerm = search && typeof search === 'string' && search.trim().length > 0 ? search.trim() : null;
+    const users = await User.findAll(searchTerm);
     return success(res, { users: users.map(formatUser) });
   } catch (err) {
     return error(res, 'Failed to retrieve users', 500);
@@ -42,11 +34,9 @@ const createUser = async (req, res) => {
     if (!name || typeof name !== 'string' || name.trim().length < 2 || name.trim().length > 80) {
       return error(res, 'Name is required and must be between 2 and 80 characters', 400);
     }
-
     if (!email || typeof email !== 'string' || !ATHIVA_EMAIL.test(email.trim())) {
       return error(res, 'A valid @athivatech.com email address is required', 400);
     }
-
     if (!role || !['admin', 'user'].includes(role)) {
       return error(res, 'Role must be either admin or user', 400);
     }
@@ -60,7 +50,7 @@ const createUser = async (req, res) => {
 
     return success(res, { user: formatUser(user) }, 201);
   } catch (err) {
-    if (err.code === 11000) {
+    if (err.code === '23505') {
       return error(res, 'Email already in use', 409);
     }
     return error(res, 'Failed to create user', 500);
@@ -71,11 +61,6 @@ const createUser = async (req, res) => {
 const updateUser = async (req, res) => {
   try {
     const { id } = req.params;
-
-    if (!id.match(/^[a-fA-F0-9]{24}$/)) {
-      return error(res, 'Invalid user ID', 400);
-    }
-
     const { name, is_active } = req.body;
     const updates = {};
 
@@ -99,7 +84,7 @@ const updateUser = async (req, res) => {
       return error(res, 'At least one field must be provided', 400);
     }
 
-    const target = await User.findById(id).select('is_root').lean();
+    const target = await User.findById(id);
     if (!target) return error(res, 'User not found', 404);
 
     if (target.is_root) {
@@ -113,21 +98,9 @@ const updateUser = async (req, res) => {
       }
     }
 
-    const user = await User.findByIdAndUpdate(
-      id,
-      { $set: updates },
-      { new: true, runValidators: true }
-    ).select('-password');
-
-    if (!user) {
-      return error(res, 'User not found', 404);
-    }
-
+    const user = await User.updateById(id, updates);
     return success(res, { user: formatUser(user) });
   } catch (err) {
-    if (err.name === 'CastError') {
-      return error(res, 'Invalid user ID', 400);
-    }
     return error(res, 'Failed to update user', 500);
   }
 };
@@ -137,15 +110,11 @@ const deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
 
-    if (!id.match(/^[a-fA-F0-9]{24}$/)) {
-      return error(res, 'Invalid user ID', 400);
-    }
-
     if (req.user.user_id === id) {
       return error(res, 'You cannot delete your own account', 400);
     }
 
-    const target = await User.findById(id).select('is_root').lean();
+    const target = await User.findById(id);
     if (!target) return error(res, 'User not found', 404);
 
     if (target.is_root) {
@@ -153,13 +122,9 @@ const deleteUser = async (req, res) => {
       return error(res, 'Root admin account cannot be deleted', 403);
     }
 
-    await User.findByIdAndDelete(id);
-
+    await User.deleteById(id);
     return success(res, { message: 'User deleted' });
   } catch (err) {
-    if (err.name === 'CastError') {
-      return error(res, 'Invalid user ID', 400);
-    }
     return error(res, 'Failed to delete user', 500);
   }
 };

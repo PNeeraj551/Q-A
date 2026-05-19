@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext'
 import { getQna } from '../../api/qna'
 import { listQuestions, createQuestion } from '../../api/questions'
 import { QuestionCard } from '@/components/qna/QuestionCard'
-import { useQnaSocket } from '../../hooks/useQnaSocket'
+import { useQnaRealtime } from '../../hooks/useQnaRealtime'
 import toast from 'react-hot-toast'
 import { VisibilityBadge, StatusBadge } from '@/components/common/Badges'
 import { EmptyState } from '@/components/common/EmptyState'
@@ -51,18 +51,18 @@ export default function QnaDetailPage() {
   const handleUpdate = useCallback((updated) => {
     setQuestions((prev) =>
       prev
-        .map((q) => (q._id === updated._id ? updated : q))
+        .map((q) => (q.id === updated.id ? updated : q))
         .sort((a, b) => b.likes_count - a.likes_count || new Date(a.created_at) - new Date(b.created_at))
     )
   }, [])
 
   const handleDelete = useCallback((qId) => {
-    setQuestions((prev) => prev.filter((q) => q._id !== qId))
+    setQuestions((prev) => prev.filter((q) => q.id !== qId))
   }, [])
 
   const onQuestionNew = useCallback((question) => {
     setQuestions((prev) => {
-      if (prev.some((q) => q._id === question._id)) return prev
+      if (prev.some((q) => q.id === question.id)) return prev
       if (prev.some((q) => q._isOptimistic && q.text === question.text && String(q.author_id) === String(question.author_id))) return prev
       return [...prev, question].sort((a, b) => b.likes_count - a.likes_count || new Date(a.created_at) - new Date(b.created_at))
     })
@@ -70,30 +70,30 @@ export default function QnaDetailPage() {
 
   const onQuestionUpdate = useCallback((updated) => {
     setQuestions((prev) =>
-      prev.map((q) => (q._id === updated._id ? { ...q, ...updated } : q))
+      prev.map((q) => (q.id === updated.id ? { ...q, ...updated } : q))
     )
   }, [])
 
   const onQuestionDelete = useCallback(({ question_id }) => {
-    setQuestions((prev) => prev.filter((q) => q._id !== question_id))
+    setQuestions((prev) => prev.filter((q) => q.id !== question_id))
   }, [])
 
   const onQuestionLike = useCallback(({ question_id, likes_count }) => {
     setQuestions((prev) =>
-      prev.map((q) => (q._id === question_id ? { ...q, likes_count } : q))
+      prev.map((q) => (q.id === question_id ? { ...q, likes_count } : q))
           .sort((a, b) => b.likes_count - a.likes_count || new Date(a.created_at) - new Date(b.created_at))
     )
   }, [])
 
   const onReplyNew = useCallback(({ question_id }) => {
     setQuestions((prev) =>
-      prev.map((q) => String(q._id) === String(question_id) ? { ...q, reply_count: q.reply_count + 1 } : q)
+      prev.map((q) => String(q.id) === String(question_id) ? { ...q, reply_count: q.reply_count + 1 } : q)
     )
   }, [])
 
   const onReplyDelete = useCallback(({ question_id }) => {
     setQuestions((prev) =>
-      prev.map((q) => String(q._id) === String(question_id) ? { ...q, reply_count: Math.max(0, q.reply_count - 1) } : q)
+      prev.map((q) => String(q.id) === String(question_id) ? { ...q, reply_count: Math.max(0, q.reply_count - 1) } : q)
     )
   }, [])
 
@@ -101,7 +101,7 @@ export default function QnaDetailPage() {
     setPost(updatedPost)
   }, [])
 
-  const socketRef = useQnaSocket(id, {
+  useQnaRealtime(id, {
     onQuestionNew,
     onQuestionUpdate,
     onQuestionDelete,
@@ -119,10 +119,10 @@ export default function QnaDetailPage() {
 
     const tempId = 'temp_' + Date.now()
     const tempQuestion = {
-      _id: tempId,
+      id: tempId,
       qna_id: id,
       text,
-      author_id: user?._id || user?.user_id,
+      author_id: user?.id || user?.user_id,
       author_name: user?.name,
       likes_count: 0,
       reply_count: 0,
@@ -141,11 +141,11 @@ export default function QnaDetailPage() {
       const res = await createQuestion(id, text)
       setQuestions((prev) =>
         prev
-          .map((q) => (q._id === tempId ? res.data.question : q))
+          .map((q) => (q.id === tempId ? res.data.question : q))
           .sort((a, b) => b.likes_count - a.likes_count || new Date(a.created_at) - new Date(b.created_at))
       )
     } catch {
-      setQuestions((prev) => prev.filter((q) => q._id !== tempId))
+      setQuestions((prev) => prev.filter((q) => q.id !== tempId))
       setQuestionText(text)
       toast.error('Failed to post question. Please try again.')
     } finally {
@@ -188,7 +188,7 @@ export default function QnaDetailPage() {
     )
   }
 
-  const currentUserId = user?._id || user?.user_id
+  const currentUserId = user?.id || user?.user_id
   const isClosed = post.status === 'CLOSED' || autoClosedByTimer || (post.end_at && new Date() >= new Date(post.end_at))
 
   const questionForm = isClosed ? (
@@ -258,7 +258,7 @@ export default function QnaDetailPage() {
       ) : (
         <Stack gap={4} >
           {questions.map((q) => (
-            <div key={q._id}>
+            <div key={q.id}>
               <QuestionCard
                 qnaId={id}
                 question={q}
@@ -267,7 +267,6 @@ export default function QnaDetailPage() {
                 isClosed={isClosed}
                 onUpdate={handleUpdate}
                 onDelete={handleDelete}
-                socketRef={socketRef}
               />
             </div>
           ))}

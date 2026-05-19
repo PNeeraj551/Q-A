@@ -9,7 +9,6 @@ const logger = require('../utils/logger');
 const ATHIVA_EMAIL = /^[a-zA-Z0-9._%+-]+@athivatech\.com$/i;
 const OTP_EXPIRY_MS = 10 * 60 * 1000;
 const MAX_OTP_ATTEMPTS = 5;
-
 const NAME_MAX = 80;
 
 // POST /auth/request-otp
@@ -21,14 +20,14 @@ const requestOtp = async (req, res) => {
   const normalEmail = email.trim().toLowerCase();
   try {
     logger.info(`[requestOtp] Looking up user: ${normalEmail}`);
-    const user = await User.findOne({ email: normalEmail, is_active: true });
+    const user = await User.findByEmail(normalEmail);
     if (!user) {
       logger.info(`[requestOtp] User not found: ${normalEmail}`);
       return success(res, { message: 'If this email is registered, a login code has been sent.' });
     }
-    logger.info(`[requestOtp] User found: ${user._id}`);
+    logger.info(`[requestOtp] User found: ${user.id}`);
 
-    await Otp.deleteMany({ email: normalEmail });
+    await Otp.clearByEmail(normalEmail);
     logger.info(`[requestOtp] Old OTPs cleared for: ${normalEmail}`);
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -37,7 +36,7 @@ const requestOtp = async (req, res) => {
     await Otp.create({
       email: normalEmail,
       otp_hash,
-      expires_at: new Date(Date.now() + OTP_EXPIRY_MS),
+      expires_at: new Date(Date.now() + OTP_EXPIRY_MS).toISOString(),
     });
     logger.info(`[requestOtp] OTP record created for: ${normalEmail}`);
 
@@ -62,39 +61,33 @@ const verifyOtp = async (req, res) => {
   }
   const normalEmail = email.trim().toLowerCase();
   try {
-    const record = await Otp.findOne({
-      email: normalEmail,
-      used: false,
-      expires_at: { $gt: new Date() },
-    });
+    const record = await Otp.findActiveByEmail(normalEmail);
 
     if (!record) {
       return error(res, 'Code is invalid or has expired. Please request a new one.', 401);
     }
 
     if (record.attempts >= MAX_OTP_ATTEMPTS) {
-      await Otp.deleteOne({ _id: record._id });
+      await Otp.deleteById(record.id);
       return error(res, 'Too many failed attempts. Please request a new code.', 429);
     }
 
     const inputHash = crypto.createHash('sha256').update(otp.trim()).digest('hex');
     if (inputHash !== record.otp_hash) {
-      record.attempts += 1;
-      await record.save();
-      const remaining = MAX_OTP_ATTEMPTS - record.attempts;
+      await Otp.updateById(record.id, { attempts: record.attempts + 1 });
+      const remaining = MAX_OTP_ATTEMPTS - (record.attempts + 1);
       return error(res, `Incorrect code. ${remaining} attempt${remaining !== 1 ? 's' : ''} remaining.`, 401);
     }
 
-    record.used = true;
-    await record.save();
+    await Otp.updateById(record.id, { used: true });
 
-    const user = await User.findOne({ email: normalEmail, is_active: true });
+    const user = await User.findByEmail(normalEmail);
     if (!user) return error(res, 'Account not found or inactive.', 401);
 
     logger.info(`[verifyOtp] Login success: ${normalEmail}`);
 
     const token = signToken({
-      user_id: user._id.toString(),
+      user_id: user.id,
       name: user.name,
       email: user.email,
       role: user.role,
@@ -102,7 +95,7 @@ const verifyOtp = async (req, res) => {
 
     return success(res, {
       token,
-      user: { _id: user._id, name: user.name, email: user.email, role: user.role },
+      user: { id: user.id, name: user.name, email: user.email, role: user.role },
     });
   } catch (err) {
     logger.error('[verifyOtp] ERROR:', err);
@@ -113,13 +106,11 @@ const verifyOtp = async (req, res) => {
 // GET /auth/me
 const me = async (req, res) => {
   try {
-    const user = await User.findById(req.user.user_id)
-      .select('_id name email role is_active created_at');
-
+    const user = await User.findById(req.user.user_id);
     if (!user) return error(res, 'User not found', 404);
 
     return success(res, {
-      _id: user._id,
+      id: user.id,
       name: user.name,
       email: user.email,
       role: user.role,
@@ -146,13 +137,20 @@ const updateMe = async (req, res) => {
       const trimmed = (name || '').trim();
       if (!trimmed) return error(res, 'Name is required', 400);
       if (trimmed.length > NAME_MAX) return error(res, `Name must be ${NAME_MAX} characters or fewer`, 400);
-      user.name = trimmed;
+
+      const updated = await User.updateById(req.user.user_id, { name: trimmed });
+      return success(res, {
+        id: updated.id,
+        name: updated.name,
+        email: updated.email,
+        role: updated.role,
+        is_active: updated.is_active,
+        created_at: updated.created_at,
+      });
     }
 
-    await user.save();
-
     return success(res, {
-      _id: user._id,
+      id: user.id,
       name: user.name,
       email: user.email,
       role: user.role,

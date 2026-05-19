@@ -1,42 +1,52 @@
-const mongoose = require('mongoose');
+const db = require('../config/supabase');
 
-const userSchema = new mongoose.Schema(
-  {
-    name: {
-      type: String,
-      required: [true, 'Name is required'],
-      trim: true,
-    },
-    email: {
-      type: String,
-      required: [true, 'Email is required'],
-      unique: true,
-      lowercase: true,
-      trim: true,
-      match: [/^[a-zA-Z0-9._%+-]+@athivatech\.com$/, 'Email must be an @athivatech.com address'],
-    },
-    role: {
-      type: String,
-      enum: ['admin', 'user'],
-      required: [true, 'Role is required'],
-    },
-    is_active: {
-      type: Boolean,
-      default: true,
-    },
-    is_root: {
-      type: Boolean,
-      default: false,
-    },
-    created_at: {
-      type: Date,
-      default: Date.now,
-    },
-  },
-  {
-    timestamps: false,
-    versionKey: false,
+const COLS = 'id, name, email, role, is_active, is_root, created_at';
+
+async function findByEmail(email) {
+  const { data, error } = await db.from('users').select(COLS).eq('email', email).eq('is_active', true).maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+async function findById(id) {
+  const { data, error } = await db.from('users').select(COLS).eq('id', id).maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+async function findAll(searchTerm) {
+  let q = db.from('users').select(COLS);
+  if (searchTerm) {
+    const term = searchTerm.replace(/'/g, "''");
+    q = q.or(`name.ilike.%${term}%,email.ilike.%${term}%`);
   }
-);
+  const { data, error } = await q;
+  if (error) throw error;
+  return data || [];
+}
 
-module.exports = mongoose.model('User', userSchema);
+async function findByIds(ids) {
+  if (!ids || !ids.length) return [];
+  const { data, error } = await db.from('users').select(COLS).in('id', ids);
+  if (error) throw error;
+  return data || [];
+}
+
+async function create(data) {
+  const { data: row, error } = await db.from('users').insert(data).select(COLS).single();
+  if (error) throw error;
+  return row;
+}
+
+async function updateById(id, updates) {
+  const { data, error } = await db.from('users').update(updates).eq('id', id).select(COLS).single();
+  if (error) throw error;
+  return data;
+}
+
+async function deleteById(id) {
+  const { error } = await db.from('users').delete().eq('id', id);
+  if (error) throw error;
+}
+
+module.exports = { findByEmail, findById, findAll, findByIds, create, updateById, deleteById };

@@ -65,13 +65,13 @@ export default function QnaEditPage() {
   }, [debouncedSearch, visibility])
 
   async function handleAddUser(user) {
-    if (addingRef.current.has(user._id)) return
-    addingRef.current.add(user._id)
+    if (addingRef.current.has(user.id)) return
+    addingRef.current.add(user.id)
     try {
-      await addQnaUser(id, user._id)
+      await addQnaUser(id, user.id)
       setAssignedUsers((prev) => [...prev, user])
     } catch { /* ignore */ } finally {
-      addingRef.current.delete(user._id)
+      addingRef.current.delete(user.id)
     }
   }
 
@@ -80,7 +80,7 @@ export default function QnaEditPage() {
     removingRef.current.add(userId)
     try {
       await removeQnaUser(id, userId)
-      setAssignedUsers((prev) => prev.filter((u) => u._id !== userId))
+      setAssignedUsers((prev) => prev.filter((u) => u.id !== userId))
     } catch { /* ignore */ } finally {
       removingRef.current.delete(userId)
     }
@@ -186,7 +186,7 @@ export default function QnaEditPage() {
                 <div className="flex bg-slate-100 rounded-lg p-0.5 shrink-0">
                   {[
                     { value: 'OPEN', label: 'Open' },
-                    { value: 'CLOSE', label: 'Closed' },
+                    { value: 'CLOSED', label: 'Closed' },
                   ].map((opt) => (
                     <button
                       key={opt.value}
@@ -252,9 +252,9 @@ export default function QnaEditPage() {
                   <div className="flex flex-wrap gap-1.5">
                     {assignedUsers.map((u) => (
                       <UserTag
-                        key={u._id}
+                        key={u.id}
                         label={u.name}
-                        onRemove={() => handleRemoveUser(u._id)}
+                        onRemove={() => handleRemoveUser(u.id)}
                         disabled={submitting}
                       />
                     ))}
@@ -266,13 +266,13 @@ export default function QnaEditPage() {
                   onChange={(e) => setUserSearch(e.target.value)}
                   placeholder="Search users by name or email..."
                 />
-                {userResults.filter((u) => !assignedUsers.find((a) => a._id === u._id)).length > 0 && (
+                {userResults.filter((u) => !assignedUsers.find((a) => a.id === u.id)).length > 0 && (
                   <div className="border border-slate-200 rounded-2xl shadow-lg divide-y divide-slate-100 max-h-48 overflow-y-auto bg-white">
                     {userResults
-                      .filter((u) => !assignedUsers.find((a) => a._id === u._id))
+                      .filter((u) => !assignedUsers.find((a) => a.id === u.id))
                       .map((u) => (
                         <button
-                          key={u._id}
+                          key={u.id}
                           type="button"
                           onClick={() => handleAddUser(u)}
                           className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-slate-50 text-sm text-left transition-colors duration-200"

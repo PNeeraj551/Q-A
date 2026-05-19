@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import supabase from '../../utils/supabase'
 import { Button } from '@/components/common/Button'
 import { Skeleton } from '@/components/common/Skeleton'
 import { textareaCls } from '@/utils/ui'
@@ -9,7 +10,7 @@ import { InlineConfirm } from '../common/InlineConfirm'
 import toast from 'react-hot-toast'
 
 // ───────────────────────── REPLY THREAD ─────────────────────────
-export function ReplyThread({ qnaId, question, currentUserId, isAdmin, isClosed, socketRef, onAccept }) {
+export function ReplyThread({ qnaId, question, currentUserId, isAdmin, isClosed, onAccept }) {
   const [replies, setReplies] = useState([])
   const [loaded, setLoaded] = useState(false)
   const [loadError, setLoadError] = useState(false)
@@ -25,29 +26,27 @@ export function ReplyThread({ qnaId, question, currentUserId, isAdmin, isClosed,
   const acceptedId = question.accepted_reply_id ? String(question.accepted_reply_id) : null
 
   useEffect(() => {
-    listReplies(qnaId, question._id)
+    listReplies(qnaId, question.id)
       .then((res) => setReplies(res.data.replies || []))
       .catch(() => setLoadError(true))
       .finally(() => setLoaded(true))
-  }, [qnaId, question._id, retryCount])
+  }, [qnaId, question.id, retryCount])
 
   useEffect(() => {
-    if (!socketRef) return
-    function onReplyNew({ reply, question_id }) {
-      if (String(question_id) !== String(question._id)) return
-      setReplies((prev) => {
-        if (prev.some((r) => r._id === reply._id)) return prev
-        const optIdx = prev.findIndex((r) => r._isOptimistic && String(r.author_id) === String(reply.author_id) && r.text === reply.text)
-        if (optIdx !== -1) { const next = [...prev]; next[optIdx] = reply; return next }
-        return [...prev, reply]
+    const channel = supabase
+      .channel(`qna_${qnaId}`)
+      .on('broadcast', { event: 'reply:new' }, ({ payload: { reply, question_id } }) => {
+        if (String(question_id) !== String(question.id)) return
+        setReplies((prev) => {
+          if (prev.some((r) => r.id === reply.id)) return prev
+          const optIdx = prev.findIndex((r) => r._isOptimistic && String(r.author_id) === String(reply.author_id) && r.text === reply.text)
+          if (optIdx !== -1) { const next = [...prev]; next[optIdx] = reply; return next }
+          return [...prev, reply]
+        })
       })
-    }
-    const socket = socketRef.current
-    if (socket) {
-      socket.on('reply:new', onReplyNew)
-      return () => socket.off('reply:new', onReplyNew)
-    }
-  }, [socketRef, question._id])
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [question.id])
 
   async function handleSubmitReply(e) {
     e.preventDefault()
@@ -56,15 +55,15 @@ export function ReplyThread({ qnaId, question, currentUserId, isAdmin, isClosed,
     submittingRef.current = true
     const tempId = 'temp_' + Date.now()
     setReplies((prev) => [...prev, {
-      _id: tempId, text, author_id: currentUserId,
+      id: tempId, text, author_id: currentUserId,
       author_name: 'You', created_at: new Date().toISOString(), _isOptimistic: true,
     }])
     setReplyText('')
     try {
-      const res = await createReply(qnaId, question._id, text)
-      setReplies((prev) => prev.map((r) => (r._id === tempId ? res.data.reply : r)))
+      const res = await createReply(qnaId, question.id, text)
+      setReplies((prev) => prev.map((r) => (r.id === tempId ? res.data.reply : r)))
     } catch {
-      setReplies((prev) => prev.filter((r) => r._id !== tempId))
+      setReplies((prev) => prev.filter((r) => r.id !== tempId))
       setReplyText(text)
       toast.error('Failed to post reply.')
     } finally {
@@ -75,10 +74,10 @@ export function ReplyThread({ qnaId, question, currentUserId, isAdmin, isClosed,
   async function handleDeleteReply(rId) {
     if (deletingRepliesRef.current.has(rId)) return
     deletingRepliesRef.current.add(rId)
-    const backup = replies.find((r) => r._id === rId)
-    setReplies((prev) => prev.filter((r) => r._id !== rId))
+    const backup = replies.find((r) => r.id === rId)
+    setReplies((prev) => prev.filter((r) => r.id !== rId))
     try {
-      await deleteReply(qnaId, question._id, rId)
+      await deleteReply(qnaId, question.id, rId)
     } catch {
       if (backup) setReplies((prev) => [...prev, backup].sort((a, b) => new Date(a.created_at) - new Date(b.created_at)))
       toast.error('Failed to delete reply.')
@@ -91,15 +90,15 @@ export function ReplyThread({ qnaId, question, currentUserId, isAdmin, isClosed,
     const text = editText.trim()
     if (!text || savingRepliesRef.current.has(rId)) return
     savingRepliesRef.current.add(rId)
-    const original = replies.find((r) => r._id === rId)
-    setReplies((prev) => prev.map((r) => (r._id === rId ? { ...r, text } : r)))
+    const original = replies.find((r) => r.id === rId)
+    setReplies((prev) => prev.map((r) => (r.id === rId ? { ...r, text } : r)))
     setEditingId(null)
     try {
-      const res = await updateReply(qnaId, question._id, rId, text)
-      setReplies((prev) => prev.map((r) => (r._id === rId ? res.data.reply : r)))
+      const res = await updateReply(qnaId, question.id, rId, text)
+      setReplies((prev) => prev.map((r) => (r.id === rId ? res.data.reply : r)))
       toast.success('Reply updated.')
     } catch {
-      if (original) setReplies((prev) => prev.map((r) => (r._id === rId ? original : r)))
+      if (original) setReplies((prev) => prev.map((r) => (r.id === rId ? original : r)))
       toast.error('Failed to update reply.')
     } finally {
       savingRepliesRef.current.delete(rId)
@@ -111,7 +110,7 @@ export function ReplyThread({ qnaId, question, currentUserId, isAdmin, isClosed,
     acceptingRef.current = true
     const newId = acceptedId === rId ? null : rId
     try {
-      const res = await acceptReply(qnaId, question._id, newId)
+      const res = await acceptReply(qnaId, question.id, newId)
       onAccept(res.data.question)
     } catch {
       toast.error('Failed to update accepted solution.')
@@ -157,8 +156,8 @@ export function ReplyThread({ qnaId, question, currentUserId, isAdmin, isClosed,
 
   // Sort: accepted reply first, then chronological
   const sorted = [...replies].sort((a, b) => {
-    if (acceptedId && String(a._id) === acceptedId) return -1
-    if (acceptedId && String(b._id) === acceptedId) return 1
+    if (acceptedId && String(a.id) === acceptedId) return -1
+    if (acceptedId && String(b.id) === acceptedId) return 1
     return new Date(a.created_at) - new Date(b.created_at)
   })
 
@@ -171,10 +170,10 @@ export function ReplyThread({ qnaId, question, currentUserId, isAdmin, isClosed,
       {sorted.length > 0 && (
         <div className="ml-1 space-y-3">
           {sorted.map((r) => {
-            const isAccepted = acceptedId && String(r._id) === acceptedId
+            const isAccepted = acceptedId && String(r.id) === acceptedId
             return (
               <div
-                key={r._id}
+                key={r.id}
                 className={`flex items-start gap-2.5 group rounded-xl p-2 -mx-2 transition-colors duration-150 ${
                   isAccepted ? 'border border-emerald-200 bg-emerald-50/50 rounded-xl p-3 -mx-2' : ''
                 }`}
@@ -199,7 +198,7 @@ export function ReplyThread({ qnaId, question, currentUserId, isAdmin, isClosed,
                       <span className="ml-2 font-normal text-slate-400">{getRelativeTime(r.created_at)}</span>
                     )}
                   </p>
-                  {editingId === r._id ? (
+                  {editingId === r.id ? (
                     <div className="mt-1.5 space-y-2">
                       <textarea
                         className={textareaCls}
@@ -210,7 +209,7 @@ export function ReplyThread({ qnaId, question, currentUserId, isAdmin, isClosed,
                         autoFocus
                       />
                       <div className="flex gap-2">
-                        <Button size="sm" onClick={() => handleSaveEdit(r._id)}>Save</Button>
+                        <Button size="sm" onClick={() => handleSaveEdit(r.id)}>Save</Button>
                         <Button size="sm" variant="ghost" onClick={() => setEditingId(null)}>Cancel</Button>
                       </div>
                     </div>
@@ -218,11 +217,11 @@ export function ReplyThread({ qnaId, question, currentUserId, isAdmin, isClosed,
                     <p className="text-sm text-slate-700 mt-0.5 leading-relaxed">{r.text}</p>
                   )}
                 </div>
-                {editingId !== r._id && (
+                {editingId !== r.id && (
                   <div className="action-buttons flex items-center gap-2 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
                     {canAccept && !r._isOptimistic && (
                       <button
-                        onClick={() => handleToggleAccept(r._id)}
+                        onClick={() => handleToggleAccept(r.id)}
                         className={`text-xs font-medium transition-colors duration-150 ${
                           isAccepted
                             ? 'text-emerald-600 hover:text-slate-500'
@@ -238,7 +237,7 @@ export function ReplyThread({ qnaId, question, currentUserId, isAdmin, isClosed,
                         {r.author_id === currentUserId && (
                           <button
                             className="p-1 rounded text-slate-400 hover:text-slate-700 transition-colors duration-150"
-                            onClick={() => { setEditingId(r._id); setEditText(r.text) }}
+                            onClick={() => { setEditingId(r.id); setEditText(r.text) }}
                             title="Edit reply"
                             aria-label="Edit reply"
                           >
@@ -249,7 +248,7 @@ export function ReplyThread({ qnaId, question, currentUserId, isAdmin, isClosed,
                         )}
                         <button
                           className="p-1 rounded text-slate-400 hover:text-red-500 transition-colors duration-150"
-                          onClick={() => handleDeleteReply(r._id)}
+                          onClick={() => handleDeleteReply(r.id)}
                           title="Delete reply"
                           aria-label="Delete reply"
                         >
@@ -284,7 +283,7 @@ export function ReplyThread({ qnaId, question, currentUserId, isAdmin, isClosed,
 }
 
 // ───────────────────────── QUESTION CARD ─────────────────────────
-export function QuestionCard({ qnaId, question, currentUserId, isAdmin, isClosed, onUpdate, onDelete, socketRef }) {
+export function QuestionCard({ qnaId, question, currentUserId, isAdmin, isClosed, onUpdate, onDelete }) {
   const [showReplies, setShowReplies] = useState(false)
   const [viewCount, setViewCount] = useState(question.view_count ?? 0)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -321,7 +320,7 @@ export function QuestionCard({ qnaId, question, currentUserId, isAdmin, isClosed
     if (likingRef.current) return
     likingRef.current = true
     try {
-      const res = await toggleLike(qnaId, question._id)
+      const res = await toggleLike(qnaId, question.id)
       onUpdate({ ...question, liked_by_me: res.data.liked_by_me, likes_count: res.data.likes_count })
     } catch {
       // state unchanged — no optimistic update to roll back
@@ -338,7 +337,7 @@ export function QuestionCard({ qnaId, question, currentUserId, isAdmin, isClosed
     onUpdate({ ...question, text })
     setEditMode(false)
     try {
-      const res = await updateQuestion(qnaId, question._id, text)
+      const res = await updateQuestion(qnaId, question.id, text)
       onUpdate(res.data.question)
       toast.success('Question updated.')
     } catch {
@@ -352,9 +351,9 @@ export function QuestionCard({ qnaId, question, currentUserId, isAdmin, isClosed
   async function handleDelete() {
     if (deletingRef.current) return
     deletingRef.current = true
-    onDelete(question._id)
+    onDelete(question.id)
     try {
-      await deleteQuestion(qnaId, question._id)
+      await deleteQuestion(qnaId, question.id)
       toast.success('Question deleted.')
     } catch {
       toast.error('Failed to delete question.')
@@ -378,7 +377,7 @@ export function QuestionCard({ qnaId, question, currentUserId, isAdmin, isClosed
     if (next && !hasViewedRef.current) {
       hasViewedRef.current = true
       setViewCount(c => c + 1)
-      trackView(qnaId, question._id).catch(() => {})
+      trackView(qnaId, question.id).catch(() => {})
     }
   }
 
@@ -558,7 +557,6 @@ export function QuestionCard({ qnaId, question, currentUserId, isAdmin, isClosed
             currentUserId={currentUserId}
             isAdmin={isAdmin}
             isClosed={isClosed}
-            socketRef={socketRef}
             onAccept={onUpdate}
           />
         </div>

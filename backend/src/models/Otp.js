@@ -1,14 +1,42 @@
-const mongoose = require('mongoose');
+const db = require('../config/supabase');
 
-const otpSchema = new mongoose.Schema({
-  email: { type: String, required: true, lowercase: true },
-  otp_hash: { type: String, required: true },
-  expires_at: { type: Date, required: true },
-  used: { type: Boolean, default: false },
-  attempts: { type: Number, default: 0 },
-}, { timestamps: false, versionKey: false });
+const COLS = 'id, email, otp_hash, expires_at, used, attempts, created_at';
 
-otpSchema.index({ expires_at: 1 }, { expireAfterSeconds: 0 });
-otpSchema.index({ email: 1 });
+async function findActiveByEmail(email) {
+  const { data, error } = await db
+    .from('otps')
+    .select(COLS)
+    .eq('email', email)
+    .eq('used', false)
+    .gt('expires_at', new Date().toISOString())
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
 
-module.exports = mongoose.model('Otp', otpSchema);
+async function create(data) {
+  const { data: row, error } = await db.from('otps').insert(data).select(COLS).single();
+  if (error) throw error;
+  return row;
+}
+
+async function clearByEmail(email) {
+  await db.rpc('delete_expired_otps', { p_email: email });
+  const { error } = await db.from('otps').delete().eq('email', email);
+  if (error) throw error;
+}
+
+async function updateById(id, updates) {
+  const { data, error } = await db.from('otps').update(updates).eq('id', id).select(COLS).single();
+  if (error) throw error;
+  return data;
+}
+
+async function deleteById(id) {
+  const { error } = await db.from('otps').delete().eq('id', id);
+  if (error) throw error;
+}
+
+module.exports = { findActiveByEmail, create, clearByEmail, updateById, deleteById };
