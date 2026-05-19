@@ -1,14 +1,9 @@
-const http = require('http');
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const { Server } = require('socket.io');
 
 const { PORT, CLIENT_URL, NODE_ENV } = require('./src/config/env');
 const { verifySmtp } = require('./src/services/emailService');
-
-const { setIO } = require('./src/sockets/io');
-const { initSocketHandler } = require('./src/sockets/socketHandler');
 
 const authRoutes = require('./src/routes/authRoutes');
 const userRoutes = require('./src/routes/userRoutes');
@@ -27,25 +22,9 @@ const app = express();
 app.set('trust proxy', 1);
 app.disable('x-powered-by');
 
-const httpServer = http.createServer(app);
-
-/* SOCKET.IO */
+/* SECURITY MIDDLEWARE */
 
 const allowedOrigin = CLIENT_URL.replace(/\/$/, '');
-
-const io = new Server(httpServer, {
-  cors: {
-    origin: allowedOrigin,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-    credentials: true,
-  },
-  transports: ['websocket', 'polling'],
-});
-
-setIO(io);
-initSocketHandler(io);
-
-/* SECURITY MIDDLEWARE */
 
 app.use(helmet({ crossOriginResourcePolicy: false }));
 
@@ -117,23 +96,18 @@ process.on('uncaughtException', (err) => {
 
 process.on('unhandledRejection', (reason) => {
   logger.error('[unhandledRejection]', { reason });
-  httpServer.close(() => process.exit(1));
+  process.exit(1);
 });
 
-process.on('SIGTERM', () => {
-  httpServer.close(() => process.exit(0));
-});
-
-process.on('SIGINT', () => {
-  httpServer.close(() => process.exit(0));
-});
+process.on('SIGTERM', () => process.exit(0));
+process.on('SIGINT', () => process.exit(0));
 
 /* SERVER START */
 
 const startServer = async () => {
   try {
     verifySmtp();
-    httpServer.listen(PORT, () => {
+    app.listen(PORT, () => {
       logger.info(`[server] Running on port ${PORT} (${NODE_ENV})`);
     });
   } catch (err) {
