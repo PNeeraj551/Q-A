@@ -106,7 +106,7 @@ process.on('SIGINT', () => process.exit(0));
 
 const startServer = async () => {
   try {
-    verifySmtp();
+    await verifySmtp();
     app.listen(PORT, () => {
       logger.info(`[server] Running on port ${PORT} (${NODE_ENV})`);
     });
