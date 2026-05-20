@@ -37,15 +37,13 @@ const requestOtp = async (req, res) => {
       otp_hash,
       expires_at: new Date(Date.now() + OTP_EXPIRY_MS).toISOString(),
     });
-    logger.info(`[requestOtp] createOtp=${Date.now() - t0}ms — responding`);
+    logger.info(`[requestOtp] createOtp=${Date.now() - t0}ms`);
 
-    // OTP is in DB — respond immediately, do not wait for SMTP
-    success(res, { message: 'Login code sent to your email.' });
+    const t1 = Date.now();
+    await sendOtpEmail(normalEmail, otp);
+    logger.info(`[requestOtp] emailSent=${Date.now() - t1}ms total=${Date.now() - t0}ms`);
 
-    // Send email in background after response is sent
-    sendOtpEmail(normalEmail, otp).catch((err) =>
-      logger.error('[requestOtp] background email failed', { message: err.message })
-    );
+    return success(res, { message: 'Login code sent to your email.' });
   } catch (err) {
     logger.error('[requestOtp] ERROR:', err);
     return error(res, 'Failed to send login code. Please try again.', 500);
