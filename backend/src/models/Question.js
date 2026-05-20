@@ -66,6 +66,15 @@ async function isLikedByUser(questionId, userId) {
   return !!data;
 }
 
+async function getAllLikedByUser(userId) {
+  const { data, error } = await db
+    .from('question_likes')
+    .select('question_id')
+    .eq('user_id', userId);
+  if (error) throw error;
+  return new Set((data || []).map((r) => r.question_id));
+}
+
 module.exports = {
   findById,
   listByQna,
@@ -75,4 +84,5 @@ module.exports = {
   countByQnaId,
   getLikedQuestionIds,
   isLikedByUser,
+  getAllLikedByUser,
 };

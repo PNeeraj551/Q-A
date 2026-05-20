@@ -10,8 +10,10 @@ const listQuestions = async (req, res) => {
     const { qnaId } = req.params;
     const userId = req.user.user_id;
 
-    const questions = await Question.listByQna(qnaId);
-    const likedSet = await Question.getLikedQuestionIds(questions.map((q) => q.id), userId);
+    const [questions, likedSet] = await Promise.all([
+      Question.listByQna(qnaId),
+      Question.getAllLikedByUser(userId),
+    ]);
 
     const result = questions.map((q) => ({
       ...q,
@@ -132,20 +134,25 @@ const toggleLike = async (req, res) => {
     const question = await Question.findById(qId);
     if (!question || question.is_deleted) return error(res, 'Question not found', 404);
 
-    const { data, error: rpcErr } = await db.rpc('toggle_question_like', {
-      p_question_id: qId,
-      p_user_id: userId,
-    });
-    if (rpcErr) throw rpcErr;
+    const already_liked = await Question.isLikedByUser(qId, userId);
 
-    const result = data && data[0] ? data[0] : { likes_count: question.likes_count, liked_by_me: false };
+    if (already_liked) {
+      await db.from('question_likes').delete().eq('question_id', qId).eq('user_id', userId);
+    } else {
+      await db.from('question_likes').upsert({ question_id: qId, user_id: userId });
+    }
+
+    const liked_by_me = !already_liked;
+    const { count } = await db.from('question_likes').select('*', { count: 'exact', head: true }).eq('question_id', qId);
+    const likes_count = count || 0;
+    await db.from('questions').update({ likes_count }).eq('id', qId);
 
     await broadcastToChannel(`qna_${qnaId}`, 'question:like', {
       question_id: qId,
-      likes_count: result.likes_count,
+      likes_count,
     });
 
-    return success(res, { likes_count: result.likes_count, liked_by_me: result.liked_by_me });
+    return success(res, { likes_count, liked_by_me });
   } catch (err) {
     return error(res, 'Failed to update like.', 500);
   }

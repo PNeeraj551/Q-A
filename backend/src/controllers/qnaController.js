@@ -80,12 +80,10 @@ const listQna = async (req, res) => {
 const getQna = async (req, res) => {
   try {
     const post = req.qnaPost;
-    const question_count = await Question.countByQnaId(post.id);
 
     return success(res, {
       post: {
         ...post,
-        question_count,
         is_effectively_closed: post.status === 'CLOSED' || (post.end_at && new Date() >= new Date(post.end_at)),
       },
     });
