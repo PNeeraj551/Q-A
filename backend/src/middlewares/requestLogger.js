@@ -6,8 +6,7 @@ module.exports = function requestLogger(req, res, next) {
   res.on('finish', () => {
     const ms = Date.now() - req.startTime;
     const status = res.statusCode;
-    const ip = req.ip || req.socket?.remoteAddress || '-';
-    const msg = `${req.method} ${req.originalUrl} ${status} ${ms}ms ${ip}`;
+    const msg = `${req.method} ${req.originalUrl} ${status} ${ms}ms`;
 
     if (status >= 500) {
       logger.error(msg);

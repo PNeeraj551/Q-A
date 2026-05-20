@@ -10,10 +10,8 @@ const listQuestions = async (req, res) => {
     const { qnaId } = req.params;
     const userId = req.user.user_id;
 
-    const [questions, likedSet] = await Promise.all([
-      Question.listByQna(qnaId),
-      Question.getLikedQuestionIds(qnaId, userId),
-    ]);
+    const questions = await Question.listByQna(qnaId);
+    const likedSet = await Question.getLikedQuestionIds(questions.map((q) => q.id), userId);
 
     const result = questions.map((q) => ({
       ...q,
@@ -85,8 +83,8 @@ const updateQuestion = async (req, res) => {
     }
 
     const updated = await Question.updateById(qId, { text: sanitized });
-    const likedSet = await Question.getLikedQuestionIds(qnaId, req.user.user_id);
-    const result = { ...updated, liked_by_me: likedSet.has(updated.id) };
+    const liked_by_me = await Question.isLikedByUser(qId, req.user.user_id);
+    const result = { ...updated, liked_by_me };
 
     await broadcastToChannel(`qna_${qnaId}`, 'question:update', result);
 
@@ -180,8 +178,8 @@ const markAcceptedReply = async (req, res) => {
     }
 
     const updated = await Question.updateById(qId, { accepted_reply_id: reply_id || null });
-    const likedSet = await Question.getLikedQuestionIds(qnaId, req.user.user_id);
-    const result = { ...updated, liked_by_me: likedSet.has(updated.id) };
+    const liked_by_me = await Question.isLikedByUser(qId, req.user.user_id);
+    const result = { ...updated, liked_by_me };
 
     await broadcastToChannel(`qna_${qnaId}`, 'question:update', result);
 

@@ -18,17 +18,16 @@ const requestOtp = async (req, res) => {
     return error(res, 'A valid @athivatech.com email is required', 400);
   }
   const normalEmail = email.trim().toLowerCase();
+  const t0 = Date.now();
   try {
-    logger.info(`[requestOtp] Looking up user: ${normalEmail}`);
     const user = await User.findByEmail(normalEmail);
+    logger.info(`[requestOtp] userLookup=${Date.now() - t0}ms`);
     if (!user) {
-      logger.info(`[requestOtp] User not found: ${normalEmail}`);
       return success(res, { message: 'If this email is registered, a login code has been sent.' });
     }
-    logger.info(`[requestOtp] User found: ${user.id}`);
 
     await Otp.clearByEmail(normalEmail);
-    logger.info(`[requestOtp] Old OTPs cleared for: ${normalEmail}`);
+    logger.info(`[requestOtp] clearOtp=${Date.now() - t0}ms`);
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const otp_hash = crypto.createHash('sha256').update(otp).digest('hex');
@@ -38,12 +37,15 @@ const requestOtp = async (req, res) => {
       otp_hash,
       expires_at: new Date(Date.now() + OTP_EXPIRY_MS).toISOString(),
     });
-    logger.info(`[requestOtp] OTP record created for: ${normalEmail}`);
+    logger.info(`[requestOtp] createOtp=${Date.now() - t0}ms — responding`);
 
-    logger.info(`[requestOtp] Sending email to: ${normalEmail}`);
-    await sendOtpEmail(normalEmail, otp);
+    // OTP is in DB — respond immediately, do not wait for SMTP
+    success(res, { message: 'Login code sent to your email.' });
 
-    return success(res, { message: 'Login code sent to your email.' });
+    // Send email in background after response is sent
+    sendOtpEmail(normalEmail, otp).catch((err) =>
+      logger.error('[requestOtp] background email failed', { message: err.message })
+    );
   } catch (err) {
     logger.error('[requestOtp] ERROR:', err);
     return error(res, 'Failed to send login code. Please try again.', 500);
@@ -84,7 +86,7 @@ const verifyOtp = async (req, res) => {
     const user = await User.findByEmail(normalEmail);
     if (!user) return error(res, 'Account not found or inactive.', 401);
 
-    logger.info(`[verifyOtp] Login success: ${normalEmail}`);
+    logger.info('[verifyOtp] Login success', { userId: user.id });
 
     const token = signToken({
       user_id: user.id,

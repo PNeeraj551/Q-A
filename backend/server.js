@@ -4,6 +4,7 @@ const helmet = require('helmet');
 
 const { PORT, CLIENT_URL, NODE_ENV } = require('./src/config/env');
 const { verifySmtp } = require('./src/services/emailService');
+const { requestIdMiddleware } = require('./src/middlewares/requestId');
 
 const authRoutes = require('./src/routes/authRoutes');
 const userRoutes = require('./src/routes/userRoutes');
@@ -39,6 +40,10 @@ app.options('*', cors(corsOptions));
 
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true }));
+
+/* REQUEST ID — must be first so all logs carry the correlation ID */
+
+app.use(requestIdMiddleware);
 
 /* REQUEST LOGGING */
 
@@ -104,16 +109,13 @@ process.on('SIGINT', () => process.exit(0));
 
 /* SERVER START */
 
-const startServer = async () => {
-  try {
-    await verifySmtp();
-    app.listen(PORT, () => {
-      logger.info(`[server] Running on port ${PORT} (${NODE_ENV})`);
-    });
-  } catch (err) {
-    logger.error('[startup error]', err);
-    process.exit(1);
-  }
+const startServer = () => {
+  app.listen(PORT, () => {
+    logger.info(`[server] Running on port ${PORT} (${NODE_ENV})`);
+    verifySmtp().catch((err) =>
+      logger.warn('[startup] SMTP verification failed', { message: err.message })
+    );
+  });
 };
 
 startServer();

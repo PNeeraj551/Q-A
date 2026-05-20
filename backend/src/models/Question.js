@@ -50,10 +50,25 @@ async function countByQnaId(qnaId) {
   return count || 0;
 }
 
-async function getLikedQuestionIds(qnaId, userId) {
-  const { data, error } = await db.from('question_likes').select('question_id').eq('user_id', userId);
+async function getLikedQuestionIds(questionIds, userId) {
+  if (!questionIds.length) return new Set();
+  const { data, error } = await db
+    .from('question_likes')
+    .select('question_id')
+    .eq('user_id', userId)
+    .in('question_id', questionIds);
   if (error) throw error;
   return new Set((data || []).map((r) => r.question_id));
+}
+
+async function isLikedByUser(questionId, userId) {
+  const { data } = await db
+    .from('question_likes')
+    .select('question_id')
+    .eq('question_id', questionId)
+    .eq('user_id', userId)
+    .maybeSingle();
+  return !!data;
 }
 
 module.exports = {
@@ -65,4 +80,5 @@ module.exports = {
   softDeleteByQnaId,
   countByQnaId,
   getLikedQuestionIds,
+  isLikedByUser,
 };
