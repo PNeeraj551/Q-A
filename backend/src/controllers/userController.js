@@ -122,7 +122,7 @@ const deleteUser = async (req, res) => {
       return error(res, 'Root admin account cannot be deleted', 403);
     }
 
-    await User.deleteById(id);
+    await User.updateById(id, { is_active: false });
     return success(res, { message: 'User deleted' });
   } catch (err) {
     return error(res, 'Failed to delete user', 500);

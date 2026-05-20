@@ -18,6 +18,16 @@ const authMiddleware = async (req, res, next) => {
     return error(res, 'Invalid or expired token', 401);
   }
 
+  // New tokens have is_active embedded — no DB query needed.
+  // Old tokens (missing is_active) fall back to DB check until users re-login.
+  if ('is_active' in decoded) {
+    if (!decoded.is_active) {
+      return error(res, 'Account is inactive or not found', 401);
+    }
+    req.user = decoded;
+    return next();
+  }
+
   try {
     const user = await User.findById(decoded.user_id);
     if (!user || !user.is_active) {

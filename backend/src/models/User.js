@@ -15,7 +15,7 @@ async function findById(id) {
 }
 
 async function findAll(searchTerm) {
-  let q = db.from('users').select(COLS);
+  let q = db.from('users').select(COLS).eq('is_active', true);
   if (searchTerm) {
     const term = searchTerm.replace(/'/g, "''");
     q = q.or(`name.ilike.%${term}%,email.ilike.%${term}%`);

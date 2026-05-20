@@ -208,8 +208,14 @@ const deleteQna = async (req, res) => {
     const post = await QnaPost.findById(req.params.id);
     if (!post) return error(res, 'Q&A not found', 404);
 
-    await Question.softDeleteByQnaId(post.id);
-    await Reply.softDeleteByQnaId(post.id);
+    const { data: qs } = await db.from('questions').select('id').eq('qna_id', post.id);
+    const qIds = (qs || []).map((q) => q.id);
+    if (qIds.length > 0) {
+      await db.from('question_likes').delete().in('question_id', qIds);
+    }
+    await db.from('replies').delete().eq('qna_id', post.id);
+    await db.from('questions').delete().eq('qna_id', post.id);
+    await db.from('qna_allowed_users').delete().eq('qna_id', post.id);
     await QnaPost.deleteById(post.id);
 
     await broadcastToChannel('qna_global', 'qna:deleted', { qna_id: post.id });
