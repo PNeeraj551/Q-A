@@ -4,7 +4,7 @@ import { Button } from '@/components/common/Button'
 import { Skeleton } from '@/components/common/Skeleton'
 import { textareaCls } from '@/utils/ui'
 import { getRelativeTime } from '@/utils/utils'
-import { listReplies, createReply, updateReply, deleteReply } from '../../api/replies'
+import { listReplies, createReply, updateReply, deleteReply, toggleReplyLike } from '../../api/replies'
 import { updateQuestion, deleteQuestion, toggleLike, acceptReply, trackView } from '../../api/questions'
 import { InlineConfirm } from '../common/InlineConfirm'
 import toast from 'react-hot-toast'
@@ -21,6 +21,7 @@ export function ReplyThread({ qnaId, question, currentUserId, isAdmin, isClosed,
   const [editText, setEditText] = useState('')
   const deletingRepliesRef = useRef(new Set())
   const savingRepliesRef = useRef(new Set())
+  const likingRepliesRef = useRef(new Set())
   const acceptingRef = useRef(false)
 
   const acceptedId = question.accepted_reply_id ? String(question.accepted_reply_id) : null
@@ -116,6 +117,27 @@ export function ReplyThread({ qnaId, question, currentUserId, isAdmin, isClosed,
       toast.error('Failed to update accepted solution.')
     } finally {
       acceptingRef.current = false
+    }
+  }
+
+  async function handleReplyLike(reply) {
+    if (likingRepliesRef.current.has(reply.id)) return
+    likingRepliesRef.current.add(reply.id)
+    const optimistic = {
+      ...reply,
+      liked_by_me: !reply.liked_by_me,
+      likes_count: reply.liked_by_me ? reply.likes_count - 1 : reply.likes_count + 1,
+    }
+    setReplies((prev) => prev.map((r) => (r.id === reply.id ? optimistic : r)))
+    try {
+      const res = await toggleReplyLike(qnaId, question.id, reply.id)
+      setReplies((prev) =>
+        prev.map((r) => (r.id === reply.id ? { ...r, liked_by_me: res.data.liked_by_me, likes_count: res.data.likes_count } : r))
+      )
+    } catch {
+      setReplies((prev) => prev.map((r) => (r.id === reply.id ? reply : r)))
+    } finally {
+      likingRepliesRef.current.delete(reply.id)
     }
   }
 
@@ -218,7 +240,23 @@ export function ReplyThread({ qnaId, question, currentUserId, isAdmin, isClosed,
                   )}
                 </div>
                 {editingId !== r.id && (
-                  <div className="action-buttons flex items-center gap-2 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                  <div className="action-buttons flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={() => !isClosed && !r._isOptimistic && handleReplyLike(r)}
+                      aria-label={r.liked_by_me ? 'Unlike reply' : 'Like reply'}
+                      className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border transition-all duration-150 ${
+                        isClosed || r._isOptimistic
+                          ? 'border-transparent text-slate-400 cursor-default'
+                          : r.liked_by_me
+                            ? 'bg-blue-50 border-blue-200 text-blue-600 hover:bg-blue-100 active:scale-95'
+                            : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100 hover:border-slate-300 active:scale-95'
+                      }`}
+                    >
+                      <svg className="w-3 h-3" fill={r.liked_by_me ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.75" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6.633 10.25c.806 0 1.533-.446 2.031-1.08a9.041 9.041 0 0 1 2.861-2.4c.723-.384 1.35-.956 1.653-1.715a4.498 4.498 0 0 0 .322-1.672V2.75a.75.75 0 0 1 .75-.75 2.25 2.25 0 0 1 2.25 2.25c0 1.152-.26 2.243-.723 3.218-.266.558.107 1.282.725 1.282m0 0h3.126c1.026 0 1.945.694 2.054 1.715.045.422.068.85.068 1.285a11.95 11.95 0 0 1-2.649 7.521c-.388.482-.987.729-1.605.729H13.48c-.483 0-.964-.078-1.423-.23l-3.114-1.04a4.501 4.501 0 0 0-1.423-.23H5.904m10.598-9.75H14.25M5.904 18.5c.083.205.173.405.27.602.197.4-.078.898-.523.898h-.908c-.889 0-1.713-.518-1.972-1.368a12 12 0 0 1-.521-3.507c0-1.553.295-3.036.831-4.398C3.387 9.953 4.167 9.5 5 9.5h1.053c.472 0 .745.556.5.96a8.958 8.958 0 0 0-1.302 4.665c0 1.194.232 2.333.654 3.375Z" />
+                      </svg>
+                      {r.likes_count > 0 && <span>{r.likes_count}</span>}
+                    </button>
                     {canAccept && !r._isOptimistic && (
                       <button
                         onClick={() => handleToggleAccept(r.id)}
@@ -319,11 +357,17 @@ export function QuestionCard({ qnaId, question, currentUserId, isAdmin, isClosed
   async function handleLike() {
     if (likingRef.current) return
     likingRef.current = true
+    const optimistic = {
+      ...question,
+      liked_by_me: !question.liked_by_me,
+      likes_count: question.liked_by_me ? question.likes_count - 1 : question.likes_count + 1,
+    }
+    onUpdate(optimistic)
     try {
       const res = await toggleLike(qnaId, question.id)
       onUpdate({ ...question, liked_by_me: res.data.liked_by_me, likes_count: res.data.likes_count })
     } catch {
-      // state unchanged — no optimistic update to roll back
+      onUpdate(question)
     } finally {
       likingRef.current = false
     }

@@ -11,3 +11,6 @@ export const updateReply = (qnaId, qId, rId, text) =>
 
 export const deleteReply = (qnaId, qId, rId) =>
   axiosInstance.delete(`/qna/${qnaId}/questions/${qId}/replies/${rId}`)
+
+export const toggleReplyLike = (qnaId, qId, rId) =>
+  axiosInstance.patch(`/qna/${qnaId}/questions/${qId}/replies/${rId}/like`)

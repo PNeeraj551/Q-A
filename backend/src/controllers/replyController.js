@@ -9,8 +9,13 @@ const { isBoardClosed } = require('../utils/boardUtils');
 const listReplies = async (req, res) => {
   try {
     const { qId } = req.params;
-    const replies = await Reply.listByQuestion(qId);
-    return success(res, { replies });
+    const userId = req.user.user_id;
+    const [replies, likedSet] = await Promise.all([
+      Reply.listByQuestion(qId),
+      Reply.getAllLikedByUser(userId),
+    ]);
+    const result = replies.map((r) => ({ ...r, liked_by_me: likedSet.has(r.id) }));
+    return success(res, { replies: result });
   } catch (err) {
     return error(res, 'Failed to load replies.', 500);
   }
@@ -104,4 +109,36 @@ const deleteReply = async (req, res) => {
   }
 };
 
-module.exports = { listReplies, createReply, updateReply, deleteReply };
+// PATCH /api/qna/:qnaId/questions/:qId/replies/:rId/like
+const toggleLike = async (req, res) => {
+  const { rId, qnaId } = req.params;
+  const userId = req.user.user_id;
+
+  try {
+    if (isBoardClosed(req.qnaPost)) {
+      return error(res, 'This Q&A board is closed.', 403);
+    }
+
+    const reply = await Reply.findById(rId);
+    if (!reply || reply.is_deleted) return error(res, 'Reply not found', 404);
+
+    const already_liked = await Reply.isLikedByUser(rId, userId);
+
+    if (already_liked) {
+      await db.from('reply_likes').delete().eq('reply_id', rId).eq('user_id', userId);
+    } else {
+      await db.from('reply_likes').upsert({ reply_id: rId, user_id: userId });
+    }
+
+    const liked_by_me = !already_liked;
+    const { count } = await db.from('reply_likes').select('*', { count: 'exact', head: true }).eq('reply_id', rId);
+    const likes_count = count || 0;
+    await db.from('replies').update({ likes_count }).eq('id', rId);
+
+    return success(res, { likes_count, liked_by_me });
+  } catch (err) {
+    return error(res, 'Failed to update like.', 500);
+  }
+};
+
+module.exports = { listReplies, createReply, updateReply, deleteReply, toggleLike };
