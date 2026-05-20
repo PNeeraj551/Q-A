@@ -1,7 +1,6 @@
 const db = require('../config/supabase');
 const QnaPost = require('../models/QnaPost');
 const Question = require('../models/Question');
-const Reply = require('../models/Reply');
 const User = require('../models/User');
 const { success, error } = require('../utils/responseUtils');
 const { broadcastToChannel } = require('../utils/broadcast');

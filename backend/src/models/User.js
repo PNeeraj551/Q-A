@@ -44,9 +44,4 @@ async function updateById(id, updates) {
   return data;
 }
 
-async function deleteById(id) {
-  const { error } = await db.from('users').delete().eq('id', id);
-  if (error) throw error;
-}
-
-module.exports = { findByEmail, findById, findAll, findByIds, create, updateById, deleteById };
+module.exports = { findByEmail, findById, findAll, findByIds, create, updateById };

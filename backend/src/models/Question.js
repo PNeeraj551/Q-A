@@ -39,11 +39,6 @@ async function softDeleteById(id) {
   return data;
 }
 
-async function softDeleteByQnaId(qnaId) {
-  const { error } = await db.from('questions').update({ is_deleted: true }).eq('qna_id', qnaId);
-  if (error) throw error;
-}
-
 async function countByQnaId(qnaId) {
   const { count, error } = await db.from('questions').select('*', { count: 'exact', head: true }).eq('qna_id', qnaId).eq('is_deleted', false);
   if (error) throw error;
@@ -77,7 +72,6 @@ module.exports = {
   create,
   updateById,
   softDeleteById,
-  softDeleteByQnaId,
   countByQnaId,
   getLikedQuestionIds,
   isLikedByUser,

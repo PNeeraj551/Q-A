@@ -37,9 +37,4 @@ async function softDeleteById(id) {
   return data;
 }
 
-async function softDeleteByQnaId(qnaId) {
-  const { error } = await db.from('replies').update({ is_deleted: true }).eq('qna_id', qnaId);
-  if (error) throw error;
-}
-
-module.exports = { findById, listByQuestion, create, updateById, softDeleteById, softDeleteByQnaId };
+module.exports = { findById, listByQuestion, create, updateById, softDeleteById };

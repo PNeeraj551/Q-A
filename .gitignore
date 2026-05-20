@@ -23,6 +23,7 @@ desktop.ini
 # Editor / IDE
 .vscode/
 .idea/
+.vercel/
 *.suo
 *.user
 
