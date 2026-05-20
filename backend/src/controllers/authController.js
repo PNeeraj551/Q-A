@@ -18,16 +18,13 @@ const requestOtp = async (req, res) => {
     return error(res, 'A valid @athivatech.com email is required', 400);
   }
   const normalEmail = email.trim().toLowerCase();
-  const t0 = Date.now();
   try {
     const user = await User.findByEmail(normalEmail);
-    logger.info(`[requestOtp] userLookup=${Date.now() - t0}ms`);
     if (!user) {
       return success(res, { message: 'If this email is registered, a login code has been sent.' });
     }
 
     await Otp.clearByEmail(normalEmail);
-    logger.info(`[requestOtp] clearOtp=${Date.now() - t0}ms`);
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const otp_hash = crypto.createHash('sha256').update(otp).digest('hex');
@@ -37,11 +34,8 @@ const requestOtp = async (req, res) => {
       otp_hash,
       expires_at: new Date(Date.now() + OTP_EXPIRY_MS).toISOString(),
     });
-    logger.info(`[requestOtp] createOtp=${Date.now() - t0}ms`);
 
-    const t1 = Date.now();
     await sendOtpEmail(normalEmail, otp);
-    logger.info(`[requestOtp] emailSent=${Date.now() - t1}ms total=${Date.now() - t0}ms`);
 
     return success(res, { message: 'Login code sent to your email.' });
   } catch (err) {

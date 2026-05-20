@@ -60,12 +60,14 @@ export default function LoginPage() {
     setEmailError('')
     if (loadingRef.current) return
     loadingRef.current = true
-    setLoading(true)
+    setStep('otp')
+    startCooldown()
     try {
       await requestOtp(email.trim())
-      setStep('otp')
-      startCooldown()
     } catch (err) {
+      setStep('email')
+      if (timerRef.current) clearInterval(timerRef.current)
+      setCooldown(0)
       const status = err.response?.status
       if (status === 429) {
         setServerError('Too many requests. Please wait a few minutes and try again.')
@@ -76,7 +78,6 @@ export default function LoginPage() {
       }
     } finally {
       loadingRef.current = false
-      setLoading(false)
     }
   }
 

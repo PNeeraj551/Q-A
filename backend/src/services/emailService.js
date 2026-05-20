@@ -2,12 +2,6 @@ const nodemailer = require('nodemailer');
 const logger = require('../utils/logger');
 const { SMTP_HOST, SMTP_PORT, SMTP_SECURE, SMTP_USER, SMTP_PASS, SMTP_FROM } = require('../config/env');
 
-logger.info('[email] SMTP config loaded', {
-  host: SMTP_HOST,
-  port: SMTP_PORT,
-  secure: SMTP_SECURE,
-});
-
 const transporter = nodemailer.createTransport({
   host: SMTP_HOST,
   port: SMTP_PORT,
@@ -36,7 +30,6 @@ async function verifySmtp() {
 
 async function sendOtpEmail(toEmail, otp) {
   try {
-    logger.info('[email] Sending OTP');
     await transporter.sendMail({
       from: SMTP_FROM,
       to: toEmail,
@@ -52,7 +45,6 @@ async function sendOtpEmail(toEmail, otp) {
         '– AthivaTech Q&A Platform',
       ].join('\n'),
     });
-    logger.info('[email] OTP sent successfully');
   } catch (err) {
     logger.error('[email] sendMail failed', {
       message: err.message,
