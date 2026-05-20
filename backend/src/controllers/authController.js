@@ -45,7 +45,7 @@ const requestOtp = async (req, res) => {
 
     return success(res, { message: 'Login code sent to your email.' });
   } catch (err) {
-    logger.error('[requestOtp] ERROR:', err);
+    logger.error('[requestOtp] ERROR', { message: err.message, code: err.code });
     return error(res, 'Failed to send login code. Please try again.', 500);
   }
 };
@@ -100,7 +100,7 @@ const verifyOtp = async (req, res) => {
       user: { id: user.id, name: user.name, email: user.email, role: user.role },
     });
   } catch (err) {
-    logger.error('[verifyOtp] ERROR:', err);
+    logger.error('[verifyOtp] ERROR', { message: err.message, code: err.code });
     return error(res, 'Verification failed. Please try again.', 500);
   }
 };
