@@ -95,7 +95,7 @@ body {
 @layer components {
   .composer-shell {
     @apply relative flex items-center gap-3
-           rounded-2xl
+           rounded-lg
            border border-slate-200
            bg-white
            px-5 py-3

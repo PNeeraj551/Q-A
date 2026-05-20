@@ -269,7 +269,7 @@ export function ReplyThread({ qnaId, question, currentUserId, isAdmin, isClosed,
       {!isClosed && (
         <form onSubmit={handleSubmitReply} className="flex gap-2 pt-1 ml-1">
           <input
-            className="flex-1 h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 focus-visible:border-blue-400 disabled:opacity-50 transition-all duration-200"
+            className="flex-1 h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 focus-visible:border-blue-400 disabled:opacity-50 transition-all duration-200"
             value={replyText}
             onChange={(e) => setReplyText(e.target.value)}
             placeholder="Write a reply..."

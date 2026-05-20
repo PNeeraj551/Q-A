@@ -12,7 +12,7 @@ export function SearchInput({ value, onChange, placeholder = 'Search...', classN
         <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35" />
       </svg>
       <input
-        className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 focus-visible:border-blue-400 transition-all duration-200"
+        className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 focus-visible:border-blue-400 transition-all duration-200"
         value={value}
         onChange={onChange}
         placeholder={placeholder}
