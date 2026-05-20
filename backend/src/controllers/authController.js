@@ -8,7 +8,7 @@ const logger = require('../utils/logger');
 
 const ATHIVA_EMAIL = /^[a-zA-Z0-9._%+-]+@athivatech\.com$/i;
 const OTP_EXPIRY_MS = 10 * 60 * 1000;
-const MAX_OTP_ATTEMPTS = 5;
+const MAX_OTP_ATTEMPTS = 3;
 const NAME_MAX = 80;
 
 // POST /auth/request-otp
