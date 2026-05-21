@@ -134,24 +134,31 @@ const toggleLike = async (req, res) => {
     const question = await Question.findById(qId);
     if (!question || question.is_deleted) return error(res, 'Question not found', 404);
 
-    const already_liked = await Question.isLikedByUser(qId, userId);
-
-    if (already_liked) {
-      await db.from('question_likes').delete().eq('question_id', qId).eq('user_id', userId);
-    } else {
-      await db.from('question_likes').upsert({ question_id: qId, user_id: userId });
-    }
-
-    const liked_by_me = !already_liked;
-    const { count } = await db.from('question_likes').select('*', { count: 'exact', head: true }).eq('question_id', qId);
-    const likes_count = count || 0;
-    await db.from('questions').update({ likes_count }).eq('id', qId);
-
-    await broadcastToChannel(`qna_${qnaId}`, 'question:like', {
-      question_id: qId,
-      likes_count,
+    const { data, error: rpcErr } = await db.rpc('toggle_question_like', {
+      p_question_id: qId,
+      p_user_id: userId,
     });
 
+    let likes_count, liked_by_me;
+
+    if (!rpcErr && data?.[0]) {
+      likes_count = data[0].likes_count;
+      liked_by_me = data[0].liked_by_me;
+    } else {
+      if (rpcErr) console.error('[toggleLike] RPC error:', rpcErr);
+      const already_liked = await Question.isLikedByUser(qId, userId);
+      if (already_liked) {
+        await db.from('question_likes').delete().eq('question_id', qId).eq('user_id', userId);
+      } else {
+        await db.from('question_likes').upsert({ question_id: qId, user_id: userId });
+      }
+      liked_by_me = !already_liked;
+      const { count } = await db.from('question_likes').select('*', { count: 'exact', head: true }).eq('question_id', qId);
+      likes_count = count || 0;
+      await db.from('questions').update({ likes_count }).eq('id', qId);
+    }
+
+    await broadcastToChannel(`qna_${qnaId}`, 'question:like', { question_id: qId, likes_count });
     return success(res, { likes_count, liked_by_me });
   } catch (err) {
     return error(res, 'Failed to update like.', 500);

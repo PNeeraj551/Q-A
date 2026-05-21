@@ -123,13 +123,13 @@ BEGIN
 
   IF v_exists THEN
     DELETE FROM question_likes WHERE question_id = p_question_id AND user_id = p_user_id;
-    UPDATE questions SET likes_count = GREATEST(0, likes_count - 1)
-      WHERE id = p_question_id RETURNING likes_count INTO v_count;
+    UPDATE questions SET likes_count = GREATEST(0, questions.likes_count - 1)
+      WHERE id = p_question_id RETURNING questions.likes_count INTO v_count;
     RETURN QUERY SELECT v_count, FALSE;
   ELSE
     INSERT INTO question_likes (question_id, user_id) VALUES (p_question_id, p_user_id) ON CONFLICT DO NOTHING;
-    UPDATE questions SET likes_count = likes_count + 1
-      WHERE id = p_question_id RETURNING likes_count INTO v_count;
+    UPDATE questions SET likes_count = questions.likes_count + 1
+      WHERE id = p_question_id RETURNING questions.likes_count INTO v_count;
     RETURN QUERY SELECT v_count, TRUE;
   END IF;
 END;

@@ -361,6 +361,7 @@ export function QuestionCard({ qnaId, question, currentUserId, isAdmin, isClosed
   async function handleLike() {
     if (likingRef.current) return
     likingRef.current = true
+    setTimeout(() => { likingRef.current = false }, 300)
     const optimistic = {
       ...question,
       liked_by_me: !question.liked_by_me,
@@ -372,8 +373,6 @@ export function QuestionCard({ qnaId, question, currentUserId, isAdmin, isClosed
       onUpdate({ ...question, liked_by_me: res.data.liked_by_me, likes_count: res.data.likes_count })
     } catch {
       onUpdate(question)
-    } finally {
-      likingRef.current = false
     }
   }
 
