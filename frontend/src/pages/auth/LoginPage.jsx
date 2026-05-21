@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { requestOtp } from '../../api/auth'
 import { Button } from '@/components/common/Button'
@@ -175,9 +175,12 @@ export default function LoginPage() {
       <header className="w-full bg-white/80 backdrop-blur border-b border-slate-200/80">
         <div className="w-full px-[12%] py-4 flex items-center justify-between">
           <span className="text-[22px] font-semibold text-slate-800 tracking-tight">AthivaTech Q&A</span>
-          <Button className="h-9 px-5 font-semibold bg-blue-800 hover:bg-blue-900" type="button" onClick={() => navigate('/login')}>
+          <Link
+            to="/login"
+            className="inline-flex items-center justify-center h-9 px-5 rounded-md text-sm font-semibold text-white bg-blue-800 hover:bg-blue-900 transition-all duration-150"
+          >
             Sign in
-          </Button>
+          </Link>
         </div>
       </header>
 
