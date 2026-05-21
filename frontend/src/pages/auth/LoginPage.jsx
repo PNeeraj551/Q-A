@@ -169,52 +169,57 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-100 via-blue-50/50 to-indigo-50/40 px-4">
-      <div className="w-full max-w-sm">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-100 via-blue-50/50 to-indigo-50/40">
+
+      {/* Navbar */}
+      <header className="w-full bg-white/80 backdrop-blur border-b border-slate-200/80">
+        <div className="w-full px-[12%] py-4 flex items-center justify-between">
+          <span className="text-[22px] font-semibold text-slate-800 tracking-tight">AthivaTech Q&A</span>
+          <Button className="h-9 px-5 font-semibold bg-blue-800 hover:bg-blue-900" type="button" onClick={() => navigate('/login')}>
+            Sign in
+          </Button>
+        </div>
+      </header>
+
+      {/* Page body */}
+      <div className="flex-1 flex items-center justify-center px-4">
+        <div className="w-full max-w-md">
+
+          {/* Heading */}
+          <div className="mb-6 text-center">
+            <h1 className="text-3xl font-bold text-slate-800">Sign in</h1>
+            <p className="mt-2 text-sm text-slate-500">Enter your Athiva email to receive a login code</p>
+          </div>
+
         <div className="bg-white rounded-2xl shadow-2xl shadow-slate-200/70 border border-slate-200/80 p-8">
 
-          {/* Logo + brand */}
-          <div className="mb-7 flex flex-col items-center">
-            <div className="flex items-center gap-2.5">
-              <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
-                <path d="M11 2L3 19h3.5l1.8-4h5.4l1.8 4H19L11 2z" fill="#1e293b" />
-                <path d="M7.8 12.5L11 5.5l3.2 7H7.8z" fill="#e8e9eb" />
-              </svg>
-              <span className="text-[22px] font-semibold text-slate-800 tracking-tight">AthivaTech</span>
-            </div>
-            {step === 'otp' && (
-              <Text size="sm" className="mt-3 text-center text-slate-500">
-                {`We sent a 6-digit code to ${email}`}
-              </Text>
-            )}
-          </div>
+          {step === 'otp' && (
+            <Text size="sm" className="mb-5 text-center text-slate-500">
+              {`We sent a 6-digit code to ${email}`}
+            </Text>
+          )}
 
           {step === 'email' ? (
             <Stack as="form" gap={4} onSubmit={handleSendOtp} noValidate>
               <div>
-                <div className="relative">
-                  <svg
-                    className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none"
-                    viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"
-                  >
-                    <path fillRule="evenodd" d="M8 1a3.5 3.5 0 00-3.5 3.5V6H3a1 1 0 00-1 1v7a1 1 0 001 1h10a1 1 0 001-1V7a1 1 0 00-1-1h-1.5V4.5A3.5 3.5 0 008 1zm-2 5V4.5a2 2 0 114 0V6H6z" clipRule="evenodd" />
-                  </svg>
-                  <input
-                    id="email"
-                    type="email"
-                    autoComplete="email"
-                    value={email}
-                    onChange={(e) => { setEmail(e.target.value); setEmailError('') }}
-                    placeholder="you@athivatech.com"
-                    disabled={loading}
-                    className={`${inputCls} pl-9 ${emailError ? errorInputCls : ''}`}
-                  />
-                </div>
+                <label htmlFor="email" className="block text-xs font-semibold tracking-widest text-slate-500 uppercase mb-1.5">
+                  Email
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => { setEmail(e.target.value); setEmailError('') }}
+                  placeholder="you@athivatech.com"
+                  disabled={loading}
+                  className={`${inputCls} ${emailError ? errorInputCls : ''}`}
+                />
                 {emailError && <p className="text-xs text-red-500 mt-1">{emailError}</p>}
               </div>
               <FormError message={serverError} />
               <Button type="submit" className="w-full h-10 font-semibold bg-blue-800 hover:bg-blue-900" disabled={loading}>
-                {loading ? 'Sending code…' : 'Send code'}
+                {loading ? 'Sending code…' : 'Send login code'}
               </Button>
             </Stack>
           ) : (
@@ -281,10 +286,11 @@ export default function LoginPage() {
           )}
         </div>
 
-        <div className="mt-4 text-center">
-          <Text size="xs" color="muted">
-            &copy; {new Date().getFullYear()} AthivaTech. All rights reserved.
-          </Text>
+          <div className="mt-4 text-center">
+            <Text size="xs" color="muted">
+              &copy; {new Date().getFullYear()} AthivaTech. All rights reserved.
+            </Text>
+          </div>
         </div>
       </div>
     </div>

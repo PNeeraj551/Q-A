@@ -196,7 +196,7 @@ export function QnaFilters({
           onClick={() => setPopoverOpen((o) => !o)}
           aria-haspopup="listbox"
           aria-expanded={popoverOpen}
-          className={`inline-flex items-center gap-1.5 h-10 px-3 rounded-full border text-xs font-medium transition-all duration-200 ${datePreset
+          className={`inline-flex items-center gap-1.5 h-10 px-3 rounded-lg border text-xs font-medium transition-all duration-200 ${datePreset
               ? 'border-blue-300 bg-blue-50 text-blue-700 shadow-sm'
               : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-700'
             }`}
@@ -319,7 +319,7 @@ export function QnaFilters({
           type="button"
           onClick={onClearFilters}
           aria-label="Clear all filters"
-          className="flex items-center gap-1.5 h-10 px-3 rounded-full border border-slate-200 bg-white text-xs font-medium text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors duration-200 shadow-sm whitespace-nowrap"
+          className="flex items-center gap-1.5 h-10 px-3 rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors duration-200 shadow-sm whitespace-nowrap"
         >
           <CloseIcon />
           Clear

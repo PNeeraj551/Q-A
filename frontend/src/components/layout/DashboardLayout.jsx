@@ -9,7 +9,7 @@ function SidebarLink({ to, label, icon, end }) {
       to={to}
       end={end}
       className={({ isActive }) =>
-        `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${isActive
+        `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${isActive
           ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md'
           : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
         }`
@@ -100,7 +100,7 @@ export default function DashboardLayout({ children, title, subtitle, actions, on
         <div className="px-3 py-3 border-t border-slate-100 shrink-0 space-y-1">
           <button
             onClick={() => setProfileOpen(true)}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 transition-all duration-200 text-left group"
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-50 transition-all duration-200 text-left group"
           >
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center font-bold text-xs select-none shrink-0 shadow-sm ring-2 ring-blue-100">
               {user?.name?.[0]?.toUpperCase() || '?'}
@@ -116,7 +116,7 @@ export default function DashboardLayout({ children, title, subtitle, actions, on
 
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-slate-500 hover:text-red-600 hover:bg-red-50 transition-all duration-200"
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-500 hover:text-red-600 hover:bg-red-50 transition-all duration-200"
           >
             <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.75" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
