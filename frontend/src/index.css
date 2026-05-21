@@ -94,7 +94,7 @@ body {
 
 @layer components {
   .composer-shell {
-    @apply relative flex items-center gap-3
+    @apply relative flex items-end gap-3
            rounded-lg
            border border-slate-200
            bg-white
@@ -124,7 +124,7 @@ body {
 
   .composer-send {
     @apply inline-flex items-center justify-center
-           h-9 w-9
+           h-8 w-8
            shrink-0
            rounded-full
            bg-gradient-to-br from-blue-600 to-indigo-600
@@ -133,13 +133,9 @@ body {
            transition-all duration-200
            hover:from-blue-700 hover:to-indigo-700
            hover:shadow-md
-           hover:scale-105
            active:scale-95
            disabled:opacity-40
            disabled:cursor-not-allowed;
   }
 }
 
-@media (hover: none) {
-  .action-buttons { opacity: 1 !important; }
-}

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { ThumbsUp } from 'lucide-react'
 import supabase from '../../utils/supabase'
 import { Button } from '@/components/common/Button'
 import { Skeleton } from '@/components/common/Skeleton'
@@ -19,6 +20,7 @@ export function ReplyThread({ qnaId, question, currentUserId, isAdmin, isClosed,
   const submittingRef = useRef(false)
   const [editingId, setEditingId] = useState(null)
   const [editText, setEditText] = useState('')
+  const [replyMenuId, setReplyMenuId] = useState(null)
   const deletingRepliesRef = useRef(new Set())
   const savingRepliesRef = useRef(new Set())
   const likingRepliesRef = useRef(new Set())
@@ -48,6 +50,15 @@ export function ReplyThread({ qnaId, question, currentUserId, isAdmin, isClosed,
       .subscribe()
     return () => { supabase.removeChannel(channel) }
   }, [question.id])
+
+  useEffect(() => {
+    if (!replyMenuId) return
+    function handleClick(e) {
+      if (!e.target.closest('[data-reply-menu]')) setReplyMenuId(null)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [replyMenuId])
 
   async function handleSubmitReply(e) {
     e.preventDefault()
@@ -190,14 +201,14 @@ export function ReplyThread({ qnaId, question, currentUserId, isAdmin, isClosed,
       )}
 
       {sorted.length > 0 && (
-        <div className="ml-1 space-y-3">
+        <div className="ml-3 border-l border-slate-100 pl-3 space-y-3">
           {sorted.map((r) => {
             const isAccepted = acceptedId && String(r.id) === acceptedId
             return (
               <div
                 key={r.id}
-                className={`flex items-start gap-2.5 group rounded-xl p-2 -mx-2 transition-colors duration-150 ${
-                  isAccepted ? 'border border-emerald-200 bg-emerald-50/50 rounded-xl p-3 -mx-2' : ''
+                className={`flex items-start gap-2.5 group rounded-lg p-1.5 -mx-1.5 transition-colors duration-150 ${
+                  isAccepted ? 'border border-emerald-200 bg-emerald-50/50 rounded-lg p-2.5 -mx-1.5' : ''
                 }`}
               >
                 <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-xs font-semibold text-slate-600 shrink-0 mt-0.5">
@@ -239,66 +250,75 @@ export function ReplyThread({ qnaId, question, currentUserId, isAdmin, isClosed,
                     <p className="text-sm text-slate-700 mt-0.5 leading-relaxed">{r.text}</p>
                   )}
                   {editingId !== r.id && (
-                    <div className="mt-2 flex items-center gap-2">
+                    <div className="mt-1.5 flex items-center gap-1">
                       <button
                         onClick={() => !isClosed && !r._isOptimistic && handleReplyLike(r)}
                         aria-label={r.liked_by_me ? 'Unlike reply' : 'Like reply'}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-150 ${
+                        className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-md text-xs font-medium border transition-all duration-150 ${
                           isClosed || r._isOptimistic
-                            ? 'bg-slate-50 border-slate-200 text-slate-400 cursor-default'
+                            ? 'border-slate-100 text-slate-300 cursor-default'
                             : r.liked_by_me
-                              ? 'bg-blue-50 border-blue-200 text-blue-600 hover:bg-blue-100 active:scale-95'
-                              : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100 hover:border-slate-300 hover:text-slate-700 active:scale-95'
+                              ? 'bg-blue-50 border-blue-200 text-blue-600 hover:bg-blue-100 active:scale-105'
+                              : 'bg-transparent border-slate-200 text-slate-500 hover:bg-slate-50 active:scale-105'
                         }`}
                       >
-                        <svg className="w-3.5 h-3.5" fill={r.liked_by_me ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.75" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M6.633 10.25c.806 0 1.533-.446 2.031-1.08a9.041 9.041 0 0 1 2.861-2.4c.723-.384 1.35-.956 1.653-1.715a4.498 4.498 0 0 0 .322-1.672V2.75a.75.75 0 0 1 .75-.75 2.25 2.25 0 0 1 2.25 2.25c0 1.152-.26 2.243-.723 3.218-.266.558.107 1.282.725 1.282m0 0h3.126c1.026 0 1.945.694 2.054 1.715.045.422.068.85.068 1.285a11.95 11.95 0 0 1-2.649 7.521c-.388.482-.987.729-1.605.729H13.48c-.483 0-.964-.078-1.423-.23l-3.114-1.04a4.501 4.501 0 0 0-1.423-.23H5.904m10.598-9.75H14.25M5.904 18.5c.083.205.173.405.27.602.197.4-.078.898-.523.898h-.908c-.889 0-1.713-.518-1.972-1.368a12 12 0 0 1-.521-3.507c0-1.553.295-3.036.831-4.398C3.387 9.953 4.167 9.5 5 9.5h1.053c.472 0 .745.556.5.96a8.958 8.958 0 0 0-1.302 4.665c0 1.194.232 2.333.654 3.375Z" />
-                        </svg>
+                        <ThumbsUp className="w-3 h-3" strokeWidth={1.75} />
                         {r.likes_count > 0 && <span>{r.likes_count}</span>}
                       </button>
                     </div>
                   )}
                 </div>
-                {editingId !== r.id && (
-                  <div className="action-buttons flex items-center gap-2 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                    {canAccept && !r._isOptimistic && (
-                      <button
-                        onClick={() => handleToggleAccept(r.id)}
-                        className={`text-xs font-medium transition-colors duration-150 ${
-                          isAccepted
-                            ? 'text-emerald-600 hover:text-slate-500'
-                            : 'text-slate-400 hover:text-emerald-600'
-                        }`}
-                        title={isAccepted ? 'Remove accepted solution' : 'Mark as accepted solution'}
-                      >
-                        {isAccepted ? 'Unaccept' : 'Accept'}
-                      </button>
-                    )}
-                    {!isClosed && (r.author_id === currentUserId || isAdmin) && (
-                      <>
-                        {r.author_id === currentUserId && (
+                {(canAccept || (!isClosed && (r.author_id === currentUserId || isAdmin))) && !r._isOptimistic && editingId !== r.id && (
+                  <div className="relative shrink-0 self-start mt-0.5" data-reply-menu>
+                    <button
+                      onClick={() => setReplyMenuId(replyMenuId === r.id ? null : r.id)}
+                      className="p-1 rounded text-slate-300 hover:text-slate-600 hover:bg-slate-100 transition-colors duration-150"
+                      aria-label="Reply options"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                        <circle cx="12" cy="5" r="1.25" />
+                        <circle cx="12" cy="12" r="1.25" />
+                        <circle cx="12" cy="19" r="1.25" />
+                      </svg>
+                    </button>
+                    {replyMenuId === r.id && (
+                      <div className="absolute right-0 top-6 z-20 w-40 bg-white border border-slate-200 rounded-lg shadow-lg py-1 overflow-hidden">
+                        {canAccept && (
                           <button
-                            className="p-1 rounded text-slate-400 hover:text-slate-700 transition-colors duration-150"
-                            onClick={() => { setEditingId(r.id); setEditText(r.text) }}
-                            title="Edit reply"
-                            aria-label="Edit reply"
+                            onClick={() => { setReplyMenuId(null); handleToggleAccept(r.id) }}
+                            className={`w-full flex items-center gap-2 px-3 py-1.5 text-xs transition-colors duration-100 ${
+                              isAccepted ? 'text-emerald-600 hover:bg-emerald-50' : 'text-slate-600 hover:bg-slate-50'
+                            }`}
                           >
-                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="1.75" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                            <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                             </svg>
+                            {isAccepted ? 'Remove accepted' : 'Mark as accepted'}
                           </button>
                         )}
-                        <button
-                          className="p-1 rounded text-slate-400 hover:text-red-500 transition-colors duration-150"
-                          onClick={() => handleDeleteReply(r.id)}
-                          title="Delete reply"
-                          aria-label="Delete reply"
-                        >
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="1.75" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-                          </svg>
-                        </button>
-                      </>
+                        {r.author_id === currentUserId && !isClosed && (
+                          <button
+                            onClick={() => { setReplyMenuId(null); setEditingId(r.id); setEditText(r.text) }}
+                            className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-50 transition-colors duration-100"
+                          >
+                            <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.75" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                            </svg>
+                            Edit
+                          </button>
+                        )}
+                        {(r.author_id === currentUserId || isAdmin) && !isClosed && (
+                          <button
+                            onClick={() => { setReplyMenuId(null); handleDeleteReply(r.id) }}
+                            className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-red-600 hover:bg-red-50 transition-colors duration-100"
+                          >
+                            <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.75" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                            </svg>
+                            Delete
+                          </button>
+                        )}
+                      </div>
                     )}
                   </div>
                 )}
@@ -309,15 +329,23 @@ export function ReplyThread({ qnaId, question, currentUserId, isAdmin, isClosed,
       )}
 
       {!isClosed && (
-        <form onSubmit={handleSubmitReply} className="flex gap-2 pt-1 ml-1">
-          <input
-            className="flex-1 h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 focus-visible:border-blue-400 disabled:opacity-50 transition-all duration-200"
-            value={replyText}
-            onChange={(e) => setReplyText(e.target.value)}
-            placeholder="Write a reply..."
-            maxLength={5000}
-          />
-          <Button type="submit" size="sm">Reply</Button>
+        <form onSubmit={handleSubmitReply} className="mt-3 ml-3">
+          <div className="flex items-center gap-2 border border-slate-200 rounded-lg px-3 py-1.5 bg-white focus-within:border-blue-400 focus-within:ring-1 focus-within:ring-blue-500/20 transition-all duration-200">
+            <input
+              className="flex-1 text-sm bg-transparent border-0 outline-none text-slate-900 placeholder:text-slate-400 py-0.5"
+              value={replyText}
+              onChange={(e) => setReplyText(e.target.value)}
+              placeholder="Write a reply..."
+              maxLength={5000}
+            />
+            <button
+              type="submit"
+              disabled={!replyText.trim()}
+              className="shrink-0 text-xs font-semibold text-blue-600 hover:text-blue-700 disabled:text-slate-300 disabled:cursor-not-allowed transition-colors duration-150"
+            >
+              Reply
+            </button>
+          </div>
         </form>
       )}
     </div>
@@ -440,11 +468,11 @@ export function QuestionCard({ qnaId, question, currentUserId, isAdmin, isClosed
   // SVG paths (reused in multiple places)
   const pencilPath = 'M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10'
   const trashPath = 'M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0'
-  const thumbUpPath = 'M6.633 10.25c.806 0 1.533-.446 2.031-1.08a9.041 9.041 0 0 1 2.861-2.4c.723-.384 1.35-.956 1.653-1.715a4.498 4.498 0 0 0 .322-1.672V2.75a.75.75 0 0 1 .75-.75 2.25 2.25 0 0 1 2.25 2.25c0 1.152-.26 2.243-.723 3.218-.266.558.107 1.282.725 1.282m0 0h3.126c1.026 0 1.945.694 2.054 1.715.045.422.068.85.068 1.285a11.95 11.95 0 0 1-2.649 7.521c-.388.482-.987.729-1.605.729H13.48c-.483 0-.964-.078-1.423-.23l-3.114-1.04a4.501 4.501 0 0 0-1.423-.23H5.904m10.598-9.75H14.25M5.904 18.5c.083.205.173.405.27.602.197.4-.078.898-.523.898h-.908c-.889 0-1.713-.518-1.972-1.368a12 12 0 0 1-.521-3.507c0-1.553.295-3.036.831-4.398C3.387 9.953 4.167 9.5 5 9.5h1.053c.472 0 .745.556.5.96a8.958 8.958 0 0 0-1.302 4.665c0 1.194.232 2.333.654 3.375Z'
+
   const chatPath = 'M2.25 12.76c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.076-4.076a1.526 1.526 0 0 1 1.037-.443 48.282 48.282 0 0 0 5.68-.494c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z'
 
   return (
-    <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm transition-all duration-200 group">
+    <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm transition-all duration-200 group">
 
       {/* ── HEADER ── */}
       <div className="flex items-center justify-between mb-3">
@@ -452,62 +480,70 @@ export function QuestionCard({ qnaId, question, currentUserId, isAdmin, isClosed
           <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold shrink-0 ${avatarColor}`}>
             {initial}
           </div>
-          <div className="min-w-0">
-            <span className="text-sm font-semibold text-slate-900">{question.author_name}</span>
+          <div className="flex items-baseline gap-0 min-w-0">
+            <span className="text-sm font-semibold text-slate-800 truncate">{question.author_name}</span>
             {question.created_at && (
-              <span className="ml-2 text-xs text-slate-400">
-                {getRelativeTime(question.created_at)}
-                {viewCount > 0 && <> · {viewCount} {viewCount === 1 ? 'view' : 'views'}</>}
-              </span>
+              <>
+                <span className="mx-1.5 text-slate-300 text-xs select-none">•</span>
+                <span className="text-xs text-slate-400 whitespace-nowrap">{getRelativeTime(question.created_at)}</span>
+              </>
+            )}
+            {viewCount > 0 && (
+              <>
+                <span className="mx-1.5 text-slate-300 text-xs select-none">•</span>
+                <span className="text-xs text-slate-400 whitespace-nowrap">{viewCount} {viewCount === 1 ? 'view' : 'views'}</span>
+              </>
             )}
           </div>
         </div>
 
-        {/* Three-dots menu */}
-        {!isClosed && canModify && !editMode && (
-          <div ref={menuRef} className="relative shrink-0 ml-3">
-            <button
-              onClick={() => setMenuOpen(v => !v)}
-              className={`action-buttons p-1.5 rounded-lg transition-colors duration-150 text-slate-400 hover:text-slate-600 hover:bg-slate-100 ${
-                menuOpen ? 'opacity-100 bg-slate-100 text-slate-600' : 'opacity-0 group-hover:opacity-100'
-              }`}
-              aria-label="More options"
-              aria-haspopup="true"
-              aria-expanded={menuOpen}
-            >
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                <circle cx="12" cy="5" r="1.5" />
-                <circle cx="12" cy="12" r="1.5" />
-                <circle cx="12" cy="19" r="1.5" />
-              </svg>
-            </button>
+        {/* Three-dots menu — always reserve space for structural consistency */}
+        <div ref={menuRef} className="relative shrink-0 ml-3 w-7">
+          {!isClosed && canModify && !editMode && (
+            <>
+              <button
+                onClick={() => setMenuOpen(v => !v)}
+                className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors duration-150 text-slate-300 hover:text-slate-600 hover:bg-slate-100 ${
+                  menuOpen ? 'bg-slate-100 text-slate-600' : ''
+                }`}
+                aria-label="More options"
+                aria-haspopup="true"
+                aria-expanded={menuOpen}
+              >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                  <circle cx="12" cy="5" r="1.5" />
+                  <circle cx="12" cy="12" r="1.5" />
+                  <circle cx="12" cy="19" r="1.5" />
+                </svg>
+              </button>
 
-            {menuOpen && (
-              <div className="absolute right-0 top-8 z-20 w-36 bg-white border border-slate-200 rounded-xl shadow-lg py-1 overflow-hidden">
-                {question.author_id === currentUserId && (
+              {menuOpen && (
+                <div className="absolute right-0 top-8 z-20 w-36 bg-white border border-slate-200 rounded-xl shadow-lg py-1 overflow-hidden">
+                  {question.author_id === currentUserId && (
+                    <button
+                      onClick={handleEditFromMenu}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors duration-100"
+                    >
+                      <svg className="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.75" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d={pencilPath} />
+                      </svg>
+                      Edit
+                    </button>
+                  )}
                   <button
-                    onClick={handleEditFromMenu}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors duration-100"
+                    onClick={handleDeleteFromMenu}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors duration-100"
                   >
-                    <svg className="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.75" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d={pencilPath} />
+                    <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.75" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d={trashPath} />
                     </svg>
-                    Edit
+                    Delete
                   </button>
-                )}
-                <button
-                  onClick={handleDeleteFromMenu}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors duration-100"
-                >
-                  <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.75" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d={trashPath} />
-                  </svg>
-                  Delete
-                </button>
-              </div>
-            )}
-          </div>
-        )}
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </div>
 
       {/* ── BODY ── */}
@@ -545,30 +581,28 @@ export function QuestionCard({ qnaId, question, currentUserId, isAdmin, isClosed
           <InlineConfirm onConfirm={handleDelete} onCancel={() => setConfirmDelete(false)} />
         ) : (
           <>
-            {/* Like pill */}
+            {/* Like reaction badge */}
             <button
               onClick={!isClosed ? handleLike : undefined}
               aria-label={question.liked_by_me ? 'Unlike question' : 'Like question'}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-150 ${
+              className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-md text-xs font-medium border transition-all duration-150 ${
                 isClosed
-                  ? 'bg-slate-50 border-slate-200 text-slate-400 cursor-default'
+                  ? 'border-slate-100 text-slate-300 cursor-default'
                   : question.liked_by_me
-                    ? 'bg-blue-50 border-blue-200 text-blue-600 hover:bg-blue-100 active:scale-95'
-                    : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100 hover:border-slate-300 hover:text-slate-700 active:scale-95'
+                    ? 'bg-blue-50 border-blue-200 text-blue-600 hover:bg-blue-100 active:scale-105'
+                    : 'bg-transparent border-slate-200 text-slate-500 hover:bg-slate-50 active:scale-105'
               }`}
             >
-              <svg className="w-3.5 h-3.5" fill={question.liked_by_me ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.75" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d={thumbUpPath} />
-              </svg>
+              <ThumbsUp className="w-3.5 h-3.5" strokeWidth={1.75} />
               {question.likes_count > 0 && <span>{question.likes_count}</span>}
             </button>
 
-            {/* Replies pill or "be the first" link */}
+            {/* Replies button or "be the first" link */}
             {replyCount === 0 ? (
               <button
                 onClick={handleReplyToggle}
                 aria-label="Be the first to answer"
-                className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-blue-600 transition-colors duration-150"
+                className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md text-xs font-medium text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-all duration-150"
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="1.75" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d={chatPath} />
@@ -579,10 +613,10 @@ export function QuestionCard({ qnaId, question, currentUserId, isAdmin, isClosed
               <button
                 onClick={handleReplyToggle}
                 aria-label={showReplies ? 'Hide replies' : `Show ${replyCount} ${replyCount === 1 ? 'reply' : 'replies'}`}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-150 ${
+                className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-md text-xs font-medium transition-all duration-150 ${
                   showReplies
-                    ? 'bg-blue-50 border-blue-200 text-blue-600'
-                    : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100 hover:border-slate-300 active:scale-95'
+                    ? 'bg-blue-50 border border-blue-200 text-blue-600'
+                    : 'bg-transparent border border-slate-200 text-slate-500 hover:bg-slate-50 active:scale-105'
                 }`}
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="1.75" viewBox="0 0 24 24">

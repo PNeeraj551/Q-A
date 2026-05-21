@@ -11,7 +11,6 @@ import { VisibilityBadge, StatusBadge } from '@/components/common/Badges'
 import { EmptyState } from '@/components/common/EmptyState'
 import { PageError } from '@/components/common/PageError'
 import { Skeleton } from '@/components/common/Skeleton'
-import { SendButton } from '@/components/common/SendButton'
 import { Surface } from '@/components/common/Surface'
 import { Stack } from '@/components/common/Stack'
 
@@ -156,8 +155,8 @@ export default function QnaDetailPage() {
 
   if (loading) {
     return (
-      <DashboardLayout title="Q&A">
-        <Stack gap={3} >
+      <DashboardLayout>
+        <Stack gap={3}>
           {[...Array(4)].map((_, i) => (
             <Surface key={i} className="p-5">
               <Stack gap={3}>
@@ -178,7 +177,7 @@ export default function QnaDetailPage() {
 
   if (fetchError) {
     return (
-      <DashboardLayout title="Q&A" onBack={() => navigate('/admin/qna')}>
+      <DashboardLayout>
         <PageError
           heading="Failed to load this Q&A board"
           description="It may have been removed or you may not have access."
@@ -200,10 +199,7 @@ export default function QnaDetailPage() {
     </div>
   ) : (
     <div>
-      <form
-        onSubmit={handleSubmitQuestion}
-        className="composer-shell"
-      >
+      <form onSubmit={handleSubmitQuestion} className="composer-shell">
         <textarea
           ref={inputRef}
           rows={1}
@@ -231,7 +227,7 @@ export default function QnaDetailPage() {
           </svg>
         </button>
       </form>
-      <p className="mt-1.5 pr-1 text-right text-xs text-slate-400">
+      <p className="mt-1 pr-1 text-right text-[11px] text-slate-300">
         Enter to post · Shift+Enter for new line
       </p>
     </div>
@@ -242,12 +238,7 @@ export default function QnaDetailPage() {
       title={post.title}
       subtitle={post.description || undefined}
       onBack={() => navigate('/admin/qna')}
-      actions={
-        <div className="flex items-center gap-2">
-          <VisibilityBadge visibility={post.visibility} />
-          <StatusBadge isClosed={isClosed} />
-        </div>
-      }
+      actions={<><StatusBadge isClosed={isClosed} /><VisibilityBadge visibility={post.visibility} /></>}
       bottomBar={questionForm}
     >
       {questions.length === 0 ? (
@@ -256,7 +247,7 @@ export default function QnaDetailPage() {
           description="Be the first to ask a question below."
         />
       ) : (
-        <Stack gap={4} >
+        <Stack gap={3}>
           {questions.map((q) => (
             <div key={q.id}>
               <QuestionCard
