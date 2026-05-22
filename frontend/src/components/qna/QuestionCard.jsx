@@ -269,10 +269,10 @@ export function ReplyThread({ qnaId, question, currentUserId, isAdmin, isClosed,
                   )}
                 </div>
                 {(canAccept || (!isClosed && (r.author_id === currentUserId || isAdmin))) && !r._isOptimistic && editingId !== r.id && (
-                  <div className="relative shrink-0 self-start mt-0.5" data-reply-menu>
+                  <div className="relative shrink-0 self-start mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150" data-reply-menu>
                     <button
                       onClick={() => setReplyMenuId(replyMenuId === r.id ? null : r.id)}
-                      className="p-1 rounded text-slate-300 hover:text-slate-600 hover:bg-slate-100 transition-colors duration-150"
+                      className="p-1 rounded text-slate-500 hover:text-slate-600 hover:bg-slate-100 transition-colors duration-150"
                       aria-label="Reply options"
                     >
                       <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
@@ -498,12 +498,12 @@ export function QuestionCard({ qnaId, question, currentUserId, isAdmin, isClosed
         </div>
 
         {/* Three-dots menu — always reserve space for structural consistency */}
-        <div ref={menuRef} className="relative shrink-0 ml-3 w-7">
+        <div ref={menuRef} className={`relative shrink-0 ml-3 w-7 opacity-0 group-hover:opacity-100 transition-opacity duration-150 ${menuOpen ? '!opacity-100' : ''}`}>
           {!isClosed && canModify && !editMode && (
             <>
               <button
                 onClick={() => setMenuOpen(v => !v)}
-                className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors duration-150 text-slate-300 hover:text-slate-600 hover:bg-slate-100 ${
+                className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors duration-150 text-slate-500 hover:text-slate-600 hover:bg-slate-100 ${
                   menuOpen ? 'bg-slate-100 text-slate-600' : ''
                 }`}
                 aria-label="More options"
