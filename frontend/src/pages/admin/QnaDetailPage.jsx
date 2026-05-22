@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import { useAuth } from '../../context/AuthContext'
-import { getQna } from '../../api/qna'
+import { getQna, regenerateShareCode, updateJoinEnabled } from '../../api/qna'
 import { listQuestions, createQuestion } from '../../api/questions'
 import { QuestionCard } from '@/components/qna/QuestionCard'
 import { useQnaRealtime } from '../../hooks/useQnaRealtime'
@@ -13,7 +13,107 @@ import { PageError } from '@/components/common/PageError'
 import { Skeleton } from '@/components/common/Skeleton'
 import { Surface } from '@/components/common/Surface'
 import { Stack } from '@/components/common/Stack'
+import { QRCode } from 'react-qr-code'
 
+// ─── Share dropdown ───────────────────────────────────────────────────────────
+function ShareDropdown({ shareUrl, joinEnabled, regenerating, togglingJoin, onRegenerate, onToggleJoin, onDownloadQr }) {
+  const [open, setOpen] = useState(false)
+  const wrapperRef = useRef(null)
+
+  useEffect(() => {
+    if (!open) return
+    function handleOutside(e) {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handleOutside)
+    return () => document.removeEventListener('mousedown', handleOutside)
+  }, [open])
+
+  return (
+    <div ref={wrapperRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 text-white transition-colors duration-150"
+      >
+        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+        </svg>
+        Share
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl border border-slate-200 shadow-xl shadow-slate-200/60 z-50 overflow-hidden">
+          <div className="px-4 py-3 border-b border-slate-100">
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest">Share this board</p>
+          </div>
+
+          <div className="p-4 space-y-4">
+            {/* URL row */}
+            <div className="flex items-center gap-2">
+              <input
+                readOnly
+                value={shareUrl}
+                className="flex-1 text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 font-mono truncate focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => { navigator.clipboard.writeText(shareUrl); toast.success('Link copied'); setOpen(false) }}
+                className="shrink-0 px-3 py-2 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white transition-colors duration-150"
+              >
+                Copy
+              </button>
+            </div>
+
+            {/* QR code */}
+            <div className="flex items-center gap-4">
+              <QRCode id="share-qr-svg" value={shareUrl} size={80} level="M" />
+              <div className="space-y-1">
+                <p className="text-xs text-slate-500 leading-snug">Scan to join on any device</p>
+                <button
+                  type="button"
+                  onClick={onDownloadQr}
+                  className="text-xs text-indigo-600 hover:text-indigo-700 transition-colors font-medium"
+                >
+                  Download QR
+                </button>
+              </div>
+            </div>
+
+            <div className="border-t border-slate-100 pt-3 flex items-center justify-between">
+              {/* Regenerate */}
+              <button
+                type="button"
+                disabled={regenerating}
+                onClick={onRegenerate}
+                className="text-xs text-slate-500 hover:text-red-600 disabled:text-slate-300 disabled:cursor-not-allowed transition-colors"
+              >
+                {regenerating ? 'Regenerating…' : 'Regenerate link'}
+              </button>
+
+              {/* Join toggle */}
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={joinEnabled}
+                  disabled={togglingJoin}
+                  onClick={onToggleJoin}
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 focus:outline-none disabled:opacity-50 ${joinEnabled ? 'bg-indigo-600' : 'bg-slate-300'}`}
+                >
+                  <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform duration-200 ${joinEnabled ? 'translate-x-4' : 'translate-x-1'}`} />
+                </button>
+                <span className="text-xs text-slate-600">Join enabled</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 export default function QnaDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -28,6 +128,9 @@ export default function QnaDetailPage() {
   const inputRef = useRef(null)
   const bottomRef = useRef(null)
   const [autoClosedByTimer, setAutoClosedByTimer] = useState(false)
+  const [joinEnabled, setJoinEnabled] = useState(true)
+  const [regenerating, setRegenerating] = useState(false)
+  const [togglingJoin, setTogglingJoin] = useState(false)
 
   useEffect(() => {
     if (!post?.end_at || post?.status === 'CLOSED') return
@@ -40,7 +143,9 @@ export default function QnaDetailPage() {
   useEffect(() => {
     Promise.all([getQna(id), listQuestions(id)])
       .then(([postRes, qRes]) => {
-        setPost(postRes.data.post)
+        const p = postRes.data.post
+        setPost(p)
+        setJoinEnabled(p.join_enabled ?? true)
         setQuestions(qRes.data.questions || [])
       })
       .catch(() => setFetchError(true))
@@ -109,6 +214,48 @@ export default function QnaDetailPage() {
     onReplyDelete,
     onQnaUpdate
   })
+
+  async function handleRegenerateCode() {
+    if (regenerating) return
+    setRegenerating(true)
+    try {
+      const res = await regenerateShareCode(id)
+      setPost((p) => ({ ...p, share_code: res.data.share_code }))
+      toast.success('Share link regenerated')
+    } catch {
+      toast.error('Failed to regenerate link')
+    } finally {
+      setRegenerating(false)
+    }
+  }
+
+  async function handleToggleJoin() {
+    if (togglingJoin) return
+    const next = !joinEnabled
+    setTogglingJoin(true)
+    setJoinEnabled(next)
+    try {
+      await updateJoinEnabled(id, next)
+    } catch {
+      setJoinEnabled(!next)
+      toast.error('Failed to update join setting')
+    } finally {
+      setTogglingJoin(false)
+    }
+  }
+
+  function handleDownloadQr() {
+    const svg = document.getElementById('share-qr-svg')
+    if (!svg) return
+    const data = new XMLSerializer().serializeToString(svg)
+    const blob = new Blob([data], { type: 'image/svg+xml' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `qna-${post.share_code || id}.svg`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
 
   async function handleSubmitQuestion(e) {
     e.preventDefault()
@@ -189,6 +336,7 @@ export default function QnaDetailPage() {
 
   const currentUserId = user?.id || user?.user_id
   const isClosed = post.status === 'CLOSED' || autoClosedByTimer || (post.end_at && new Date() >= new Date(post.end_at))
+  const shareUrl = post.share_code ? `${window.location.origin}/join/${post.share_code}` : null
 
   const questionForm = isClosed ? (
     <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm text-slate-500">
@@ -238,7 +386,23 @@ export default function QnaDetailPage() {
       title={post.title}
       subtitle={post.description || undefined}
       onBack={() => navigate('/admin/qna')}
-      actions={<><StatusBadge isClosed={isClosed} /><VisibilityBadge visibility={post.visibility} /></>}
+      actions={
+        <>
+          <StatusBadge isClosed={isClosed} />
+          <VisibilityBadge visibility={post.visibility} />
+          {shareUrl && (
+            <ShareDropdown
+              shareUrl={shareUrl}
+              joinEnabled={joinEnabled}
+              regenerating={regenerating}
+              togglingJoin={togglingJoin}
+              onRegenerate={handleRegenerateCode}
+              onToggleJoin={handleToggleJoin}
+              onDownloadQr={handleDownloadQr}
+            />
+          )}
+        </>
+      }
       bottomBar={questionForm}
     >
       {questions.length === 0 ? (

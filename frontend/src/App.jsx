@@ -15,6 +15,7 @@ const UsersPage          = lazy(() => import('./pages/admin/UsersPage'))
 const AnalyticsPage      = lazy(() => import('./pages/admin/AnalyticsPage'))
 const QnaListPage        = lazy(() => import('./pages/user/QnaListPage'))
 const QnaFeedPage        = lazy(() => import('./pages/user/QnaDetailPage'))
+const JoinBoardPage      = lazy(() => import('./pages/public/JoinBoardPage'))
 
 function PageSkeleton() {
   return (
@@ -45,6 +46,9 @@ export default function App() {
             {/* User routes */}
             <Route path="/user/qna" element={<ProtectedRoute><QnaListPage /></ProtectedRoute>} />
             <Route path="/user/qna/:id" element={<ProtectedRoute><QnaFeedPage /></ProtectedRoute>} />
+
+            {/* Public share-link routes — no auth required */}
+            <Route path="/join/:shareCode" element={<JoinBoardPage />} />
 
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>

@@ -8,12 +8,11 @@ const { isBoardClosed } = require('../utils/boardUtils');
 const listQuestions = async (req, res) => {
   try {
     const { qnaId } = req.params;
-    const userId = req.user.user_id;
+    const userId = req.user?.user_id || req.userSession?.user_id || null;
 
-    const [questions, likedSet] = await Promise.all([
-      Question.listByQna(qnaId),
-      Question.getAllLikedByUser(userId),
-    ]);
+    const questions = await Question.listByQna(qnaId);
+
+    const likedSet = userId ? await Question.getAllLikedByUser(userId) : new Set();
 
     const result = questions.map((q) => ({
       ...q,
@@ -43,11 +42,17 @@ const createQuestion = async (req, res) => {
   }
 
   try {
+    const isPublicSession = !!req.userSession;
+    const authorId = isPublicSession ? req.userSession.user_id : req.user.user_id;
+    const authorName = isPublicSession
+      ? (req.userSession.is_anonymous ? 'Anonymous' : (req.userSession.display_name || 'Anonymous'))
+      : req.user.name;
+
     const question = await Question.create({
       qna_id: qnaId,
       text: sanitized,
-      author_id: req.user.user_id,
-      author_name: req.user.name,
+      author_id: authorId,
+      author_name: authorName,
     });
 
     const result = { ...question, liked_by_me: false };
@@ -124,22 +129,21 @@ const deleteQuestion = async (req, res) => {
 // PATCH /api/qna/:qnaId/questions/:qId/like
 const toggleLike = async (req, res) => {
   const { qId, qnaId } = req.params;
-  const userId = req.user.user_id;
+  const userId = req.user?.user_id || req.userSession?.user_id || null;
 
   try {
-    if (isBoardClosed(req.qnaPost)) {
-      return error(res, 'This Q&A board is closed.', 403);
-    }
+    if (!userId) return error(res, 'Authentication required to like', 401);
+    if (isBoardClosed(req.qnaPost)) return error(res, 'This Q&A board is closed.', 403);
 
     const question = await Question.findById(qId);
     if (!question || question.is_deleted) return error(res, 'Question not found', 404);
+
+    let likes_count, liked_by_me;
 
     const { data, error: rpcErr } = await db.rpc('toggle_question_like', {
       p_question_id: qId,
       p_user_id: userId,
     });
-
-    let likes_count, liked_by_me;
 
     if (!rpcErr && data?.[0]) {
       likes_count = data[0].likes_count;
@@ -173,7 +177,7 @@ const trackView = async (req, res) => {
     const question = await Question.findById(qId);
     if (!question) return error(res, 'Question not found', 404);
     return success(res, { view_count: question.view_count });
-  } catch (err) {
+  } catch {
     return error(res, 'Failed to track view.', 500);
   }
 };

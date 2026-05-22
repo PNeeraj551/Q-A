@@ -1,9 +1,24 @@
+const crypto = require('crypto');
 const db = require('../config/supabase');
 
-const COLS = 'id, title, description, visibility, status, created_by, end_at, created_at, updated_at';
+const COLS = 'id, title, description, visibility, status, created_by, end_at, share_code, join_enabled, created_at, updated_at';
+
+function generateShareCode() {
+  return crypto.randomBytes(6).toString('base64url').slice(0, 9).toUpperCase();
+}
 
 async function findById(id) {
   const { data, error } = await db.from('qna_posts').select(COLS).eq('id', id).maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+async function findByShareCode(shareCode) {
+  const { data, error } = await db
+    .from('qna_posts')
+    .select(COLS)
+    .eq('share_code', shareCode)
+    .maybeSingle();
   if (error) throw error;
   return data;
 }
@@ -57,6 +72,8 @@ async function getUserAllowedQnaIds(userId) {
 
 module.exports = {
   findById,
+  findByShareCode,
+  generateShareCode,
   create,
   updateById,
   deleteById,

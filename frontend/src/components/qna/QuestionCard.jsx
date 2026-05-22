@@ -254,7 +254,7 @@ export function ReplyThread({ qnaId, question, currentUserId, isAdmin, isClosed,
                       <button
                         onClick={() => !isClosed && !r._isOptimistic && handleReplyLike(r)}
                         aria-label={r.liked_by_me ? 'Unlike reply' : 'Like reply'}
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border transition-colors duration-100 select-none ${
+                        className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium border transition-colors duration-100 select-none ${
                           isClosed || r._isOptimistic
                             ? 'border-slate-100 text-slate-300 cursor-default'
                             : r.liked_by_me
@@ -585,7 +585,7 @@ export function QuestionCard({ qnaId, question, currentUserId, isAdmin, isClosed
             <button
               onClick={!isClosed ? handleLike : undefined}
               aria-label={question.liked_by_me ? 'Unlike question' : 'Like question'}
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border transition-colors duration-100 select-none ${
+              className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium border transition-colors duration-100 select-none ${
                 isClosed
                   ? 'border-slate-100 text-slate-300 cursor-default'
                   : question.liked_by_me

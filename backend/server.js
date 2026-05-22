@@ -11,6 +11,7 @@ const userRoutes = require('./src/routes/userRoutes');
 const qnaRoutes = require('./src/routes/qnaRoutes');
 const questionRoutes = require('./src/routes/questionRoutes');
 const replyRoutes = require('./src/routes/replyRoutes');
+const userAccessRoutes = require('./src/routes/userAccessRoutes');
 
 const errorMiddleware = require('./src/middlewares/errorMiddleware');
 const errorLogger = require('./src/middlewares/errorLogger');
@@ -77,6 +78,7 @@ app.use(globalLimiter);
 
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api', userAccessRoutes);
 app.use('/api/qna', qnaRoutes);
 app.use('/api/qna/:qnaId/questions', questionRoutes);
 app.use('/api/qna/:qnaId/questions/:qId/replies', replyRoutes);

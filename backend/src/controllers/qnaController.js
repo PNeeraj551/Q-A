@@ -5,7 +5,7 @@ const User = require('../models/User');
 const { success, error } = require('../utils/responseUtils');
 const { broadcastToChannel } = require('../utils/broadcast');
 
-const QNA_COLS = 'id, title, description, visibility, status, created_by, end_at, created_at, updated_at';
+const QNA_COLS = 'id, title, description, visibility, status, created_by, end_at, share_code, join_enabled, created_at, updated_at';
 
 // GET /api/qna
 const listQna = async (req, res) => {
@@ -79,7 +79,11 @@ const listQna = async (req, res) => {
 // GET /api/qna/:id
 const getQna = async (req, res) => {
   try {
-    const post = req.qnaPost;
+    let post = req.qnaPost;
+
+    if (!post.share_code) {
+      post = await QnaPost.updateById(post.id, { share_code: QnaPost.generateShareCode() });
+    }
 
     return success(res, {
       post: {
@@ -121,6 +125,8 @@ const createQna = async (req, res) => {
       visibility,
       end_at: end_at ? new Date(end_at).toISOString() : null,
       created_by: req.user.user_id,
+      share_code: QnaPost.generateShareCode(),
+      join_enabled: true,
     });
 
     // Insert allowed_users into junction table for PRIVATE boards
@@ -138,7 +144,7 @@ const createQna = async (req, res) => {
 
 // PATCH /api/qna/:id
 const updateQna = async (req, res) => {
-  const { title, description, visibility, allowed_users, status, end_at } = req.body;
+  const { title, description, visibility, allowed_users, status, end_at, join_enabled } = req.body;
 
   try {
     const post = await QnaPost.findById(req.params.id);
@@ -169,6 +175,10 @@ const updateQna = async (req, res) => {
         return error(res, 'Status must be OPEN or CLOSED', 400);
       }
       updates.status = status;
+    }
+
+    if (join_enabled !== undefined) {
+      updates.join_enabled = Boolean(join_enabled);
     }
 
     if (end_at !== undefined) {
@@ -278,4 +288,19 @@ const removeUser = async (req, res) => {
   }
 };
 
-module.exports = { listQna, getQna, createQna, updateQna, deleteQna, getUsers, addUser, removeUser };
+// POST /api/qna/:id/regenerate-code
+const regenerateShareCode = async (req, res) => {
+  try {
+    const post = await QnaPost.findById(req.params.id);
+    if (!post) return error(res, 'Q&A not found', 404);
+
+    const newCode = QnaPost.generateShareCode();
+    const updated = await QnaPost.updateById(post.id, { share_code: newCode });
+
+    return success(res, { share_code: updated.share_code });
+  } catch (err) {
+    return error(res, 'Failed to regenerate share code.', 500);
+  }
+};
+
+module.exports = { listQna, getQna, createQna, updateQna, deleteQna, getUsers, addUser, removeUser, regenerateShareCode };

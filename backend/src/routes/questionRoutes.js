@@ -1,18 +1,19 @@
 const express = require('express');
 const router = express.Router({ mergeParams: true });
 const authMiddleware = require('../middlewares/authMiddleware');
-const qnaAccessGuard = require('../middlewares/qnaAccessGuard');
+const withBoardSession = require('../middlewares/withBoardSession');
 const { listQuestions, createQuestion, updateQuestion, deleteQuestion, toggleLike, markAcceptedReply, trackView } = require('../controllers/questionController');
 
-const withAccess = [authMiddleware, qnaAccessGuard];
+// JWT-only (edit/delete/accept require proven identity)
 const authenticated = [authMiddleware];
 
-router.get('/', withAccess, listQuestions);
-router.post('/', withAccess, createQuestion);
+// Accepts JWT or session token (read, post, like)
+router.get('/', withBoardSession, listQuestions);
+router.post('/', withBoardSession, createQuestion);
 router.patch('/:qId', authenticated, updateQuestion);
 router.delete('/:qId', authenticated, deleteQuestion);
-router.patch('/:qId/like', withAccess, toggleLike);
+router.patch('/:qId/like', withBoardSession, toggleLike);
 router.patch('/:qId/accept-reply', authenticated, markAcceptedReply);
-router.patch('/:qId/view', authenticated, trackView);
+router.patch('/:qId/view', withBoardSession, trackView);
 
 module.exports = router;

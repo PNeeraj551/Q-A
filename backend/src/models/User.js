@@ -8,6 +8,12 @@ async function findByEmail(email) {
   return data;
 }
 
+async function findByEmailRaw(email) {
+  const { data, error } = await db.from('users').select(COLS).eq('email', email).maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
 async function findById(id) {
   const { data, error } = await db.from('users').select(COLS).eq('id', id).maybeSingle();
   if (error) throw error;
@@ -44,4 +50,4 @@ async function updateById(id, updates) {
   return data;
 }
 
-module.exports = { findByEmail, findById, findAll, findByIds, create, updateById };
+module.exports = { findByEmail, findByEmailRaw, findById, findAll, findByIds, create, updateById };

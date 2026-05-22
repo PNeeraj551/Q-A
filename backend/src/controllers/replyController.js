@@ -9,11 +9,12 @@ const { isBoardClosed } = require('../utils/boardUtils');
 const listReplies = async (req, res) => {
   try {
     const { qId } = req.params;
-    const userId = req.user.user_id;
-    const [replies, likedSet] = await Promise.all([
-      Reply.listByQuestion(qId),
-      Reply.getAllLikedByUser(userId),
-    ]);
+    const userId = req.user?.user_id || req.userSession?.user_id || null;
+
+    const replies = await Reply.listByQuestion(qId);
+
+    const likedSet = userId ? await Reply.getAllLikedByUser(userId) : new Set();
+
     const result = replies.map((r) => ({ ...r, liked_by_me: likedSet.has(r.id) }));
     return success(res, { replies: result });
   } catch (err) {
@@ -41,12 +42,18 @@ const createReply = async (req, res) => {
     const question = await Question.findById(qId);
     if (!question || question.is_deleted) return error(res, 'Question not found', 404);
 
+    const isPublicSession = !!req.userSession;
+    const authorId = isPublicSession ? req.userSession.user_id : req.user.user_id;
+    const authorName = isPublicSession
+      ? (req.userSession.is_anonymous ? 'Anonymous' : (req.userSession.display_name || 'Anonymous'))
+      : req.user.name;
+
     const reply = await Reply.create({
       question_id: qId,
       qna_id: qnaId,
       text: text.trim(),
-      author_id: req.user.user_id,
-      author_name: req.user.name,
+      author_id: authorId,
+      author_name: authorName,
     });
 
     await db.rpc('increment_reply_count', { p_question_id: qId });
@@ -111,26 +118,24 @@ const deleteReply = async (req, res) => {
 
 // PATCH /api/qna/:qnaId/questions/:qId/replies/:rId/like
 const toggleLike = async (req, res) => {
-  const { rId, qnaId } = req.params;
-  const userId = req.user.user_id;
+  const { rId } = req.params;
+  const userId = req.user?.user_id || req.userSession?.user_id || null;
 
   try {
-    if (isBoardClosed(req.qnaPost)) {
-      return error(res, 'This Q&A board is closed.', 403);
-    }
+    if (!userId) return error(res, 'Authentication required to like', 401);
+    if (isBoardClosed(req.qnaPost)) return error(res, 'This Q&A board is closed.', 403);
 
     const reply = await Reply.findById(rId);
     if (!reply || reply.is_deleted) return error(res, 'Reply not found', 404);
 
     const already_liked = await Reply.isLikedByUser(rId, userId);
-
     if (already_liked) {
       await db.from('reply_likes').delete().eq('reply_id', rId).eq('user_id', userId);
     } else {
       await db.from('reply_likes').upsert({ reply_id: rId, user_id: userId });
     }
-
     const liked_by_me = !already_liked;
+
     const { count } = await db.from('reply_likes').select('*', { count: 'exact', head: true }).eq('reply_id', rId);
     const likes_count = count || 0;
     await db.from('replies').update({ likes_count }).eq('id', rId);

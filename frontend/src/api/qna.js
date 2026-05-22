@@ -17,3 +17,9 @@ export const addQnaUser = (id, userId) =>
 
 export const removeQnaUser = (id, userId) =>
   axiosInstance.delete(`/qna/${id}/users/${userId}`)
+
+export const regenerateShareCode = (id) =>
+  axiosInstance.post(`/qna/${id}/regenerate-code`)
+
+export const updateJoinEnabled = (id, enabled) =>
+  axiosInstance.patch(`/qna/${id}`, { join_enabled: enabled })

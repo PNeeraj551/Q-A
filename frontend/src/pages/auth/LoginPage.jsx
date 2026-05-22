@@ -97,7 +97,7 @@ export default function LoginPage() {
       if (userData.role === 'admin') {
         navigate('/admin/qna', { replace: true })
       } else {
-        navigate('/user/qna', { replace: true })
+        setServerError('Admin access only. Use your shared board link to participate.')
       }
     } catch (err) {
       const status = err.response?.status
