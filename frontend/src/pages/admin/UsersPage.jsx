@@ -439,9 +439,6 @@ export default function UsersPage() {
                             </div>
                             <div className="min-w-0">
                               <span className="font-medium text-slate-900 truncate block leading-snug">{user.name}</span>
-                              {user.is_root && (
-                                <span className="text-[10px] font-mono text-slate-400 tracking-wide leading-none">root</span>
-                              )}
                             </div>
                           </div>
                         )}
