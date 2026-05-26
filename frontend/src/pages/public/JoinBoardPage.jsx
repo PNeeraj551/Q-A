@@ -404,8 +404,80 @@ export default function JoinBoardPage() {
   const [session, setSession] = useState(null)
   const [invalidMsg, setInvalidMsg] = useState('')
   const [email, setEmail] = useState('')
-  const [otp, setOtp] = useState('')
+  const [digits, setDigits] = useState(Array(6).fill(''))
+  const [otpError, setOtpError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [cooldown, setCooldown] = useState(0)
+  const inputRefs = useRef([])
+  const timerRef = useRef(null)
+
+  const otp = digits.join('')
+
+  useEffect(() => {
+    return () => { if (timerRef.current) clearInterval(timerRef.current) }
+  }, [])
+
+  useEffect(() => {
+    if (pageState === 'otp') setTimeout(() => inputRefs.current[0]?.focus(), 50)
+  }, [pageState])
+
+  function startCooldown() {
+    setCooldown(60)
+    timerRef.current = setInterval(() => {
+      setCooldown((c) => {
+        if (c <= 1) { clearInterval(timerRef.current); return 0 }
+        return c - 1
+      })
+    }, 1000)
+  }
+
+  function handleOtpChange(e, idx) {
+    const val = e.target.value.replace(/\D/g, '')
+    if (!val) return
+    const next = [...digits]
+    next[idx] = val[val.length - 1]
+    setDigits(next)
+    setOtpError('')
+    if (idx < 5) inputRefs.current[idx + 1]?.focus()
+  }
+
+  function handleOtpKeyDown(e, idx) {
+    if (e.key === 'Backspace') {
+      e.preventDefault()
+      if (digits[idx]) {
+        const next = [...digits]; next[idx] = ''; setDigits(next)
+      } else if (idx > 0) {
+        const next = [...digits]; next[idx - 1] = ''; setDigits(next)
+        inputRefs.current[idx - 1]?.focus()
+      }
+    } else if (e.key === 'ArrowLeft' && idx > 0) {
+      inputRefs.current[idx - 1]?.focus()
+    } else if (e.key === 'ArrowRight' && idx < 5) {
+      inputRefs.current[idx + 1]?.focus()
+    }
+  }
+
+  function handleOtpPaste(e) {
+    e.preventDefault()
+    const paste = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6)
+    if (!paste) return
+    const next = [...paste.split(''), ...Array(6).fill('')].slice(0, 6)
+    setDigits(next)
+    setOtpError('')
+    inputRefs.current[Math.min(paste.length, 5)]?.focus()
+  }
+
+  async function handleResend() {
+    if (cooldown > 0 || submitting) return
+    setDigits(Array(6).fill(''))
+    setOtpError('')
+    try {
+      await requestJoinOtp(shareCode, email.trim())
+      startCooldown()
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to resend code.')
+    }
+  }
 
   useEffect(() => {
     getBoardPreview(shareCode)
@@ -440,6 +512,7 @@ export default function JoinBoardPage() {
     try {
       await requestJoinOtp(shareCode, email.trim())
       setPageState('otp')
+      startCooldown()
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to send code. Please try again.')
     } finally {
@@ -449,10 +522,11 @@ export default function JoinBoardPage() {
 
   async function handleVerifyOtp(e) {
     e.preventDefault()
-    if (otp.trim().length !== 6 || submitting) return
+    if (otp.length !== 6 || submitting) return
+    setOtpError('')
     setSubmitting(true)
     try {
-      const res = await verifyJoinOtp(shareCode, email, otp.trim())
+      const res = await verifyJoinOtp(shareCode, email, otp)
       const s = res.data
       localStorage.setItem(`qs_token_${board.id}`, s.session_token)
       localStorage.setItem(`qs_session_${board.id}`, JSON.stringify({
@@ -533,39 +607,80 @@ export default function JoinBoardPage() {
         {/* OTP form */}
         {pageState === 'otp' && board && (
           <div className="flex-1 flex items-center justify-center px-6">
-            <div className="w-full max-w-sm">
-              <div className="text-center mb-6">
-                <h2 className="text-xl font-bold text-slate-900">Check your email</h2>
-                <p className="text-sm text-slate-500 mt-2 leading-relaxed">
+            <div className="w-full max-w-md">
+              <div className="mb-6 text-center">
+                <h2 className="text-3xl font-bold text-slate-800">Check your email</h2>
+                <p className="mt-2 text-sm text-slate-500">Enter your Athiva email to receive a login code</p>
+              </div>
+
+              <div className="bg-white rounded-2xl shadow-2xl shadow-slate-200/70 border border-slate-200/80 p-8">
+                <p className="mb-5 text-center text-sm text-slate-500">
                   We sent a 6-digit code to <span className="font-medium text-slate-700">{email}</span>
                 </p>
+
+                <form onSubmit={handleVerifyOtp} className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-slate-700 text-center">Enter your code</label>
+                    <div className="flex gap-2.5 justify-center">
+                      {digits.map((d, i) => (
+                        <input
+                          key={i}
+                          ref={(el) => { inputRefs.current[i] = el }}
+                          type="text"
+                          inputMode="numeric"
+                          maxLength={1}
+                          value={d}
+                          onChange={(e) => handleOtpChange(e, i)}
+                          onKeyDown={(e) => handleOtpKeyDown(e, i)}
+                          onPaste={handleOtpPaste}
+                          onFocus={(e) => e.target.select()}
+                          disabled={submitting}
+                          aria-label={`Digit ${i + 1}`}
+                          autoComplete={i === 0 ? 'one-time-code' : 'off'}
+                          className={[
+                            'w-11 h-12 text-center text-lg font-semibold rounded-lg border',
+                            'transition-all duration-150 focus:outline-none',
+                            'focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20',
+                            'disabled:opacity-50 disabled:cursor-not-allowed',
+                            otpError
+                              ? 'border-red-400 bg-red-50 text-red-900'
+                              : d
+                              ? 'border-slate-300 bg-white text-slate-900'
+                              : 'border-slate-200 bg-white text-slate-900',
+                          ].join(' ')}
+                        />
+                      ))}
+                    </div>
+                    {otpError && <p className="text-xs text-red-500 text-center mt-0.5">{otpError}</p>}
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={submitting || otp.length !== 6}
+                    className="w-full h-10 rounded-lg bg-blue-800 hover:bg-blue-900 text-white text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
+                  >
+                    {submitting ? 'Verifying…' : 'Join board'}
+                  </button>
+
+                  <div className="flex flex-col items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={handleResend}
+                      disabled={cooldown > 0 || submitting}
+                      className="text-sm text-blue-600 hover:text-blue-700 disabled:text-slate-400 disabled:cursor-not-allowed transition-colors duration-200"
+                    >
+                      {cooldown > 0 ? `Resend code in ${cooldown}s` : 'Resend code'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setPageState('join'); setDigits(Array(6).fill('')); setOtpError('') }}
+                      className="text-xs text-slate-400 hover:text-slate-600 transition-colors duration-200"
+                    >
+                      ← Back to email
+                    </button>
+                  </div>
+                </form>
               </div>
-              <form onSubmit={handleVerifyOtp} className="space-y-3">
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  placeholder="000000"
-                  required
-                  autoFocus
-                  maxLength={6}
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-center text-2xl font-mono tracking-widest text-slate-900 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 bg-white shadow-sm"
-                />
-                <button
-                  type="submit"
-                  disabled={submitting || otp.length !== 6}
-                  className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-semibold hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150 shadow-sm"
-                >
-                  {submitting ? 'Verifying…' : 'Join board'}
-                </button>
-              </form>
-              <button
-                onClick={() => setPageState('join')}
-                className="w-full mt-3 text-sm text-slate-400 hover:text-slate-600 transition-colors"
-              >
-                ← Use a different email
-              </button>
             </div>
           </div>
         )}
