@@ -1,6 +1,7 @@
 const db = require('../config/supabase');
 const QnaPost = require('../models/QnaPost');
 const { error } = require('../utils/responseUtils');
+const logger = require('../utils/logger');
 
 const qnaAccessGuard = async (req, res, next) => {
   const qnaId = req.params.id || req.params.qnaId;
@@ -37,6 +38,7 @@ const qnaAccessGuard = async (req, res, next) => {
     req.qnaPost = post;
     next();
   } catch (err) {
+    logger.error('qnaAccessGuard error', { err: err.message, qnaId });
     return error(res, 'Q&A not found', 404);
   }
 };

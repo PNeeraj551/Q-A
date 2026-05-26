@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-const base = axios.create({ baseURL: import.meta.env.VITE_API_URL || '/api' })
+const base = axios.create({ baseURL: import.meta.env.VITE_API_URL || '/api', withCredentials: true })
 
 export const getBoardPreview = (shareCode) =>
   base.get(`/join/${shareCode}`)

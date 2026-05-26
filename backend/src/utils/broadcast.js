@@ -1,10 +1,11 @@
 const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } = require('../config/env');
+const logger = require('./logger');
 
-const BROADCAST_URL = `${SUPABASE_URL}/realtime/v1/api/broadcast`;
+const BROADCAST_URL = `${SUPABASE_URL.replace(/\/$/, '')}/realtime/v1/api/broadcast`;
 
 async function broadcastToChannel(channel, event, payload) {
   try {
-    await fetch(BROADCAST_URL, {
+    const res = await fetch(BROADCAST_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -15,8 +16,12 @@ async function broadcastToChannel(channel, event, payload) {
         messages: [{ topic: channel, event, payload }],
       }),
     });
-  } catch {
-    // non-fatal — client sees stale data until next poll or refresh
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      logger.error('[broadcast] HTTP error', { status: res.status, channel, event, body });
+    }
+  } catch (err) {
+    logger.error('[broadcast] fetch error', { message: err.message, channel, event });
   }
 }
 

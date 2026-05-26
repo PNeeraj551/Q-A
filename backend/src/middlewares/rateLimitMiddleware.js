@@ -25,4 +25,21 @@ const otpLimiter = rateLimit({
   message: { success: false, error: 'Too many OTP requests. Please wait 15 minutes.' },
 });
 
-module.exports = { globalLimiter, authLimiter, otpLimiter };
+const voteLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: NODE_ENV === 'production' ? 30 : 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many votes. Please slow down.' },
+});
+
+const deviceTokenLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: NODE_ENV === 'production' ? 10 : 100,
+  keyGenerator: (req) => req.headers['x-device-token'] || req.ip,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many votes from this device. Please slow down.' },
+});
+
+module.exports = { globalLimiter, authLimiter, otpLimiter, voteLimiter, deviceTokenLimiter };

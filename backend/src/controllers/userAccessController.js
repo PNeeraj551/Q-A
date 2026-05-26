@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const { COOKIE_NAME, cookieOptions } = require('../config/cookies');
 const QnaPost = require('../models/QnaPost');
 const Otp = require('../models/Otp');
 const UserSession = require('../models/UserSession');
@@ -20,6 +21,11 @@ const getBoard = async (req, res) => {
     if (!post) return error(res, 'Board not found', 404);
     if (!post.join_enabled) return error(res, 'Joining is disabled for this board', 403);
     if (isBoardClosed(post)) return error(res, 'This board has ended', 410);
+
+    const existingToken = req.cookies?.[COOKIE_NAME];
+    if (!existingToken) {
+      res.cookie(COOKIE_NAME, crypto.randomUUID(), cookieOptions);
+    }
 
     return success(res, {
       board: {
@@ -151,6 +157,7 @@ const toggleAnonymous = async (req, res) => {
     const updated = await UserSession.updateAnonymous(req.userSession.id, !req.userSession.is_anonymous);
     return success(res, { is_anonymous: updated.is_anonymous });
   } catch (err) {
+    logger.error('toggleAnonymous error', { err: err.message });
     return error(res, 'Failed to update anonymous setting.', 500);
   }
 };

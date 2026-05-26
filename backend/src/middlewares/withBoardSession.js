@@ -3,6 +3,7 @@ const User = require('../models/User');
 const UserSession = require('../models/UserSession');
 const QnaPost = require('../models/QnaPost');
 const { error } = require('../utils/responseUtils');
+const { COOKIE_NAME } = require('../config/cookies');
 
 // Accepts either JWT (admin/user) or X-Session-Token (public participant).
 // Attaches req.user OR req.userSession, and req.qnaPost.
@@ -66,6 +67,24 @@ const withBoardSession = async (req, res, next) => {
     } catch {
       return error(res, 'Session validation failed', 401);
     }
+  }
+
+  // ── Device token path (HttpOnly cookie) ──────────────────────────
+  const deviceToken = req.cookies?.[COOKIE_NAME];
+  if (deviceToken) {
+    if (qnaId) {
+      try {
+        const post = await QnaPost.findById(qnaId);
+        if (!post) return error(res, 'Board not found', 404);
+        req.qnaPost = post;
+      } catch {
+        return error(res, 'Board not found', 404);
+      }
+    }
+    req.deviceToken = deviceToken;
+    req.user = null;
+    req.userSession = null;
+    return next();
   }
 
   return error(res, 'Authentication required', 401);

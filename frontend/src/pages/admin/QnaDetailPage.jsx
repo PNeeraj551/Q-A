@@ -189,18 +189,6 @@ export default function QnaDetailPage() {
     )
   }, [])
 
-  const onReplyNew = useCallback(({ question_id }) => {
-    setQuestions((prev) =>
-      prev.map((q) => String(q.id) === String(question_id) ? { ...q, reply_count: q.reply_count + 1 } : q)
-    )
-  }, [])
-
-  const onReplyDelete = useCallback(({ question_id }) => {
-    setQuestions((prev) =>
-      prev.map((q) => String(q.id) === String(question_id) ? { ...q, reply_count: Math.max(0, q.reply_count - 1) } : q)
-    )
-  }, [])
-
   const onQnaUpdate = useCallback((updatedPost) => {
     setPost(updatedPost)
   }, [])
@@ -210,9 +198,7 @@ export default function QnaDetailPage() {
     onQuestionUpdate,
     onQuestionDelete,
     onQuestionLike,
-    onReplyNew,
-    onReplyDelete,
-    onQnaUpdate
+    onQnaUpdate,
   })
 
   async function handleRegenerateCode() {
@@ -271,7 +257,6 @@ export default function QnaDetailPage() {
       author_id: user?.id || user?.user_id,
       author_name: user?.name,
       likes_count: 0,
-      reply_count: 0,
       liked_by_me: false,
       created_at: new Date().toISOString(),
       _isOptimistic: true,
@@ -323,18 +308,21 @@ export default function QnaDetailPage() {
   }
 
   if (fetchError) {
+    const goBack = user?.role === 'admin' ? '/admin/qna' : '/user/qna'
     return (
       <DashboardLayout>
         <PageError
           heading="Failed to load this Q&A board"
           description="It may have been removed or you may not have access."
-          action={{ label: 'Back to Q&A Boards', onClick: () => navigate('/admin/qna') }}
+          action={{ label: 'Back to Q&A Boards', onClick: () => navigate(goBack) }}
         />
       </DashboardLayout>
     )
   }
 
+  const isAdmin = user?.role === 'admin'
   const currentUserId = user?.id || user?.user_id
+  const backRoute = isAdmin ? '/admin/qna' : '/user/qna'
   const isClosed = post.status === 'CLOSED' || autoClosedByTimer || (post.end_at && new Date() >= new Date(post.end_at))
   const shareUrl = post.share_code ? `${window.location.origin}/join/${post.share_code}` : null
 
@@ -369,7 +357,7 @@ export default function QnaDetailPage() {
             }
           }}
         />
-        <button type="submit" disabled={submitting} aria-label="Post question" className="composer-send">
+        <button type="submit" disabled={submitting || !questionText.trim()} aria-label="Post question" className="composer-send">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
           </svg>
@@ -385,12 +373,12 @@ export default function QnaDetailPage() {
     <DashboardLayout
       title={post.title}
       subtitle={post.description || undefined}
-      onBack={() => navigate('/admin/qna')}
+      onBack={() => navigate(backRoute)}
       actions={
         <>
           <StatusBadge isClosed={isClosed} />
           <VisibilityBadge visibility={post.visibility} />
-          {shareUrl && (
+          {shareUrl && isAdmin && (
             <ShareDropdown
               shareUrl={shareUrl}
               joinEnabled={joinEnabled}
@@ -411,21 +399,21 @@ export default function QnaDetailPage() {
           description="Be the first to ask a question below."
         />
       ) : (
-        <Stack gap={3}>
+        <div className="space-y-2.5">
           {questions.map((q) => (
-            <div key={q.id}>
+            <div key={q.id} className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
               <QuestionCard
                 qnaId={id}
                 question={q}
                 currentUserId={currentUserId}
-                isAdmin={true}
+                isAdmin={isAdmin}
                 isClosed={isClosed}
                 onUpdate={handleUpdate}
                 onDelete={handleDelete}
               />
             </div>
           ))}
-        </Stack>
+        </div>
       )}
       <div ref={bottomRef} />
     </DashboardLayout>

@@ -20,3 +20,9 @@ export const acceptReply = (qnaId, qId, replyId) =>
 
 export const trackView = (qnaId, qId) =>
   axiosInstance.patch(`/qna/${qnaId}/questions/${qId}/view`)
+
+export const markAnsweredInSlack = (qnaId, qId) =>
+  axiosInstance.patch(`/qna/${qnaId}/questions/${qId}/slack-answer`)
+
+export const pushToSlack = (qnaId, qId) =>
+  axiosInstance.post(`/qna/${qnaId}/questions/${qId}/push-slack`)

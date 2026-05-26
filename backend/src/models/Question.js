@@ -1,6 +1,6 @@
 const db = require('../config/supabase');
 
-const COLS = 'id, qna_id, text, author_id, author_name, likes_count, reply_count, view_count, accepted_reply_id, is_deleted, created_at, updated_at';
+const COLS = 'id, qna_id, text, author_id, author_name, likes_count, reply_count, view_count, accepted_reply_id, answered_in_slack, is_deleted, created_at, updated_at';
 
 async function findById(id) {
   const { data, error } = await db.from('questions').select(COLS).eq('id', id).maybeSingle();

@@ -27,7 +27,13 @@ export function useQnaRealtime(qnaId, {
       .on('broadcast', { event: 'reply:new' },       ({ payload }) => cbRefs.current.onReplyNew?.(payload))
       .on('broadcast', { event: 'reply:delete' },    ({ payload }) => cbRefs.current.onReplyDelete?.(payload))
       .on('broadcast', { event: 'qna:updated' },     ({ payload }) => cbRefs.current.onQnaUpdate?.(payload))
-      .subscribe()
+      .subscribe((status, err) => {
+        if (status === 'SUBSCRIBED') {
+          console.log(`[realtime] subscribed to qna_${qnaId}`)
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.error(`[realtime] subscription failed for qna_${qnaId}:`, status, err)
+        }
+      })
 
     return () => {
       supabase.removeChannel(channel)

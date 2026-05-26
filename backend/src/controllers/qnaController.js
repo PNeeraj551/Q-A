@@ -1,9 +1,9 @@
 const db = require('../config/supabase');
 const QnaPost = require('../models/QnaPost');
 const Question = require('../models/Question');
-const User = require('../models/User');
 const { success, error } = require('../utils/responseUtils');
 const { broadcastToChannel } = require('../utils/broadcast');
+const logger = require('../utils/logger');
 
 const QNA_COLS = 'id, title, description, visibility, status, created_by, end_at, share_code, join_enabled, created_at, updated_at';
 
@@ -72,6 +72,7 @@ const listQna = async (req, res) => {
       totalPages: Math.ceil((total || 0) / limitNum),
     });
   } catch (err) {
+    logger.error('listQna error', { err: err.message });
     return error(res, 'Failed to load Q&A posts.', 500);
   }
 };
@@ -92,13 +93,14 @@ const getQna = async (req, res) => {
       },
     });
   } catch (err) {
+    logger.error('getQna error', { err: err.message });
     return error(res, 'Failed to load Q&A post.', 500);
   }
 };
 
 // POST /api/qna
 const createQna = async (req, res) => {
-  const { title, description, visibility, allowed_users, end_at } = req.body;
+  const { title, description, visibility, end_at } = req.body;
 
   if (!title || typeof title !== 'string' || !title.trim()) {
     return error(res, 'Title is required', 400);
@@ -129,22 +131,18 @@ const createQna = async (req, res) => {
       join_enabled: true,
     });
 
-    // Insert allowed_users into junction table for PRIVATE boards
-    if (visibility === 'PRIVATE' && Array.isArray(allowed_users) && allowed_users.length > 0) {
-      await QnaPost.setAllowedUsers(post.id, allowed_users);
-    }
-
     await broadcastToChannel('qna_global', 'qna:new', { post: { ...post, question_count: 0 } });
 
     return success(res, { post }, 201);
   } catch (err) {
+    logger.error('createQna error', { err: err.message });
     return error(res, 'Failed to create Q&A post.', 500);
   }
 };
 
 // PATCH /api/qna/:id
 const updateQna = async (req, res) => {
-  const { title, description, visibility, allowed_users, status, end_at, join_enabled } = req.body;
+  const { title, description, visibility, status, end_at, join_enabled } = req.body;
 
   try {
     const post = await QnaPost.findById(req.params.id);
@@ -196,15 +194,11 @@ const updateQna = async (req, res) => {
 
     const updated = await QnaPost.updateById(post.id, updates);
 
-    // Update allowed_users if provided
-    if (allowed_users !== undefined && Array.isArray(allowed_users)) {
-      await QnaPost.setAllowedUsers(post.id, allowed_users);
-    }
-
     await broadcastToChannel('qna_global', 'qna:updated', { post: updated });
 
     return success(res, { post: updated });
   } catch (err) {
+    logger.error('updateQna error', { err: err.message });
     return error(res, 'Failed to update Q&A post.', 500);
   }
 };
@@ -229,62 +223,8 @@ const deleteQna = async (req, res) => {
 
     return success(res, { message: 'Q&A post deleted' });
   } catch (err) {
+    logger.error('deleteQna error', { err: err.message });
     return error(res, 'Failed to delete Q&A post.', 500);
-  }
-};
-
-// GET /api/qna/:id/users
-const getUsers = async (req, res) => {
-  try {
-    const post = await QnaPost.findById(req.params.id);
-    if (!post) return error(res, 'Q&A not found', 404);
-
-    const allowedIds = await QnaPost.getAllowedUserIds(req.params.id);
-    const users = await User.findByIds(allowedIds);
-
-    return success(res, { users });
-  } catch (err) {
-    return error(res, 'Failed to load users.', 500);
-  }
-};
-
-// POST /api/qna/:id/users
-const addUser = async (req, res) => {
-  const { userId } = req.body;
-
-  if (!userId || typeof userId !== 'string' || !userId.trim()) {
-    return error(res, 'Valid userId is required', 400);
-  }
-
-  try {
-    const [post, user] = await Promise.all([
-      QnaPost.findById(req.params.id),
-      User.findById(userId),
-    ]);
-    if (!post) return error(res, 'Q&A not found', 404);
-    if (!user || !user.is_active) return error(res, 'User not found', 404);
-
-    await QnaPost.addUser(req.params.id, userId);
-
-    return success(res, { message: 'User added' });
-  } catch (err) {
-    return error(res, 'Failed to add user.', 500);
-  }
-};
-
-// DELETE /api/qna/:id/users/:userId
-const removeUser = async (req, res) => {
-  const { userId } = req.params;
-
-  try {
-    const post = await QnaPost.findById(req.params.id);
-    if (!post) return error(res, 'Q&A not found', 404);
-
-    await QnaPost.removeUser(req.params.id, userId);
-
-    return success(res, { message: 'User removed' });
-  } catch (err) {
-    return error(res, 'Failed to remove user.', 500);
   }
 };
 
@@ -299,8 +239,9 @@ const regenerateShareCode = async (req, res) => {
 
     return success(res, { share_code: updated.share_code });
   } catch (err) {
+    logger.error('regenerateShareCode error', { err: err.message });
     return error(res, 'Failed to regenerate share code.', 500);
   }
 };
 
-module.exports = { listQna, getQna, createQna, updateQna, deleteQna, getUsers, addUser, removeUser, regenerateShareCode };
+module.exports = { listQna, getQna, createQna, updateQna, deleteQna, regenerateShareCode };

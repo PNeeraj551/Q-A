@@ -4,6 +4,8 @@ const Reply = require('../models/Reply');
 const { broadcastToChannel } = require('../utils/broadcast');
 const { success, error } = require('../utils/responseUtils');
 const { isBoardClosed } = require('../utils/boardUtils');
+const { stripHtml } = require('../utils/sanitize');
+const logger = require('../utils/logger');
 
 // GET /api/qna/:qnaId/questions/:qId/replies
 const listReplies = async (req, res) => {
@@ -18,6 +20,7 @@ const listReplies = async (req, res) => {
     const result = replies.map((r) => ({ ...r, liked_by_me: likedSet.has(r.id) }));
     return success(res, { replies: result });
   } catch (err) {
+    logger.error('listReplies error', { err: err.message, qId: req.params.qId });
     return error(res, 'Failed to load replies.', 500);
   }
 };
@@ -51,7 +54,7 @@ const createReply = async (req, res) => {
     const reply = await Reply.create({
       question_id: qId,
       qna_id: qnaId,
-      text: text.trim(),
+      text: stripHtml(text.trim()),
       author_id: authorId,
       author_name: authorName,
     });
@@ -62,6 +65,7 @@ const createReply = async (req, res) => {
 
     return success(res, { reply }, 201);
   } catch (err) {
+    logger.error('createReply error', { err: err.message, qId, qnaId });
     return error(res, 'Failed to post reply.', 500);
   }
 };
@@ -89,6 +93,7 @@ const updateReply = async (req, res) => {
     const updated = await Reply.updateById(rId, { text: text.trim() });
     return success(res, { reply: updated });
   } catch (err) {
+    logger.error('updateReply error', { err: err.message, rId });
     return error(res, 'Failed to update reply.', 500);
   }
 };
@@ -112,6 +117,7 @@ const deleteReply = async (req, res) => {
 
     return success(res, { message: 'Reply deleted' });
   } catch (err) {
+    logger.error('deleteReply error', { err: err.message, rId, qId });
     return error(res, 'Failed to delete reply.', 500);
   }
 };
@@ -142,6 +148,7 @@ const toggleLike = async (req, res) => {
 
     return success(res, { likes_count, liked_by_me });
   } catch (err) {
+    logger.error('reply toggleLike error', { err: err.message, rId });
     return error(res, 'Failed to update like.', 500);
   }
 };

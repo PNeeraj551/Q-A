@@ -20,7 +20,7 @@ const requestOtp = async (req, res) => {
   const normalEmail = email.trim().toLowerCase();
   try {
     const user = await User.findByEmail(normalEmail);
-    if (!user) {
+    if (!user || user.role !== 'admin') {
       return success(res, { message: 'If this email is registered, a login code has been sent.' });
     }
 
@@ -114,6 +114,7 @@ const me = async (req, res) => {
       created_at: user.created_at,
     });
   } catch (err) {
+    logger.error('me error', { err: err.message });
     return error(res, 'Failed to retrieve user profile.', 500);
   }
 };
@@ -154,6 +155,7 @@ const updateMe = async (req, res) => {
       created_at: user.created_at,
     });
   } catch (err) {
+    logger.error('updateMe error', { err: err.message });
     return error(res, 'Failed to update profile.', 500);
   }
 };

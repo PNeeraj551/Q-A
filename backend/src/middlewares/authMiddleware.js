@@ -1,6 +1,7 @@
 const { verifyToken } = require('../utils/jwtUtils');
 const { error } = require('../utils/responseUtils');
 const User = require('../models/User');
+const logger = require('../utils/logger');
 
 const authMiddleware = async (req, res, next) => {
   const authHeader = req.headers['authorization'];
@@ -36,6 +37,7 @@ const authMiddleware = async (req, res, next) => {
     req.user = { ...decoded, role: user.role, is_root: user.is_root };
     next();
   } catch (err) {
+    logger.error('authMiddleware error', { err: err.message });
     return error(res, 'Authentication failed', 401);
   }
 };

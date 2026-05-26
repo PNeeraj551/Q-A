@@ -1,19 +1,22 @@
 const express = require('express');
 const router = express.Router({ mergeParams: true });
 const authMiddleware = require('../middlewares/authMiddleware');
+const roleGuard = require('../middlewares/roleGuard');
 const withBoardSession = require('../middlewares/withBoardSession');
-const { listQuestions, createQuestion, updateQuestion, deleteQuestion, toggleLike, markAcceptedReply, trackView } = require('../controllers/questionController');
+const { voteLimiter, deviceTokenLimiter } = require('../middlewares/rateLimitMiddleware');
+const deviceTokenValidator = require('../middlewares/deviceTokenValidator');
+const { listQuestions, createQuestion, updateQuestion, deleteQuestion, toggleLike, markAcceptedReply, trackView, markAnsweredInSlack, pushQuestionToSlack } = require('../controllers/questionController');
 
-// JWT-only (edit/delete/accept require proven identity)
 const authenticated = [authMiddleware];
 
-// Accepts JWT or session token (read, post, like)
 router.get('/', withBoardSession, listQuestions);
-router.post('/', withBoardSession, createQuestion);
+router.post('/', deviceTokenValidator, withBoardSession, createQuestion);
 router.patch('/:qId', authenticated, updateQuestion);
 router.delete('/:qId', authenticated, deleteQuestion);
-router.patch('/:qId/like', withBoardSession, toggleLike);
+router.patch('/:qId/like', voteLimiter, deviceTokenLimiter, deviceTokenValidator, withBoardSession, toggleLike);
 router.patch('/:qId/accept-reply', authenticated, markAcceptedReply);
 router.patch('/:qId/view', withBoardSession, trackView);
+router.patch('/:qId/slack-answer', authMiddleware, roleGuard('admin'), markAnsweredInSlack);
+router.post('/:qId/push-slack', authMiddleware, roleGuard('admin'), pushQuestionToSlack);
 
 module.exports = router;

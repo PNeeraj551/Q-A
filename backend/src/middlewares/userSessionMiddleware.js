@@ -1,5 +1,6 @@
 const UserSession = require('../models/UserSession');
 const { error } = require('../utils/responseUtils');
+const logger = require('../utils/logger');
 
 // Validates X-Session-Token header and attaches req.userSession
 const userSessionMiddleware = async (req, res, next) => {
@@ -12,6 +13,7 @@ const userSessionMiddleware = async (req, res, next) => {
     req.userSession = session;
     next();
   } catch (err) {
+    logger.error('userSessionMiddleware error', { err: err.message });
     return error(res, 'Session validation failed', 401);
   }
 };

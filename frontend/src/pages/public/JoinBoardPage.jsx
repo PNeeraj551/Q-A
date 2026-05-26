@@ -1,89 +1,27 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
-import { getBoardPreview, requestJoinOtp, verifyJoinOtp } from '../../api/userAccess'
-import { setPublicBoardId, getPublicBoard, getPublicQuestions, postPublicQuestion } from '../../api/publicQna'
-import { getSession, saveSession } from '../../hooks/useUserSession'
+import { getBoardPreview } from '../../api/userAccess'
+import { setPublicBoardId, getPublicQuestions, postPublicQuestion } from '../../api/publicQna'
+import { getSession } from '../../hooks/useUserSession'
 import PublicQuestionCard from '../../components/public/PublicQuestionCard'
-
-const ATHIVA_EMAIL = /^[a-zA-Z0-9._%+-]+@athivatech\.com$/i
-const RESEND_COOLDOWN = 60
+import { useQnaRealtime } from '../../hooks/useQnaRealtime'
 
 // ─── Skeleton ────────────────────────────────────────────────────────────────
 function CardSkeleton() {
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm animate-pulse">
-      <div className="flex items-center gap-3 mb-3">
-        <div className="w-9 h-9 rounded-full bg-slate-200 shrink-0" />
-        <div className="flex-1 space-y-1.5">
-          <div className="h-3.5 bg-slate-200 rounded w-32" />
-          <div className="h-3 bg-slate-100 rounded w-20" />
+    <div className="px-5 py-4 animate-pulse">
+      <div className="flex items-start gap-3">
+        <div className="w-8 h-8 rounded-full bg-slate-200 shrink-0" />
+        <div className="flex-1 space-y-2">
+          <div className="flex items-center gap-2">
+            <div className="h-3 bg-slate-200 rounded w-24" />
+            <div className="h-3 bg-slate-100 rounded w-12" />
+          </div>
+          <div className="h-3.5 bg-slate-100 rounded w-3/4" />
+          <div className="h-3.5 bg-slate-100 rounded w-1/2" />
         </div>
       </div>
-      <div className="h-4 bg-slate-100 rounded w-3/4 mb-2" />
-      <div className="h-3 bg-slate-100 rounded w-1/2" />
-    </div>
-  )
-}
-
-// ─── OTP digit input helpers ──────────────────────────────────────────────────
-function OtpInput({ digits, setDigits, error, loading, inputRefs }) {
-  function handleChange(e, idx) {
-    const val = e.target.value.replace(/\D/g, '')
-    if (!val) return
-    const next = [...digits]
-    next[idx] = val[val.length - 1]
-    setDigits(next)
-    if (idx < 5) inputRefs.current[idx + 1]?.focus()
-  }
-  function handleKeyDown(e, idx) {
-    if (e.key === 'Backspace') {
-      e.preventDefault()
-      if (digits[idx]) {
-        const next = [...digits]; next[idx] = ''; setDigits(next)
-      } else if (idx > 0) {
-        const next = [...digits]; next[idx - 1] = ''; setDigits(next)
-        inputRefs.current[idx - 1]?.focus()
-      }
-    } else if (e.key === 'ArrowLeft' && idx > 0) inputRefs.current[idx - 1]?.focus()
-    else if (e.key === 'ArrowRight' && idx < 5) inputRefs.current[idx + 1]?.focus()
-  }
-  function handlePaste(e) {
-    e.preventDefault()
-    const paste = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6)
-    if (!paste) return
-    const next = [...paste.split(''), ...Array(6).fill('')].slice(0, 6)
-    setDigits(next)
-    inputRefs.current[Math.min(paste.length, 5)]?.focus()
-  }
-  return (
-    <div className="flex gap-2 justify-center">
-      {digits.map((d, i) => (
-        <input
-          key={i}
-          ref={(el) => { inputRefs.current[i] = el }}
-          type="text"
-          inputMode="numeric"
-          maxLength={1}
-          value={d}
-          onChange={(e) => handleChange(e, i)}
-          onKeyDown={(e) => handleKeyDown(e, i)}
-          onPaste={handlePaste}
-          onFocus={(e) => e.target.select()}
-          disabled={loading}
-          aria-label={`Digit ${i + 1}`}
-          autoComplete={i === 0 ? 'one-time-code' : 'off'}
-          className={[
-            'w-11 h-12 text-center text-lg font-semibold rounded-lg border',
-            'transition-all duration-150 focus:outline-none',
-            'focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20',
-            'disabled:opacity-50 disabled:cursor-not-allowed',
-            error
-              ? 'border-red-400 bg-red-50 text-red-900'
-              : d ? 'border-slate-300 bg-white text-slate-900' : 'border-slate-200 bg-white text-slate-900',
-          ].join(' ')}
-        />
-      ))}
     </div>
   )
 }
@@ -93,16 +31,67 @@ function BoardView({ board, session, boardId }) {
   const [questions, setQuestions] = useState([])
   const [loading, setLoading] = useState(true)
   const [questionText, setQuestionText] = useState('')
+  const [isAnonymous, setIsAnonymous] = useState(session.is_anonymous ?? true)
+  const [identityOpen, setIdentityOpen] = useState(false)
+  const [localDisplayName, setLocalDisplayName] = useState(session.display_name || '')
+  const [nameInput, setNameInput] = useState('')
+  const [boardStatus, setBoardStatus] = useState(board.status)
+  const [newQuestionCount, setNewQuestionCount] = useState(0)
+
   const submittingRef = useRef(false)
+  const composerRef = useRef(null)
+  const listBottomRef = useRef(null)
+  const listTopRef = useRef(null)
+  const isScrolledPastRef = useRef(false)
+
+  const isClosed = boardStatus === 'CLOSED' || (board.end_at && new Date() >= new Date(board.end_at))
 
   useEffect(() => {
     getPublicQuestions(boardId)
-      .then((res) => setQuestions(res.data.questions || []))
+      .then((res) => {
+        const qs = res.data.questions || []
+        setQuestions(qs)
+      })
       .catch(() => toast.error('Failed to load questions'))
       .finally(() => setLoading(false))
   }, [boardId])
 
-  const isClosed = board.status === 'CLOSED' || (board.end_at && new Date() >= new Date(board.end_at))
+  useQnaRealtime(boardId, {
+    onQuestionNew: (q) => {
+      setQuestions((prev) => {
+        if (prev.some((e) => e.id === q.id)) return prev
+        return [...prev, { ...q, liked_by_me: false, _isNew: true }]
+      })
+      if (isScrolledPastRef.current) setNewQuestionCount((c) => c + 1)
+    },
+    onQuestionUpdate: (updated) => {
+      setQuestions((prev) =>
+        prev.map((q) => q.id === updated.id ? { ...q, ...updated, liked_by_me: q.liked_by_me } : q)
+      )
+    },
+    onQuestionDelete: ({ question_id }) => {
+      setQuestions((prev) => prev.filter((q) => q.id !== question_id))
+    },
+    onQuestionLike: ({ question_id, likes_count }) => {
+      setQuestions((prev) =>
+        prev.map((q) => q.id === question_id ? { ...q, likes_count } : q)
+      )
+    },
+    onQnaUpdate: (payload) => {
+      if (payload.status) setBoardStatus(payload.status)
+    },
+  })
+
+  useEffect(() => {
+    if (loading || !listTopRef.current) return
+    const el = listTopRef.current
+    const observer = new IntersectionObserver(
+      ([entry]) => { isScrolledPastRef.current = !entry.isIntersecting },
+      { threshold: 0 }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [loading])
 
   async function handleSubmitQuestion(e) {
     e.preventDefault()
@@ -114,20 +103,24 @@ function BoardView({ board, session, boardId }) {
     const optimistic = {
       id: tempId,
       text,
-      author_name: session.is_anonymous ? 'Anonymous' : session.display_name,
+      author_name: isAnonymous ? 'Anonymous' : localDisplayName,
       likes_count: 0,
-      reply_count: 0,
-      view_count: 0,
       liked_by_me: false,
       _isOptimistic: true,
       created_at: new Date().toISOString(),
     }
     setQuestions((prev) => [...prev, optimistic])
     setQuestionText('')
+    if (composerRef.current) composerRef.current.style.height = 'auto'
 
     try {
-      const res = await postPublicQuestion(boardId, text)
-      setQuestions((prev) => prev.map((q) => q.id === tempId ? { ...res.data.question, liked_by_me: false } : q))
+      const displayName = isAnonymous ? null : localDisplayName
+      const res = await postPublicQuestion(boardId, text, isAnonymous, displayName)
+      setQuestions((prev) => {
+        const alreadyExists = prev.some((q) => q.id === res.data.question.id)
+        if (alreadyExists) return prev.filter((q) => q.id !== tempId)
+        return prev.map((q) => q.id === tempId ? { ...res.data.question, liked_by_me: false } : q)
+      })
     } catch (err) {
       setQuestions((prev) => prev.filter((q) => q.id !== tempId))
       setQuestionText(text)
@@ -145,81 +138,242 @@ function BoardView({ board, session, boardId }) {
     setQuestions((prev) => prev.filter((q) => q.id !== id))
   }
 
+  function handleScrollToNew() {
+    listBottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    setNewQuestionCount(0)
+  }
+
   return (
-    <div className="space-y-4">
-      {/* Board header */}
-      <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-semibold text-slate-800">{board.title}</h2>
+    <div className="flex flex-col flex-1 min-h-0">
+
+      {/* ── Board header ── */}
+      <div className="shrink-0 bg-white border-b border-slate-200">
+        <div className="max-w-5xl mx-auto px-6 py-5 flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="text-lg font-bold text-slate-900 leading-tight tracking-tight">{board.title}</h1>
             {board.description && (
-              <p className="mt-1 text-sm text-slate-500">{board.description}</p>
+              <p className="text-sm text-slate-500 mt-0.5 leading-snug">{board.description}</p>
             )}
+            <p className="text-xs text-slate-400 mt-2">
+              Participating as{' '}
+              <span className="font-semibold text-slate-600">{isAnonymous ? 'Anonymous' : localDisplayName}</span>
+            </p>
           </div>
-          <span className={`shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${
-            isClosed
-              ? 'bg-amber-50 border-amber-200 text-amber-700'
-              : 'bg-emerald-50 border-emerald-200 text-emerald-700'
-          }`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${isClosed ? 'bg-amber-500' : 'bg-emerald-500'}`} />
-            {isClosed ? 'Closed' : 'Open'}
-          </span>
-        </div>
-        <div className="mt-2 flex items-center gap-2 text-xs text-slate-400">
-          <span>Joined as</span>
-          <span className="font-medium text-slate-600">
-            {session.is_anonymous ? 'Anonymous' : session.display_name}
-          </span>
-          <span className="text-slate-300">·</span>
-          <span>{session.email}</span>
+          {!isClosed ? (
+            <span className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 mt-0.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Live
+            </span>
+          ) : (
+            <span className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200 mt-0.5">
+              Closed
+            </span>
+          )}
         </div>
       </div>
 
-      {/* Question input */}
-      {!isClosed && (
-        <form onSubmit={handleSubmitQuestion} className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-          <textarea
-            className="w-full text-sm text-slate-900 placeholder:text-slate-400 bg-transparent border-0 outline-none resize-none leading-relaxed"
-            rows={2}
-            placeholder="Ask a question…"
-            value={questionText}
-            onChange={(e) => setQuestionText(e.target.value)}
-            maxLength={5000}
-          />
-          <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100">
-            <span className="text-xs text-slate-400">
-              Posting as <span className="font-medium">{session.is_anonymous ? 'Anonymous' : session.display_name}</span>
-            </span>
-            <button
-              type="submit"
-              disabled={!questionText.trim()}
-              className="px-4 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed transition-colors duration-150"
-            >
-              Post
-            </button>
-          </div>
-        </form>
-      )}
+      {/* ── Questions feed ── */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-5xl mx-auto px-6 py-5">
+          <div ref={listTopRef} />
 
-      {/* Questions list */}
-      {loading ? (
-        Array.from({ length: 3 }).map((_, i) => <CardSkeleton key={i} />)
-      ) : questions.length === 0 ? (
-        <div className="py-12 text-center text-sm text-slate-400">
-          No questions yet. Be the first to ask!
+          {loading ? (
+            <div className="space-y-2.5">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+                  <CardSkeleton />
+                </div>
+              ))}
+            </div>
+          ) : questions.length === 0 ? (
+            <div className="py-16 text-center">
+              <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
+                <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" strokeWidth="1.75" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+              </div>
+              <p className="text-sm font-medium text-slate-500">No questions yet</p>
+              <p className="text-xs text-slate-400 mt-0.5">Be the first to ask something below.</p>
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              {questions.map((q) => (
+                <div key={q.id} className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+                  <PublicQuestionCard
+                    question={q}
+                    boardId={boardId}
+                    isClosed={isClosed}
+                    session={session}
+                    isNew={!!q._isNew}
+                    onUpdate={handleQuestionUpdate}
+                    onDelete={handleQuestionDelete}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div ref={listBottomRef} />
+        </div>
+      </div>
+
+      {/* ── Composer / closed bar ── */}
+      {!isClosed ? (
+        <div className="shrink-0 border-t border-slate-200/80 bg-white/95 backdrop-blur-md">
+          <div className="max-w-5xl mx-auto px-6 py-4">
+            <form onSubmit={handleSubmitQuestion}>
+              <div className="flex items-end gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm transition-all duration-200 focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-500/10">
+                <textarea
+                  ref={composerRef}
+                  rows={1}
+                  placeholder="Ask a question…"
+                  value={questionText}
+                  onChange={(e) => {
+                    setQuestionText(e.target.value)
+                    const el = composerRef.current
+                    if (el) {
+                      el.style.height = 'auto'
+                      el.style.height = Math.min(el.scrollHeight, window.innerHeight * 0.4) + 'px'
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault()
+                      handleSubmitQuestion(e)
+                    }
+                  }}
+                  maxLength={5000}
+                  className="flex-1 min-w-0 resize-none bg-transparent border-0 outline-none text-sm leading-6 text-slate-800 placeholder:text-slate-400 py-0 overflow-y-auto"
+                  style={{ maxHeight: '40vh' }}
+                />
+                <button
+                  type="submit"
+                  disabled={!questionText.trim()}
+                  className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center bg-gradient-to-br from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-150 shadow-sm active:scale-95"
+                >
+                  <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Identity + hint row */}
+              <div className="flex items-center justify-between mt-2 px-0.5">
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setIdentityOpen((o) => !o)}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 transition-colors duration-100 select-none"
+                  >
+                    {isAnonymous ? (
+                      <svg className="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                      </svg>
+                    ) : (
+                      <span className="w-4 h-4 rounded-full bg-indigo-100 text-indigo-700 text-[10px] font-bold flex items-center justify-center shrink-0">
+                        {(localDisplayName || '?')[0].toUpperCase()}
+                      </span>
+                    )}
+                    {isAnonymous ? 'Anonymous' : localDisplayName}
+                    <svg className="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                    </svg>
+                  </button>
+
+                  {identityOpen && (
+                    <>
+                      <div className="fixed inset-0 z-10" onClick={() => setIdentityOpen(false)} />
+                      <div className="absolute bottom-full left-0 mb-1.5 z-20 w-52 bg-white border border-slate-200 rounded-xl shadow-lg py-1 overflow-hidden">
+                        <button
+                          type="button"
+                          onClick={() => { setIsAnonymous(true); setIdentityOpen(false) }}
+                          className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left transition-colors duration-100 ${isAnonymous ? 'bg-slate-50 text-slate-900 font-medium' : 'text-slate-600 hover:bg-slate-50'}`}
+                        >
+                          <svg className="w-4 h-4 text-slate-400 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                          </svg>
+                          Stay anonymous
+                        </button>
+                        {localDisplayName ? (
+                          <button
+                            type="button"
+                            onClick={() => { setIsAnonymous(false); setIdentityOpen(false) }}
+                            className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left transition-colors duration-100 ${!isAnonymous ? 'bg-slate-50 text-slate-900 font-medium' : 'text-slate-600 hover:bg-slate-50'}`}
+                          >
+                            <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold flex items-center justify-center shrink-0">
+                              {localDisplayName[0].toUpperCase()}
+                            </span>
+                            Ask as {localDisplayName}
+                          </button>
+                        ) : (
+                          <div className="px-3 py-2.5 border-t border-slate-100">
+                            <p className="text-xs font-medium text-slate-500 mb-2">Reveal your name</p>
+                            <div className="flex gap-1.5">
+                              <input
+                                type="text"
+                                value={nameInput}
+                                onChange={(e) => setNameInput(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault()
+                                    const trimmed = nameInput.trim()
+                                    if (!trimmed) return
+                                    setLocalDisplayName(trimmed)
+                                    setIsAnonymous(false)
+                                    setIdentityOpen(false)
+                                    setNameInput('')
+                                    localStorage.setItem(`qs_session_${boardId}`, JSON.stringify({ display_name: trimmed, is_anonymous: false }))
+                                  }
+                                }}
+                                placeholder="Your name"
+                                maxLength={80}
+                                autoFocus
+                                className="flex-1 min-w-0 rounded-md border border-slate-200 px-2 py-1 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
+                              />
+                              <button
+                                type="button"
+                                disabled={!nameInput.trim()}
+                                onClick={() => {
+                                  const trimmed = nameInput.trim()
+                                  if (!trimmed) return
+                                  setLocalDisplayName(trimmed)
+                                  setIsAnonymous(false)
+                                  setIdentityOpen(false)
+                                  setNameInput('')
+                                  localStorage.setItem(`qs_session_${boardId}`, JSON.stringify({ display_name: trimmed, is_anonymous: false }))
+                                }}
+                                className="shrink-0 px-2.5 py-1 rounded-md text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 disabled:bg-slate-200 disabled:text-slate-400 transition-colors"
+                              >
+                                Set
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+                <span className="text-[11px] text-slate-400 select-none">Enter to post · Shift+Enter for new line</span>
+              </div>
+            </form>
+          </div>
         </div>
       ) : (
-        questions.map((q) => (
-          <PublicQuestionCard
-            key={q.id}
-            question={q}
-            boardId={boardId}
-            isClosed={isClosed}
-            session={session}
-            onUpdate={handleQuestionUpdate}
-            onDelete={handleQuestionDelete}
-          />
-        ))
+        <div className="shrink-0 border-t border-slate-200/80 bg-slate-50">
+          <div className="max-w-5xl mx-auto px-6 py-4">
+            <p className="text-xs text-slate-500 text-center">This board is closed. No new questions can be posted.</p>
+          </div>
+        </div>
+      )}
+
+      {/* ── New questions floating pill ── */}
+      {newQuestionCount > 0 && (
+        <button
+          onClick={handleScrollToNew}
+          className="fixed bottom-28 left-1/2 -translate-x-1/2 z-30 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-indigo-600 text-white shadow-lg shadow-indigo-500/30 hover:bg-indigo-700 transition-colors duration-150"
+        >
+          ↓ {newQuestionCount} new {newQuestionCount === 1 ? 'question' : 'questions'}
+        </button>
       )}
     </div>
   )
@@ -229,29 +383,10 @@ function BoardView({ board, session, boardId }) {
 export default function JoinBoardPage() {
   const { shareCode } = useParams()
 
-  // page state: 'loading' | 'invalid' | 'join' | 'otp' | 'board'
   const [pageState, setPageState] = useState('loading')
   const [board, setBoard] = useState(null)
   const [session, setSession] = useState(null)
   const [invalidMsg, setInvalidMsg] = useState('')
-
-  // Join form state
-  const [email, setEmail] = useState('')
-  const [emailError, setEmailError] = useState('')
-  const [serverError, setServerError] = useState('')
-  const [digits, setDigits] = useState(Array(6).fill(''))
-  const [otpError, setOtpError] = useState('')
-  const [formLoading, setFormLoading] = useState(false)
-  const [cooldown, setCooldown] = useState(0)
-  const loadingRef = useRef(false)
-  const timerRef = useRef(null)
-  const inputRefs = useRef([])
-
-  const otp = digits.join('')
-
-  useEffect(() => {
-    return () => { if (timerRef.current) clearInterval(timerRef.current) }
-  }, [])
 
   useEffect(() => {
     getBoardPreview(shareCode)
@@ -259,15 +394,17 @@ export default function JoinBoardPage() {
         const b = res.data.board
         setBoard(b)
 
-        // Check for existing session in localStorage
         const existing = getSession(b.id)
-        if (existing?.session_token) {
+        if (existing) {
           setPublicBoardId(b.id)
           setSession(existing)
-          setPageState('board')
         } else {
-          setPageState('join')
+          const sessionData = { display_name: '', is_anonymous: true }
+          localStorage.setItem(`qs_session_${b.id}`, JSON.stringify(sessionData))
+          setPublicBoardId(b.id)
+          setSession(sessionData)
         }
+        setPageState('board')
       })
       .catch((err) => {
         const status = err.response?.status
@@ -278,214 +415,41 @@ export default function JoinBoardPage() {
       })
   }, [shareCode])
 
-  useEffect(() => {
-    if (pageState === 'otp') setTimeout(() => inputRefs.current[0]?.focus(), 50)
-  }, [pageState])
-
-  function startCooldown() {
-    setCooldown(RESEND_COOLDOWN)
-    timerRef.current = setInterval(() => {
-      setCooldown((c) => {
-        if (c <= 1) { clearInterval(timerRef.current); return 0 }
-        return c - 1
-      })
-    }, 1000)
-  }
-
-  async function handleSendOtp(e) {
-    e.preventDefault()
-    setServerError('')
-    if (!email.trim() || !ATHIVA_EMAIL.test(email.trim())) {
-      setEmailError('Enter a valid @athivatech.com email')
-      return
-    }
-    setEmailError('')
-    if (loadingRef.current) return
-    loadingRef.current = true
-    setFormLoading(true)
-    try {
-      await requestJoinOtp(shareCode, email.trim())
-      setPageState('otp')
-      startCooldown()
-    } catch (err) {
-      const status = err.response?.status
-      const serverMsg = err.response?.data?.error
-      if (status === 429) setServerError('Too many requests. Please wait a few minutes.')
-      else if (status === 404) setServerError(serverMsg || 'No account found for this email. Contact your administrator.')
-      else if (status === 403) setServerError(serverMsg || 'Access denied.')
-      else setServerError(serverMsg || 'Failed to send code. Please try again.')
-    } finally {
-      loadingRef.current = false
-      setFormLoading(false)
-    }
-  }
-
-  async function handleVerifyOtp(e) {
-    e.preventDefault()
-    setServerError('')
-    if (!otp.trim() || !/^\d{6}$/.test(otp.trim())) {
-      setOtpError('Enter the 6-digit code from your email')
-      return
-    }
-    setOtpError('')
-    if (loadingRef.current) return
-    loadingRef.current = true
-    setFormLoading(true)
-    try {
-      const res = await verifyJoinOtp(shareCode, email.trim(), otp.trim())
-      const sessionData = res.data
-      saveSession(board.id, sessionData)
-      setPublicBoardId(board.id)
-      setSession(sessionData)
-      setPageState('board')
-    } catch (err) {
-      const status = err.response?.status
-      if (status === 429) setServerError('Too many failed attempts. Please request a new code.')
-      else setServerError(err.response?.data?.error || 'Verification failed. Please try again.')
-    } finally {
-      loadingRef.current = false
-      setFormLoading(false)
-    }
-  }
-
-  async function handleResend() {
-    if (cooldown > 0 || loadingRef.current) return
-    setServerError('')
-    setDigits(Array(6).fill(''))
-    setOtpError('')
-    loadingRef.current = true
-    setFormLoading(true)
-    try {
-      await requestJoinOtp(shareCode, email.trim())
-      startCooldown()
-    } catch (err) {
-      setServerError(err.response?.data?.error || 'Failed to resend. Please try again.')
-    } finally {
-      loadingRef.current = false
-      setFormLoading(false)
-    }
-  }
-
-  // ── Render ──────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="bg-white border-b border-slate-200">
-        <div className="max-w-3xl mx-auto px-4 py-4 flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center shrink-0">
+    <div className="h-screen flex flex-col bg-slate-50">
+
+      {/* ── Top nav bar ── */}
+      <header className="shrink-0 bg-white border-b border-slate-200">
+        <div className="max-w-5xl mx-auto px-6 py-3.5 flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shrink-0 shadow-sm">
             <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
             </svg>
           </div>
-          <span className="text-base font-semibold text-slate-800">AthivaTech Q&amp;A</span>
+          <span className="text-sm font-bold text-slate-800 tracking-tight">AthivaTech Q&amp;A</span>
         </div>
       </header>
 
-      <main className="max-w-3xl mx-auto px-4 py-8">
+      <div className="flex-1 min-h-0 flex flex-col">
+
         {/* Loading */}
         {pageState === 'loading' && (
-          <div className="flex items-center justify-center py-24">
+          <div className="flex-1 flex items-center justify-center">
             <div className="w-6 h-6 rounded-full border-2 border-slate-200 border-t-indigo-500 animate-spin" />
           </div>
         )}
 
         {/* Invalid */}
         {pageState === 'invalid' && (
-          <div className="text-center py-20">
-            <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4">
-              <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-              </svg>
-            </div>
-            <h2 className="text-lg font-semibold text-slate-800 mb-2">Board unavailable</h2>
-            <p className="text-sm text-slate-500">{invalidMsg}</p>
-          </div>
-        )}
-
-        {/* Join form */}
-        {(pageState === 'join' || pageState === 'otp') && board && (
-          <div className="max-w-md mx-auto">
-            {/* Board preview */}
-            <div className="mb-6 text-center">
-              <h1 className="text-2xl font-bold text-slate-800">{board.title}</h1>
-              {board.description && (
-                <p className="mt-1.5 text-sm text-slate-500">{board.description}</p>
-              )}
-            </div>
-
-            <div className="bg-white rounded-2xl shadow-lg shadow-slate-200/60 border border-slate-200 p-8">
-              {pageState === 'join' ? (
-                <form onSubmit={handleSendOtp} noValidate className="space-y-4">
-                  <div>
-                    <h2 className="text-lg font-semibold text-slate-800 mb-1">Join this board</h2>
-                    <p className="text-sm text-slate-500">Enter your company email to get a verification code.</p>
-                  </div>
-                  <div>
-                    <label htmlFor="email" className="block text-xs font-semibold tracking-widest text-slate-500 uppercase mb-1.5">
-                      Email
-                    </label>
-                    <input
-                      id="email"
-                      type="email"
-                      autoComplete="email"
-                      value={email}
-                      onChange={(e) => { setEmail(e.target.value); setEmailError('') }}
-                      placeholder="you@athivatech.com"
-                      disabled={formLoading}
-                      className={[
-                        'w-full rounded-lg border px-3 py-2.5 text-sm text-slate-900',
-                        'placeholder:text-slate-400 focus:outline-none focus:ring-2',
-                        'transition-all duration-150',
-                        emailError
-                          ? 'border-red-400 focus:ring-red-500/20 bg-red-50'
-                          : 'border-slate-200 focus:ring-indigo-500/20 focus:border-indigo-400',
-                      ].join(' ')}
-                    />
-                    {emailError && <p className="text-xs text-red-500 mt-1">{emailError}</p>}
-                  </div>
-                  {serverError && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{serverError}</p>}
-                  <button
-                    type="submit"
-                    disabled={formLoading}
-                    className="w-full h-10 rounded-lg text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-150"
-                  >
-                    {formLoading ? 'Sending code…' : 'Send verification code'}
-                  </button>
-                </form>
-              ) : (
-                <form onSubmit={handleVerifyOtp} noValidate className="space-y-5">
-                  <div className="text-center">
-                    <h2 className="text-lg font-semibold text-slate-800 mb-1">Enter verification code</h2>
-                    <p className="text-sm text-slate-500">We sent a 6-digit code to <strong>{email}</strong></p>
-                  </div>
-                  <OtpInput digits={digits} setDigits={setDigits} error={otpError} loading={formLoading} inputRefs={inputRefs} />
-                  {otpError && <p className="text-xs text-red-500 text-center">{otpError}</p>}
-                  {serverError && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{serverError}</p>}
-                  <button
-                    type="submit"
-                    disabled={formLoading}
-                    className="w-full h-10 rounded-lg text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-150"
-                  >
-                    {formLoading ? 'Verifying…' : 'Join board'}
-                  </button>
-                  <div className="flex flex-col items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={handleResend}
-                      disabled={cooldown > 0 || formLoading}
-                      className="text-sm text-indigo-600 hover:text-indigo-700 disabled:text-slate-400 disabled:cursor-not-allowed transition-colors"
-                    >
-                      {cooldown > 0 ? `Resend code in ${cooldown}s` : 'Resend code'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setPageState('join'); setDigits(Array(6).fill('')); setOtpError(''); setServerError('') }}
-                      className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
-                    >
-                      ← Change email
-                    </button>
-                  </div>
-                </form>
-              )}
+          <div className="flex-1 flex items-center justify-center px-6">
+            <div className="text-center max-w-xs">
+              <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4">
+                <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                </svg>
+              </div>
+              <h2 className="text-base font-semibold text-slate-800 mb-1.5">Board unavailable</h2>
+              <p className="text-sm text-slate-500 leading-relaxed">{invalidMsg}</p>
             </div>
           </div>
         )}
@@ -494,7 +458,8 @@ export default function JoinBoardPage() {
         {pageState === 'board' && board && session && (
           <BoardView board={board} session={session} boardId={board.id} />
         )}
-      </main>
+
+      </div>
     </div>
   )
 }

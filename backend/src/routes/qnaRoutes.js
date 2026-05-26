@@ -9,9 +9,6 @@ const {
   createQna,
   updateQna,
   deleteQna,
-  getUsers,
-  addUser,
-  removeUser,
   regenerateShareCode,
 } = require('../controllers/qnaController');
 const { getAnalytics } = require('../controllers/analyticsController');
@@ -25,9 +22,6 @@ router.get('/analytics', adminOnly, getAnalytics);
 router.get('/:id', authenticated, qnaAccessGuard, getQna);
 router.patch('/:id', adminOnly, updateQna);
 router.delete('/:id', adminOnly, deleteQna);
-router.get('/:id/users', adminOnly, getUsers);
-router.post('/:id/users', adminOnly, addUser);
-router.delete('/:id/users/:userId', adminOnly, removeUser);
 router.post('/:id/regenerate-code', adminOnly, regenerateShareCode);
 
 module.exports = router;

@@ -33,15 +33,15 @@ const QnaIcon = (
   </svg>
 )
 
-const UsersIcon = (
-  <svg fill="none" stroke="currentColor" strokeWidth="1.75" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-  </svg>
-)
-
 const AnalyticsIcon = (
   <svg fill="none" stroke="currentColor" strokeWidth="1.75" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+  </svg>
+)
+
+const ModerationIcon = (
+  <svg fill="none" stroke="currentColor" strokeWidth="1.75" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
   </svg>
 )
 
@@ -83,8 +83,8 @@ export default function DashboardLayout({ children, title, subtitle, actions, on
                 Navigation
               </p>
               <SidebarLink to="/admin/qna" label="Q&A Boards" icon={QnaIcon} />
-              <SidebarLink to="/admin/users" label="Users" icon={UsersIcon} />
               <SidebarLink to="/admin/analytics" label="Analytics" icon={AnalyticsIcon} />
+              <SidebarLink to="/admin/moderation" label="Integrity" icon={ModerationIcon} />
             </>
           ) : (
             <>
