@@ -12,7 +12,7 @@ const QnaCreatePage      = lazy(() => import('./pages/admin/QnaCreatePage'))
 const QnaEditPage        = lazy(() => import('./pages/admin/QnaEditPage'))
 const QnaDetailPage      = lazy(() => import('./pages/admin/QnaDetailPage'))
 const AnalyticsPage      = lazy(() => import('./pages/admin/AnalyticsPage'))
-const ModerationPage     = lazy(() => import('./pages/admin/ModerationPage'))
+const UsersPage          = lazy(() => import('./pages/admin/UsersPage'))
 const QnaListPage        = lazy(() => import('./pages/user/QnaListPage'))
 const JoinBoardPage      = lazy(() => import('./pages/public/JoinBoardPage'))
 
@@ -40,7 +40,7 @@ export default function App() {
             <Route path="/admin/qna/:id/edit" element={<AdminRoute><QnaEditPage /></AdminRoute>} />
             <Route path="/admin/qna/:id" element={<AdminRoute><QnaDetailPage /></AdminRoute>} />
             <Route path="/admin/analytics" element={<AdminRoute><AnalyticsPage /></AdminRoute>} />
-            <Route path="/admin/moderation" element={<AdminRoute><ModerationPage /></AdminRoute>} />
+            <Route path="/admin/users" element={<AdminRoute><UsersPage /></AdminRoute>} />
 
             {/* User routes */}
             <Route path="/user/qna" element={<ProtectedRoute><QnaListPage /></ProtectedRoute>} />

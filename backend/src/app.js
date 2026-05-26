@@ -11,7 +11,7 @@ const qnaRoutes = require('./routes/qnaRoutes');
 const questionRoutes = require('./routes/questionRoutes');
 const replyRoutes = require('./routes/replyRoutes');
 const userAccessRoutes = require('./routes/userAccessRoutes');
-const moderationRoutes = require('./routes/moderationRoutes');
+const userManagementRoutes = require('./routes/userManagementRoutes');
 const errorMiddleware = require('./middlewares/errorMiddleware');
 const errorLogger = require('./middlewares/errorLogger');
 const requestLogger = require('./middlewares/requestLogger');
@@ -51,7 +51,7 @@ app.use('/api', userAccessRoutes);
 app.use('/api/qna', qnaRoutes);
 app.use('/api/qna/:qnaId/questions', questionRoutes);
 app.use('/api/qna/:qnaId/questions/:qId/replies', replyRoutes);
-app.use('/api/admin/moderation', moderationRoutes);
+app.use('/api/admin/users', userManagementRoutes);
 
 app.use('*', (req, res) => res.status(404).json({ success: false, error: 'Route not found' }));
 app.use(errorLogger);

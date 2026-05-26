@@ -8,13 +8,14 @@ const { stripHtml } = require('../utils/sanitize');
 const { toggleDeviceVote } = require('../services/voteIntegrityService');
 const slackService = require('../services/slackService');
 const logger = require('../utils/logger');
+const { COOKIE_NAME } = require('../config/cookies');
 
 // GET /api/qna/:qnaId/questions
 const listQuestions = async (req, res) => {
   const { qnaId } = req.params;
   try {
     const userId = req.user?.user_id || req.userSession?.user_id || null;
-    const deviceToken = req.deviceToken || null;
+    const deviceToken = req.deviceToken || req.cookies?.[COOKIE_NAME] || null;
 
     const questions = await Question.listByQna(qnaId);
 

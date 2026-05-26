@@ -87,6 +87,7 @@ const verifyOtp = async (req, res) => {
       role: user.role,
       is_active: user.is_active,
       is_root: user.is_root,
+      status: user.status || 'VERIFIED',
     });
 
     return success(res, {

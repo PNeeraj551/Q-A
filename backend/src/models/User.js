@@ -1,9 +1,15 @@
 const db = require('../config/supabase');
 
-const COLS = 'id, name, email, role, is_active, is_root, created_at';
+const COLS = 'id, name, email, role, is_active, is_root, status, deleted_at, locked_until, otp_attempts, created_at';
 
 async function findByEmail(email) {
-  const { data, error } = await db.from('users').select(COLS).eq('email', email).eq('is_active', true).maybeSingle();
+  const { data, error } = await db
+    .from('users')
+    .select(COLS)
+    .eq('email', email)
+    .eq('status', 'VERIFIED')
+    .is('deleted_at', null)
+    .maybeSingle();
   if (error) throw error;
   return data;
 }
@@ -21,7 +27,12 @@ async function findById(id) {
 }
 
 async function findAll(searchTerm) {
-  let q = db.from('users').select(COLS).eq('is_active', true);
+  let q = db
+    .from('users')
+    .select(COLS)
+    .neq('status', 'DELETED')
+    .is('deleted_at', null)
+    .order('created_at', { ascending: true });
   if (searchTerm) {
     const term = searchTerm.replace(/'/g, "''");
     q = q.or(`name.ilike.%${term}%,email.ilike.%${term}%`);

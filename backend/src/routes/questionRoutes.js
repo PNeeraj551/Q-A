@@ -9,7 +9,7 @@ const { listQuestions, createQuestion, updateQuestion, deleteQuestion, toggleLik
 
 const authenticated = [authMiddleware];
 
-router.get('/', withBoardSession, listQuestions);
+router.get('/', listQuestions);
 router.post('/', deviceTokenValidator, withBoardSession, createQuestion);
 router.patch('/:qId', authenticated, updateQuestion);
 router.delete('/:qId', authenticated, deleteQuestion);

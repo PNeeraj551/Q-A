@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
-import { getBoardPreview } from '../../api/userAccess'
+import { getBoardPreview, requestJoinOtp, verifyJoinOtp } from '../../api/userAccess'
 import { setPublicBoardId, getPublicQuestions, postPublicQuestion } from '../../api/publicQna'
 import { getSession } from '../../hooks/useUserSession'
 import PublicQuestionCard from '../../components/public/PublicQuestionCard'
@@ -379,6 +379,22 @@ function BoardView({ board, session, boardId }) {
   )
 }
 
+// ─── Nav bar ─────────────────────────────────────────────────────────────────
+function NavBar() {
+  return (
+    <header className="shrink-0 bg-white border-b border-slate-200">
+      <div className="max-w-5xl mx-auto px-6 py-3.5 flex items-center gap-3">
+        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shrink-0 shadow-sm">
+          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+          </svg>
+        </div>
+        <span className="text-sm font-bold text-slate-800 tracking-tight">AthivaTech Q&amp;A</span>
+      </div>
+    </header>
+  )
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function JoinBoardPage() {
   const { shareCode } = useParams()
@@ -387,6 +403,9 @@ export default function JoinBoardPage() {
   const [board, setBoard] = useState(null)
   const [session, setSession] = useState(null)
   const [invalidMsg, setInvalidMsg] = useState('')
+  const [email, setEmail] = useState('')
+  const [otp, setOtp] = useState('')
+  const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
     getBoardPreview(shareCode)
@@ -394,17 +413,16 @@ export default function JoinBoardPage() {
         const b = res.data.board
         setBoard(b)
 
-        const existing = getSession(b.id)
-        if (existing) {
+        // If user already has a session token for this board, go straight in
+        const existingToken = localStorage.getItem(`qs_token_${b.id}`)
+        if (existingToken) {
+          const existingSession = getSession(b.id)
           setPublicBoardId(b.id)
-          setSession(existing)
+          setSession(existingSession || { display_name: '', is_anonymous: true })
+          setPageState('board')
         } else {
-          const sessionData = { display_name: '', is_anonymous: true }
-          localStorage.setItem(`qs_session_${b.id}`, JSON.stringify(sessionData))
-          setPublicBoardId(b.id)
-          setSession(sessionData)
+          setPageState('join')
         }
-        setPageState('board')
       })
       .catch((err) => {
         const status = err.response?.status
@@ -415,20 +433,45 @@ export default function JoinBoardPage() {
       })
   }, [shareCode])
 
+  async function handleRequestOtp(e) {
+    e.preventDefault()
+    if (!email.trim() || submitting) return
+    setSubmitting(true)
+    try {
+      await requestJoinOtp(shareCode, email.trim())
+      setPageState('otp')
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to send code. Please try again.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function handleVerifyOtp(e) {
+    e.preventDefault()
+    if (otp.trim().length !== 6 || submitting) return
+    setSubmitting(true)
+    try {
+      const res = await verifyJoinOtp(shareCode, email, otp.trim())
+      const s = res.data
+      localStorage.setItem(`qs_token_${board.id}`, s.session_token)
+      localStorage.setItem(`qs_session_${board.id}`, JSON.stringify({
+        display_name: s.display_name || '',
+        is_anonymous: s.is_anonymous ?? true,
+      }))
+      setPublicBoardId(board.id)
+      setSession({ display_name: s.display_name || '', is_anonymous: s.is_anonymous ?? true })
+      setPageState('board')
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Invalid or expired code.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   return (
     <div className="h-screen flex flex-col bg-slate-50">
-
-      {/* ── Top nav bar ── */}
-      <header className="shrink-0 bg-white border-b border-slate-200">
-        <div className="max-w-5xl mx-auto px-6 py-3.5 flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shrink-0 shadow-sm">
-            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-            </svg>
-          </div>
-          <span className="text-sm font-bold text-slate-800 tracking-tight">AthivaTech Q&amp;A</span>
-        </div>
-      </header>
+      <NavBar />
 
       <div className="flex-1 min-h-0 flex flex-col">
 
@@ -450,6 +493,79 @@ export default function JoinBoardPage() {
               </div>
               <h2 className="text-base font-semibold text-slate-800 mb-1.5">Board unavailable</h2>
               <p className="text-sm text-slate-500 leading-relaxed">{invalidMsg}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Email form */}
+        {pageState === 'join' && board && (
+          <div className="flex-1 flex items-center justify-center px-6">
+            <div className="w-full max-w-sm">
+              <div className="text-center mb-6">
+                <h2 className="text-xl font-bold text-slate-900 leading-tight">{board.title}</h2>
+                {board.description && (
+                  <p className="text-sm text-slate-500 mt-1.5 leading-snug">{board.description}</p>
+                )}
+                <p className="text-sm text-slate-500 mt-3">Enter your Athiva email to join</p>
+              </div>
+              <form onSubmit={handleRequestOtp} className="space-y-3">
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@athivatech.com"
+                  required
+                  autoFocus
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 bg-white shadow-sm"
+                />
+                <button
+                  type="submit"
+                  disabled={submitting || !email.trim()}
+                  className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-semibold hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150 shadow-sm"
+                >
+                  {submitting ? 'Sending…' : 'Send login code'}
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* OTP form */}
+        {pageState === 'otp' && board && (
+          <div className="flex-1 flex items-center justify-center px-6">
+            <div className="w-full max-w-sm">
+              <div className="text-center mb-6">
+                <h2 className="text-xl font-bold text-slate-900">Check your email</h2>
+                <p className="text-sm text-slate-500 mt-2 leading-relaxed">
+                  We sent a 6-digit code to <span className="font-medium text-slate-700">{email}</span>
+                </p>
+              </div>
+              <form onSubmit={handleVerifyOtp} className="space-y-3">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  placeholder="000000"
+                  required
+                  autoFocus
+                  maxLength={6}
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-center text-2xl font-mono tracking-widest text-slate-900 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 bg-white shadow-sm"
+                />
+                <button
+                  type="submit"
+                  disabled={submitting || otp.length !== 6}
+                  className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-semibold hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150 shadow-sm"
+                >
+                  {submitting ? 'Verifying…' : 'Join board'}
+                </button>
+              </form>
+              <button
+                onClick={() => setPageState('join')}
+                className="w-full mt-3 text-sm text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                ← Use a different email
+              </button>
             </div>
           </div>
         )}

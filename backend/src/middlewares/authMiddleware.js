@@ -19,22 +19,29 @@ const authMiddleware = async (req, res, next) => {
     return error(res, 'Invalid or expired token', 401);
   }
 
-  // New tokens have is_active embedded — no DB query needed.
-  // Old tokens (missing is_active) fall back to DB check until users re-login.
-  if ('is_active' in decoded) {
-    if (!decoded.is_active) {
+  // Fast path: token has status embedded (new tokens)
+  if ('status' in decoded) {
+    if (decoded.status !== 'VERIFIED') {
       return error(res, 'Account is inactive or not found', 401);
     }
     req.user = decoded;
     return next();
   }
 
-  try {
-    const user = await User.findById(decoded.user_id);
-    if (!user || !user.is_active) {
+  // Legacy fast path: token has is_active (tokens issued before status was added)
+  if ('is_active' in decoded) {
+    if (!decoded.is_active) {
       return error(res, 'Account is inactive or not found', 401);
     }
-    req.user = { ...decoded, role: user.role, is_root: user.is_root };
+    // Fall through to DB check to get current status for legacy tokens
+  }
+
+  try {
+    const user = await User.findById(decoded.user_id);
+    if (!user || user.status !== 'VERIFIED' || user.deleted_at) {
+      return error(res, 'Account is inactive or not found', 401);
+    }
+    req.user = { ...decoded, role: user.role, is_root: user.is_root, status: user.status };
     next();
   } catch (err) {
     logger.error('authMiddleware error', { err: err.message });
