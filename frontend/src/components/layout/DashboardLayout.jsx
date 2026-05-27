@@ -45,7 +45,7 @@ const UsersIcon = (
   </svg>
 )
 
-export default function DashboardLayout({ children, title, subtitle, actions, onBack, bottomBar }) {
+export default function DashboardLayout({ children, title, subtitle, titleMeta, actions, onBack, bottomBar }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [profileOpen, setProfileOpen] = useState(false)
@@ -83,8 +83,9 @@ export default function DashboardLayout({ children, title, subtitle, actions, on
                 Navigation
               </p>
               <SidebarLink to="/admin/qna" label="Q&A Boards" icon={QnaIcon} />
-              <SidebarLink to="/admin/analytics" label="Analytics" icon={AnalyticsIcon} />
               <SidebarLink to="/admin/users" label="Users" icon={UsersIcon} />
+              <SidebarLink to="/admin/analytics" label="Analytics" icon={AnalyticsIcon} />
+
             </>
           ) : (
             <>
@@ -143,7 +144,8 @@ export default function DashboardLayout({ children, title, subtitle, actions, on
                     Back
                   </button>
                 )}
-                {title && <h1 className="text-xl font-bold text-slate-900 leading-tight tracking-tight">{title}</h1>}
+                {title && <h1 className="text-2xl font-bold text-slate-900 leading-tight tracking-tight">{title}</h1>}
+                {titleMeta && <div className="mt-1.5">{titleMeta}</div>}
                 {subtitle && <p className="text-sm text-slate-500 mt-1 leading-relaxed">{subtitle}</p>}
               </div>
               {actions && <div className="flex items-center gap-2 shrink-0">{actions}</div>}

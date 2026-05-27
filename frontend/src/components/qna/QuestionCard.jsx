@@ -125,8 +125,13 @@ export function QuestionCard({ qnaId, question, currentUserId, isAdmin, isClosed
   }
 
   async function handlePushSlack() {
-    await pushToSlack(qnaId, question.id)
-    toast.success('Pushed to Slack.')
+    try {
+      await pushToSlack(qnaId, question.id)
+      onUpdate({ ...question, pushed_to_slack: true })
+      toast.success('Pushed to Slack.')
+    } catch {
+      toast.error('Already pushed to Slack.')
+    }
   }
 
   function handleCopy() {
@@ -158,26 +163,73 @@ export function QuestionCard({ qnaId, question, currentUserId, isAdmin, isClosed
   return (
     <div className={`px-6 py-4 group transition-opacity duration-150${answered ? ' opacity-75' : ''}${question._isOptimistic ? ' opacity-60' : ''}`}>
 
-      {/* ── Header row: avatar + name/time + action pill ── */}
-      <div className="flex items-center gap-3">
-        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold shrink-0 ${avatarColor}`}>
+      {/* ── Header row: avatar + name/time + action ── */}
+      <div className="flex items-start gap-3">
+        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold shrink-0 mt-0.5 ${avatarColor}`}>
           {initial}
         </div>
 
-        <div className="flex-1 min-w-0 flex items-center gap-0">
-          <span className="text-sm font-semibold text-slate-800 truncate leading-snug">{question.author_name}</span>
-          {question.created_at && (
-            <>
-              <span className="mx-1.5 text-slate-300 text-xs select-none">·</span>
-              <span className="text-xs text-slate-400 whitespace-nowrap">{getRelativeTime(question.created_at)}</span>
-            </>
-          )}
-          {question._isOptimistic && (
-            <span className="ml-2 text-xs text-slate-400 italic">Posting…</span>
+        <div className="flex-1 min-w-0 pr-2">
+          {/* Name + time */}
+          <div className="flex items-center gap-0 mb-1 flex-wrap">
+            <span className="text-sm font-semibold text-slate-700 leading-snug">{question.author_name}</span>
+            {question.created_at && (
+              <>
+                <span className="mx-1.5 text-slate-300 text-xs select-none">·</span>
+                <span className="text-xs text-slate-400 whitespace-nowrap">{getRelativeTime(question.created_at)}</span>
+              </>
+            )}
+            {question._isOptimistic && (
+              <span className="ml-1.5 text-xs text-slate-400 italic">Posting…</span>
+            )}
+            {answered && (
+              <span className="ml-2 inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-xs px-2 py-0.5">
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                </svg>
+                Answered in Slack
+              </span>
+            )}
+          </div>
+
+          {/* Body: text or edit textarea */}
+          {editMode ? (
+            <div className="space-y-2">
+              <textarea
+                ref={editRef}
+                className={textareaCls}
+                rows={1}
+                style={{ maxHeight: '40vh' }}
+                value={editText}
+                onChange={(e) => {
+                  setEditText(e.target.value)
+                  e.target.style.height = 'auto'
+                  e.target.style.height = `${e.target.scrollHeight}px`
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSaveEdit() }
+                  if (e.key === 'Escape') { setEditMode(false); setEditText(question.text) }
+                }}
+                maxLength={5000}
+              />
+              <div className="flex gap-2">
+                <Button size="sm" onClick={handleSaveEdit}>Save</Button>
+                <Button size="sm" variant="ghost" onClick={() => { setEditMode(false); setEditText(question.text) }}>Cancel</Button>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <p className="text-[15px] text-slate-800 leading-relaxed whitespace-pre-wrap break-words">{question.text}</p>
+              {confirmDelete && !isAdmin && (
+                <div className="mt-2">
+                  <InlineConfirm onConfirm={handleDelete} onCancel={() => setConfirmDelete(false)} />
+                </div>
+              )}
+            </div>
           )}
         </div>
 
-        {/* Action pill — hidden in edit/delete confirm modes */}
+        {/* Right side action */}
         {!editMode && !confirmDelete && (
           <QuestionActionPill
             question={question}
@@ -194,55 +246,12 @@ export function QuestionCard({ qnaId, question, currentUserId, isAdmin, isClosed
         )}
       </div>
 
-      {/* ── Body: text + badges + edit ── */}
-      <div className="mt-1.5 pl-11">
-        {editMode ? (
-          <div className="space-y-2">
-            <textarea
-              ref={editRef}
-              className={textareaCls}
-              rows={1}
-              style={{ maxHeight: '40vh' }}
-              value={editText}
-              onChange={(e) => {
-                setEditText(e.target.value)
-                e.target.style.height = 'auto'
-                e.target.style.height = `${e.target.scrollHeight}px`
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSaveEdit() }
-                if (e.key === 'Escape') { setEditMode(false); setEditText(question.text) }
-              }}
-              maxLength={5000}
-            />
-            <div className="flex gap-2">
-              <Button size="sm" onClick={handleSaveEdit}>Save</Button>
-              <Button size="sm" variant="ghost" onClick={() => { setEditMode(false); setEditText(question.text) }}>Cancel</Button>
-            </div>
-          </div>
-        ) : (
-          <p className="text-[15px] text-slate-800 leading-relaxed whitespace-pre-wrap break-words">{question.text}</p>
-        )}
-
-        {/* Answered badge */}
-        {answered && !editMode && (
-          <div className="mt-2">
-            <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs px-2 py-0.5 rounded-full">
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-              </svg>
-              Answered in Slack
-            </span>
-          </div>
-        )}
-
-        {/* Inline delete confirm */}
-        {confirmDelete && (
-          <div className="mt-2">
-            <InlineConfirm onConfirm={handleDelete} onCancel={() => setConfirmDelete(false)} />
-          </div>
-        )}
-      </div>
+      {/* ── Admin inline delete confirm ── */}
+      {isAdmin && confirmDelete && (
+        <div className="mt-2 pl-11">
+          <InlineConfirm onConfirm={handleDelete} onCancel={() => setConfirmDelete(false)} />
+        </div>
+      )}
 
       {/* ── Fixed dropdown menu ── */}
       {menuOpen && (

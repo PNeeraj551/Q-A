@@ -20,11 +20,6 @@ const QuestionIcon = (
   </svg>
 )
 
-const ReplyIcon = (
-  <svg fill="none" stroke="currentColor" strokeWidth="1.75" viewBox="0 0 24 24" className="w-5 h-5">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
-  </svg>
-)
 
 function KpiCard({ label, value, icon, color, loading }) {
   const colorMap = {
@@ -126,10 +121,9 @@ export default function AnalyticsPage() {
         <Stack gap={8} className="max-w-5xl">
 
           {/* KPI Surfaces */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <KpiCard label="Total Q&A Boards" value={data?.total_posts} icon={QnaIcon} color="blue" loading={loading} />
             <KpiCard label="Total Questions" value={data?.total_questions} icon={QuestionIcon} color="indigo" loading={loading} />
-            <KpiCard label="Total Replies" value={data?.total_replies} icon={ReplyIcon} color="violet" loading={loading} />
           </div>
 
           {/* Visibility breakdown */}

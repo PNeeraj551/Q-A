@@ -7,6 +7,7 @@ const { hashIp } = require('../utils/hashUtils');
 const { stripHtml } = require('../utils/sanitize');
 const { toggleDeviceVote } = require('../services/voteIntegrityService');
 const slackService = require('../services/slackService');
+const QnaPost = require('../models/QnaPost');
 const logger = require('../utils/logger');
 const { COOKIE_NAME } = require('../config/cookies');
 
@@ -118,12 +119,13 @@ const updateQuestion = async (req, res) => {
     const question = await Question.findById(qId);
     if (!question || question.is_deleted) return error(res, 'Question not found', 404);
 
-    if (question.author_id !== req.user.user_id && req.user.role !== 'admin') {
+    const actorId = req.user?.user_id || req.userSession?.user_id;
+    if (!actorId || (question.author_id !== actorId && req.user?.role !== 'admin')) {
       return error(res, 'Not authorized', 403);
     }
 
     const updated = await Question.updateById(qId, { text: sanitized });
-    const liked_by_me = await Question.isLikedByUser(qId, req.user.user_id);
+    const liked_by_me = await Question.isLikedByUser(qId, actorId);
     const result = { ...updated, liked_by_me };
 
     await broadcastToChannel(`qna_${qnaId}`, 'question:update', result);
@@ -143,7 +145,8 @@ const deleteQuestion = async (req, res) => {
     const question = await Question.findById(qId);
     if (!question || question.is_deleted) return error(res, 'Question not found', 404);
 
-    if (question.author_id !== req.user.user_id && req.user.role !== 'admin') {
+    const actorId = req.user?.user_id || req.userSession?.user_id;
+    if (!actorId || (question.author_id !== actorId && req.user?.role !== 'admin')) {
       return error(res, 'Not authorized', 403);
     }
 
@@ -282,9 +285,12 @@ const pushQuestionToSlack = async (req, res) => {
   try {
     const question = await Question.findById(qId);
     if (!question || question.is_deleted) return error(res, 'Question not found', 404);
+    if (question.pushed_to_slack) return error(res, 'This question has already been pushed to Slack.', 409);
 
-    const result = await slackService.pushQuestion({ ...question, qna_id: qnaId });
-    logger.info('question pushed to Slack', { questionId: qId, qnaId, simulated: result.simulated });
+    const board = await QnaPost.findById(qnaId);
+    const result = await slackService.pushQuestion({ ...question, qna_id: qnaId, board_title: board?.title || qnaId });
+    await Question.updateById(qId, { pushed_to_slack: true });
+    logger.info('question pushed to Slack', { questionId: qId, qnaId });
     return success(res, { pushed: true, simulated: result.simulated });
   } catch (err) {
     logger.error('pushQuestionToSlack error', { err: err.message, questionId: qId });

@@ -6,6 +6,7 @@ import { setPublicBoardId, getPublicQuestions, postPublicQuestion } from '../../
 import { getSession } from '../../hooks/useUserSession'
 import PublicQuestionCard from '../../components/public/PublicQuestionCard'
 import { useQnaRealtime } from '../../hooks/useQnaRealtime'
+import supabase from '../../utils/supabase'
 
 // ─── Skeleton ────────────────────────────────────────────────────────────────
 function CardSkeleton() {
@@ -222,48 +223,15 @@ function BoardView({ board, session, boardId }) {
         <div className="shrink-0 border-t border-slate-200/80 bg-white/95 backdrop-blur-md">
           <div className="max-w-5xl mx-auto px-6 py-4">
             <form onSubmit={handleSubmitQuestion}>
-              <div className="flex items-end gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm transition-all duration-200 focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-500/10">
-                <textarea
-                  ref={composerRef}
-                  rows={1}
-                  placeholder="Ask a question…"
-                  value={questionText}
-                  onChange={(e) => {
-                    setQuestionText(e.target.value)
-                    const el = composerRef.current
-                    if (el) {
-                      el.style.height = 'auto'
-                      el.style.height = Math.min(el.scrollHeight, window.innerHeight * 0.4) + 'px'
-                    }
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault()
-                      handleSubmitQuestion(e)
-                    }
-                  }}
-                  maxLength={5000}
-                  className="flex-1 min-w-0 resize-none bg-transparent border-0 outline-none text-sm leading-6 text-slate-800 placeholder:text-slate-400 py-0 overflow-y-auto"
-                  style={{ maxHeight: '40vh' }}
-                />
-                <button
-                  type="submit"
-                  disabled={!questionText.trim()}
-                  className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center bg-gradient-to-br from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-150 shadow-sm active:scale-95"
-                >
-                  <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
-                  </svg>
-                </button>
-              </div>
+              {/* Unified composer container */}
+              <div className="flex items-end rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-200 focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-500/10">
 
-              {/* Identity + hint row */}
-              <div className="flex items-center justify-between mt-2 px-0.5">
-                <div className="relative">
+                {/* Identity toggle — integrated left */}
+                <div className="relative shrink-0 px-3 py-2.5">
                   <button
                     type="button"
                     onClick={() => setIdentityOpen((o) => !o)}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 transition-colors duration-100 select-none"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-600 transition-colors duration-100 select-none whitespace-nowrap"
                   >
                     {isAnonymous ? (
                       <svg className="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -283,7 +251,7 @@ function BoardView({ board, session, boardId }) {
                   {identityOpen && (
                     <>
                       <div className="fixed inset-0 z-10" onClick={() => setIdentityOpen(false)} />
-                      <div className="absolute bottom-full left-0 mb-1.5 z-20 w-52 bg-white border border-slate-200 rounded-xl shadow-lg py-1 overflow-hidden">
+                      <div className="absolute bottom-full left-0 mb-2 z-20 w-52 bg-white border border-slate-200 rounded-xl shadow-lg py-1 overflow-hidden">
                         <button
                           type="button"
                           onClick={() => { setIsAnonymous(true); setIdentityOpen(false) }}
@@ -353,6 +321,50 @@ function BoardView({ board, session, boardId }) {
                     </>
                   )}
                 </div>
+
+                {/* Divider */}
+                <div className="w-px bg-slate-100 shrink-0 self-stretch" />
+
+                {/* Input */}
+                <textarea
+                  ref={composerRef}
+                  rows={1}
+                  placeholder="Ask a question…"
+                  value={questionText}
+                  onChange={(e) => {
+                    setQuestionText(e.target.value)
+                    const el = composerRef.current
+                    if (el) {
+                      el.style.height = 'auto'
+                      el.style.height = Math.min(el.scrollHeight, window.innerHeight * 0.4) + 'px'
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault()
+                      handleSubmitQuestion(e)
+                    }
+                  }}
+                  maxLength={5000}
+                  className="flex-1 min-w-0 resize-none bg-transparent border-0 outline-none text-sm leading-6 text-slate-800 placeholder:text-slate-400 px-3 py-3 overflow-y-auto"
+                  style={{ maxHeight: '40vh' }}
+                />
+
+                {/* Send button */}
+                <div className="px-3 py-2.5 shrink-0">
+                  <button
+                    type="submit"
+                    disabled={!questionText.trim()}
+                    className="w-8 h-8 rounded-full flex items-center justify-center bg-gradient-to-br from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-150 shadow-sm active:scale-95"
+                  >
+                    <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex justify-end mt-1.5 px-0.5">
                 <span className="text-[11px] text-slate-400 select-none">Enter to post · Shift+Enter for new line</span>
               </div>
             </form>
@@ -403,6 +415,7 @@ export default function JoinBoardPage() {
   const [board, setBoard] = useState(null)
   const [session, setSession] = useState(null)
   const [invalidMsg, setInvalidMsg] = useState('')
+  const [joinDisabled, setJoinDisabled] = useState(false)
   const [email, setEmail] = useState('')
   const [digits, setDigits] = useState(Array(6).fill(''))
   const [otpError, setOtpError] = useState('')
@@ -498,12 +511,44 @@ export default function JoinBoardPage() {
       })
       .catch((err) => {
         const status = err.response?.status
-        if (status === 403) setInvalidMsg('Joining is currently disabled for this board.')
-        else if (status === 410) setInvalidMsg('This board has ended and is no longer accepting participants.')
-        else setInvalidMsg('This board link is invalid or no longer active.')
+        if (status === 403) {
+          setInvalidMsg('Joining is currently disabled for this board.')
+          setJoinDisabled(true)
+        } else if (status === 410) {
+          setInvalidMsg('This board has ended and is no longer accepting participants.')
+        } else {
+          setInvalidMsg('This board link is invalid or no longer active.')
+        }
         setPageState('invalid')
       })
   }, [shareCode])
+
+  useEffect(() => {
+    if (!joinDisabled) return
+    const channel = supabase
+      .channel('qna_global')
+      .on('broadcast', { event: 'qna:updated' }, () => {
+        getBoardPreview(shareCode)
+          .then((res) => {
+            const b = res.data.board
+            setBoard(b)
+            setJoinDisabled(false)
+            setInvalidMsg('')
+            const existingToken = localStorage.getItem(`qs_token_${b.id}`)
+            if (existingToken) {
+              const existingSession = getSession(b.id)
+              setPublicBoardId(b.id)
+              setSession(existingSession || { display_name: '', is_anonymous: true })
+              setPageState('board')
+            } else {
+              setPageState('join')
+            }
+          })
+          .catch(() => {})
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [joinDisabled, shareCode])
 
   async function handleRequestOtp(e) {
     e.preventDefault()
@@ -532,9 +577,10 @@ export default function JoinBoardPage() {
       localStorage.setItem(`qs_session_${board.id}`, JSON.stringify({
         display_name: s.display_name || '',
         is_anonymous: s.is_anonymous ?? true,
+        user_id: s.user_id,
       }))
       setPublicBoardId(board.id)
-      setSession({ display_name: s.display_name || '', is_anonymous: s.is_anonymous ?? true })
+      setSession({ display_name: s.display_name || '', is_anonymous: s.is_anonymous ?? true, user_id: s.user_id })
       setPageState('board')
     } catch (err) {
       toast.error(err.response?.data?.error || 'Invalid or expired code.')

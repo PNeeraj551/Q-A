@@ -27,6 +27,7 @@ export function QuestionActionPill({
   const voted = question.liked_by_me
   const count = question.likes_count
   const handled = !!question.answered_in_slack
+  const pushedToSlack = !!question.pushed_to_slack
   const showAdminActions = isAdmin
   const showMore = canModify
 
@@ -60,15 +61,24 @@ export function QuestionActionPill({
               {/* Push to Slack */}
               <button
                 type="button"
-                onClick={handlePushSlack}
-                disabled={pushing}
-                title="Push to Slack"
-                className="px-2.5 py-1.5 text-slate-400 hover:bg-slate-50 hover:text-indigo-600 disabled:opacity-40 transition-colors duration-150"
+                onClick={!pushedToSlack ? handlePushSlack : undefined}
+                disabled={pushing || pushedToSlack}
+                title={pushedToSlack ? 'Already pushed to Slack' : 'Push to Slack'}
+                className={[
+                  'px-2.5 py-1.5 transition-colors duration-150 disabled:cursor-not-allowed',
+                  pushedToSlack
+                    ? 'text-emerald-500 opacity-60'
+                    : 'text-slate-400 hover:bg-slate-50 hover:text-indigo-600 disabled:opacity-40',
+                ].join(' ')}
               >
                 {pushing ? (
                   <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3V4A10 10 0 002 12h2z" />
+                  </svg>
+                ) : pushedToSlack ? (
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                   </svg>
                 ) : (
                   <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
