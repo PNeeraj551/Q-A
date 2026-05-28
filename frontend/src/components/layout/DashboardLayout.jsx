@@ -180,11 +180,15 @@ export default function DashboardLayout({ children, title, subtitle, titleMeta, 
                 Back
               </button>
             )}
-            {(title || titleMeta || actions) && (
-              <div className={`flex items-center gap-2 flex-wrap${!onBack ? ' pt-3' : ''}`}>
+            {(title || actions) && (
+              <div className={`flex items-center justify-between gap-3${!onBack ? ' pt-3' : ''}`}>
                 {title && <span className="text-base font-bold text-slate-900 leading-tight">{title}</span>}
-                {titleMeta && <div className="flex items-center gap-1.5">{titleMeta}</div>}
-                {actions && <div className="ml-auto shrink-0">{actions}</div>}
+                {actions && <div className="shrink-0">{actions}</div>}
+              </div>
+            )}
+            {titleMeta && (
+              <div className="flex items-center gap-1.5 mt-2">
+                {titleMeta}
               </div>
             )}
             {subtitle && <p className="text-xs text-slate-500 mt-1 leading-snug">{subtitle}</p>}

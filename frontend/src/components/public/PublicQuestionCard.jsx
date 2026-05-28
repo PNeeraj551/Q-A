@@ -128,180 +128,188 @@ export default function PublicQuestionCard({ question, boardId, isClosed, isNew,
     }
   }
 
-  const cardBorder = isTopQuestion ? 'border border-indigo-300 shadow-md border-l-4 border-l-indigo-500' : 'border border-slate-200 shadow-sm'
-  const cardBg = isTopQuestion ? 'bg-indigo-50/30' : 'bg-white'
+  const cardBorder = isTopQuestion
+    ? 'border border-indigo-200 border-l-4 border-l-indigo-500 bg-indigo-50/10 shadow-sm'
+    : 'border border-slate-200/80 bg-white hover:border-slate-300 shadow-sm shadow-slate-100/40'
 
   return (
-    <div className={`rounded-xl overflow-hidden ${cardBorder} ${cardBg} transition-all duration-200`}>
-    <div className={`px-4 sm:px-6 py-4 group transition-opacity duration-150${answered ? ' opacity-75' : ''}${isNew ? ' animate-[fadeSlideIn_200ms_ease_out]' : ''}`}>
-
-      {/* Zone 1 — header: avatar + name/time/badges + owner actions */}
-      <div className="flex items-start gap-3">
-        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold shrink-0 mt-0.5 ${avatarColor}`}>
-          {letter}
-        </div>
-
-        <div className="flex-1 min-w-0">
-          <div>
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-sm font-semibold text-slate-800 leading-snug">{question.author_name || 'Anonymous'}</span>
-              {question._isOptimistic && (
-                <span className="text-xs text-slate-400 italic">Posting…</span>
-              )}
-              {answered && (
-                <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-xs px-2 py-0.5 shrink-0">
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                  </svg>
-                  Answered in Slack
-                </span>
-              )}
-              {isTopQuestion && (
-                <span className="inline-flex items-center gap-1 bg-indigo-50 text-indigo-600 border border-indigo-200 rounded-full text-[10px] font-semibold tracking-wide uppercase px-2 py-0.5 shrink-0">
-                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.562.562 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.562.562 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
-                  </svg>
-                  <span className="md:hidden">Top</span>
-                  <span className="hidden md:inline">Top Question</span>
-                </span>
-              )}
-            </div>
-            <span className="text-xs text-slate-400 leading-tight">{timeAgo(question.created_at)}</span>
+    <div className={`rounded-2xl px-4 sm:px-6 py-4 group transition-all duration-200 ${cardBorder}${answered ? ' opacity-75' : ''}${isNew ? ' animate-[fadeSlideIn_200ms_ease_out]' : ''}`}>
+      <div className="grid grid-cols-[40px_minmax(0,1fr)] gap-x-2.5 sm:gap-x-3">
+        {/* LEFT COLUMN: Avatar only */}
+        <div className="col-start-1 flex justify-center pt-0.5">
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold shrink-0 select-none ${avatarColor}`}>
+            {letter}
           </div>
         </div>
 
-        {/* Top-right: owner dots (slide-in on hover) + vote */}
-        {!editing && (
-          <div className="shrink-0">
-            {/* Desktop pill */}
-            <div className="hidden md:inline-flex items-center rounded-full border border-slate-200 bg-white shadow-sm overflow-hidden">
-              {isOwner && !question._isOptimistic && (
-                <div className="inline-flex items-center max-w-0 group-hover:max-w-[60px] overflow-hidden transition-all duration-200 ease-out">
+        {/* RIGHT COLUMN: Author row, badges, content, actions, inline edit composer */}
+        <div className="col-start-2 min-w-0 flex flex-col">
+          {/* Header Row: Author details + upvote/option pill */}
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-sm font-semibold text-slate-800 leading-snug tracking-tight">{question.author_name || 'Anonymous'}</span>
+                {question._isOptimistic && (
+                  <span className="text-xs text-slate-400 italic select-none">Posting…</span>
+                )}
+                {answered && (
+                  <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-xs px-2 py-0.5 shrink-0 select-none">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                    </svg>
+                    Answered in Slack
+                  </span>
+                )}
+                {isTopQuestion && (
+                  <span className="inline-flex items-center gap-1 bg-indigo-50 text-indigo-600 border border-indigo-200 rounded-full text-[10px] font-semibold tracking-wide uppercase px-2 py-0.5 shrink-0 select-none">
+                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.562.562 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.562.562 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
+                    </svg>
+                    <span className="md:hidden">Top</span>
+                    <span className="hidden md:inline">Top Question</span>
+                  </span>
+                )}
+              </div>
+              <span className="text-xs text-slate-400 leading-tight block mt-0.5 select-none">{timeAgo(question.created_at)}</span>
+            </div>
+
+            {/* Top-right owner dot actions (slide-in on hover) + upvote pill */}
+            {!editing && (
+              <div className="shrink-0">
+                {/* Desktop pill */}
+                <div className="hidden md:inline-flex items-center rounded-lg border border-slate-200/80 bg-white shadow-sm shadow-slate-100/50 overflow-hidden transition-all duration-200 ease-out select-none">
+                  {isOwner && !question._isOptimistic && (
+                    <div className="inline-flex items-center max-w-0 group-hover:max-w-[60px] overflow-hidden transition-all duration-200 ease-out">
+                      <button
+                        ref={menuBtnRef}
+                        type="button"
+                        onClick={openMenu}
+                        aria-label="More options"
+                        aria-haspopup="true"
+                        aria-expanded={menuOpen}
+                        className={[
+                          'px-2.5 py-2 transition-colors duration-150 focus:outline-none focus:bg-slate-50',
+                          menuOpen ? 'bg-slate-50 text-slate-600' : 'text-slate-400 hover:bg-slate-50 hover:text-slate-600',
+                        ].join(' ')}
+                      >
+                        <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                          <circle cx="5" cy="12" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="19" cy="12" r="1.5" />
+                        </svg>
+                      </button>
+                      <div className="w-px h-4 bg-slate-100 shrink-0" />
+                    </div>
+                  )}
                   <button
-                    ref={menuBtnRef}
                     type="button"
-                    onClick={openMenu}
-                    aria-label="More options"
-                    aria-haspopup="true"
-                    aria-expanded={menuOpen}
+                    onClick={!isClosed && !question._isOptimistic ? handleLike : undefined}
+                    disabled={isClosed || !!question._isOptimistic}
+                    aria-label={voted ? 'Remove like' : 'Like question'}
+                    aria-pressed={voted}
                     className={[
-                      'px-2.5 py-1.5 transition-colors duration-150',
-                      menuOpen ? 'bg-slate-100 text-slate-600' : 'text-slate-400 hover:bg-slate-50 hover:text-slate-600',
+                      'inline-flex items-center gap-1.5 px-3 py-2 text-xs transition-colors duration-150 select-none focus:outline-none',
+                      isClosed || question._isOptimistic ? 'text-slate-300 cursor-default font-semibold'
+                        : voted || isTopQuestion ? 'text-indigo-600 bg-indigo-50 border border-indigo-100 font-bold hover:bg-indigo-100/70 hover:border-indigo-200'
+                        : count > 0 ? 'text-blue-600 bg-blue-50/50 border border-blue-100 font-semibold hover:bg-blue-100/50'
+                        : 'text-slate-500 hover:text-slate-700 bg-slate-50 hover:bg-slate-100 active:bg-slate-200',
                     ].join(' ')}
                   >
-                    <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
-                      <circle cx="5" cy="12" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="19" cy="12" r="1.5" />
+                    <span className="tabular-nums">{count}</span>
+                    <svg className="w-3 h-3 md:w-3.5 md:h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d={thumbsUpPath} />
                     </svg>
                   </button>
-                  <div className="w-px h-5 bg-slate-200 shrink-0" />
                 </div>
-              )}
-              <button
-                type="button"
-                onClick={!isClosed && !question._isOptimistic ? handleLike : undefined}
-                disabled={isClosed || !!question._isOptimistic}
-                aria-label={voted ? 'Remove like' : 'Like question'}
-                aria-pressed={voted}
-                className={[
-                  'inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs transition-colors duration-150 select-none',
-                  isClosed || question._isOptimistic ? 'text-slate-300 cursor-default font-semibold'
-                    : voted || isTopQuestion ? 'text-indigo-600 font-bold hover:bg-slate-50'
-                    : count > 0 ? 'text-blue-500 font-semibold hover:bg-slate-50'
-                    : 'text-slate-500 font-semibold hover:bg-slate-50 hover:text-slate-700 active:bg-slate-100',
-                ].join(' ')}
-              >
-                <span className="tabular-nums">{count}</span>
-                <svg className="w-3 h-3 md:w-3.5 md:h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d={thumbsUpPath} />
-                </svg>
-              </button>
-            </div>
-            {/* Mobile pill */}
-            <div className="md:hidden inline-flex items-center rounded-full border border-slate-200 bg-white shadow-sm overflow-hidden">
-              {isOwner && !question._isOptimistic && (
-                <>
+                
+                {/* Mobile pill */}
+                <div className="md:hidden inline-flex items-center rounded-lg border border-slate-200 bg-white shadow-sm shrink-0 select-none">
+                  {isOwner && !question._isOptimistic && (
+                    <>
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onClick={openMenu}
+                        aria-label="More options"
+                        aria-haspopup="true"
+                        aria-expanded={menuOpen}
+                        className={[
+                          'px-3 py-2 transition-colors duration-150 focus:outline-none',
+                          menuOpen ? 'bg-slate-50 text-slate-600' : 'text-slate-400 hover:bg-slate-50 hover:text-slate-600',
+                        ].join(' ')}
+                      >
+                        <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                          <circle cx="5" cy="12" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="19" cy="12" r="1.5" />
+                        </svg>
+                      </button>
+                      <div className="w-px h-4 bg-slate-100 shrink-0" />
+                    </>
+                  )}
                   <button
                     type="button"
-                    onMouseDown={(e) => e.stopPropagation()}
-                    onClick={openMenu}
-                    aria-label="More options"
-                    aria-haspopup="true"
-                    aria-expanded={menuOpen}
+                    onClick={!isClosed && !question._isOptimistic ? handleLike : undefined}
+                    disabled={isClosed || !!question._isOptimistic}
+                    aria-label={voted ? 'Remove like' : 'Like question'}
+                    aria-pressed={voted}
                     className={[
-                      'px-2.5 py-1.5 transition-colors duration-150',
-                      menuOpen ? 'bg-slate-100 text-slate-600' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600',
+                      'inline-flex items-center gap-1.5 px-3 py-2 text-xs transition-colors duration-150 select-none focus:outline-none',
+                      isClosed || question._isOptimistic ? 'text-slate-300 cursor-default font-semibold'
+                        : voted || isTopQuestion ? 'text-indigo-600 bg-indigo-50 border border-indigo-100 font-bold hover:bg-indigo-100/70 hover:border-indigo-200'
+                        : count > 0 ? 'text-blue-600 bg-blue-50/50 border border-blue-100 font-semibold hover:bg-blue-100/50'
+                        : 'text-slate-500 hover:text-slate-700 bg-slate-50 hover:bg-slate-100 active:bg-slate-200',
                     ].join(' ')}
                   >
-                    <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
-                      <circle cx="5" cy="12" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="19" cy="12" r="1.5" />
+                    <span className="tabular-nums">{count}</span>
+                    <svg className="w-3 h-3 md:w-3.5 md:h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d={thumbsUpPath} />
                     </svg>
                   </button>
-                  <div className="w-px h-5 bg-slate-200 shrink-0" />
-                </>
-              )}
-              <button
-                type="button"
-                onClick={!isClosed && !question._isOptimistic ? handleLike : undefined}
-                disabled={isClosed || !!question._isOptimistic}
-                aria-label={voted ? 'Remove like' : 'Like question'}
-                aria-pressed={voted}
-                className={[
-                  'inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs transition-colors duration-150 select-none',
-                  isClosed || question._isOptimistic ? 'text-slate-300 cursor-default font-semibold'
-                    : voted || isTopQuestion ? 'text-indigo-600 font-bold hover:bg-slate-50'
-                    : count > 0 ? 'text-blue-500 font-semibold hover:bg-slate-50'
-                    : 'text-slate-500 font-semibold hover:bg-slate-50 hover:text-slate-700 active:bg-slate-100',
-                ].join(' ')}
-              >
-                <span className="tabular-nums">{count}</span>
-                <svg className="w-3 h-3 md:w-3.5 md:h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d={thumbsUpPath} />
-                </svg>
-              </button>
-            </div>
+                </div>
+              </div>
+            )}
           </div>
-        )}
-      </div>
 
-      {/* Body — full width below header row */}
-      {editing ? (
-        <div className="mt-1 space-y-2">
-          <textarea
-            ref={editRef}
-            rows={1}
-            value={editText}
-            onChange={(e) => {
-              setEditText(e.target.value)
-              const el = editRef.current
-              if (el) { el.style.height = 'auto'; el.style.height = `${el.scrollHeight}px` }
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSave() }
-              if (e.key === 'Escape') setEditing(false)
-            }}
-            maxLength={5000}
-            style={{ maxHeight: '40vh' }}
-            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-[15px] text-slate-800 leading-relaxed resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/15 focus:border-blue-400 transition-all duration-150"
-          />
-          <div className="flex items-center gap-2">
-            <button onClick={handleSave} disabled={saving || !editText.trim()} className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150">
-              {saving ? 'Saving…' : 'Save'}
-            </button>
-            <button onClick={() => setEditing(false)} disabled={saving} className="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors duration-150">
-              Cancel
-            </button>
-          </div>
+          {/* Body and composer row - nested inside column 2 so text aligns perfectly under author's name */}
+          {editing ? (
+            <div className="mt-2 space-y-2">
+              <textarea
+                ref={editRef}
+                rows={1}
+                value={editText}
+                onChange={(e) => {
+                  setEditText(e.target.value)
+                  const el = editRef.current
+                  if (el) { el.style.height = 'auto'; el.style.height = `${el.scrollHeight}px` }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSave() }
+                  if (e.key === 'Escape') setEditing(false)
+                }}
+                maxLength={5000}
+                style={{ maxHeight: '40vh' }}
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-[15px] text-slate-800 leading-relaxed resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500/15 focus:border-indigo-400 transition-all duration-150"
+              />
+              <div className="flex items-center gap-2 select-none">
+                <button onClick={handleSave} disabled={saving || !editText.trim()} className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150 shadow-sm">
+                  {saving ? 'Saving…' : 'Save Changes'}
+                </button>
+                <button onClick={() => setEditing(false)} disabled={saving} className="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors duration-150">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="mt-1">
+              <p className="text-[15px] text-slate-800 leading-relaxed whitespace-pre-wrap break-words">{question.text}</p>
+            </div>
+          )}
         </div>
-      ) : (
-        <p className="mt-1.5 text-[15px] text-slate-800 leading-relaxed whitespace-pre-wrap break-words">{question.text}</p>
-      )}
+      </div>
 
       {/* Fixed dropdown menu */}
       {menuOpen && (
         <div
           ref={menuRef}
           style={{ position: 'fixed', top: menuPos.top, right: menuPos.right, zIndex: 9999 }}
-          className="w-36 bg-white border border-slate-200 rounded-xl shadow-lg py-1 overflow-hidden"
+          className="w-36 bg-white border border-slate-200 rounded-xl shadow-lg py-1 overflow-hidden select-none"
         >
           <button
             onClick={startEdit}
@@ -324,7 +332,6 @@ export default function PublicQuestionCard({ question, boardId, isClosed, isNew,
           </button>
         </div>
       )}
-    </div>
     </div>
   )
 }

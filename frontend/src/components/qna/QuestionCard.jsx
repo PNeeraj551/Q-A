@@ -161,113 +161,129 @@ export function QuestionCard({ qnaId, question, currentUserId, isAdmin, isClosed
   const slackPath = 'M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zm1.271 0a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zm2.521-10.123a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zm0 1.271a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zm10.122 2.521a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zm-1.268 0a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312zm-2.523 10.122a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zm0-1.268a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z'
 
   const cardBorder = isTopQuestion
-    ? 'border border-indigo-300 shadow-md border-l-4 border-l-indigo-500'
-    : 'border border-slate-200 shadow-sm'
-  const cardBg = isTopQuestion ? 'bg-indigo-50/30' : 'bg-white'
+    ? 'border border-indigo-200 border-l-4 border-l-indigo-500 bg-indigo-50/10 shadow-sm'
+    : 'border border-slate-200/80 bg-white hover:border-slate-300 shadow-sm shadow-slate-100/40'
 
   return (
-    <div className={`rounded-xl overflow-hidden ${cardBorder} ${cardBg} transition-all duration-200`}>
-    <div className={`px-4 sm:px-6 py-4 group transition-opacity duration-150${answered ? ' opacity-75' : ''}${question._isOptimistic ? ' opacity-60' : ''}`}>
-
-      {/* Zone 1 — header: avatar + name/time/badges + admin actions */}
-      <div className="flex items-start gap-3">
-        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold shrink-0 mt-0.5 ${avatarColor}`}>
-          {initial}
+    <div className={`rounded-2xl px-4 sm:px-6 py-4 group transition-all duration-200 ${cardBorder}${answered ? ' opacity-75' : ''}${question._isOptimistic ? ' opacity-60' : ''}`}>
+      <div className="grid grid-cols-[40px_minmax(0,1fr)] gap-x-2.5 sm:gap-x-3">
+        {/* LEFT COLUMN: Avatar only */}
+        <div className="col-start-1 flex justify-center pt-0.5">
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold shrink-0 select-none ${avatarColor}`}>
+            {initial}
+          </div>
         </div>
 
-        <div className="flex-1 min-w-0">
-          <div>
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-sm font-semibold text-slate-700 leading-snug">{question.author_name}</span>
-              {question._isOptimistic && (
-                <span className="text-xs text-slate-400 italic">Posting…</span>
-              )}
-              {answered && (
-                <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-xs px-2 py-0.5 shrink-0">
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                  </svg>
-                  Answered in Slack
-                </span>
-              )}
-              {isTopQuestion && (
-                <span className="inline-flex items-center gap-1 bg-indigo-50 text-indigo-600 border border-indigo-200 rounded-full text-[10px] font-semibold tracking-wide uppercase px-2 py-0.5 shrink-0">
-                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.562.562 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.562.562 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
-                  </svg>
-                  <span className="md:hidden">Top</span>
-                  <span className="hidden md:inline">Top Question</span>
-                </span>
+        {/* RIGHT COLUMN: Author row, badges, content, actions, inline edit composer */}
+        <div className="col-start-2 min-w-0 flex flex-col">
+          {/* Header Row: Author details + action pill */}
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-sm font-semibold text-slate-800 leading-snug tracking-tight">{question.author_name}</span>
+                {question._isOptimistic && (
+                  <span className="text-xs text-slate-400 italic select-none">Posting…</span>
+                )}
+                {answered && (
+                  <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-full text-xs px-2 py-0.5 shrink-0 select-none">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                    </svg>
+                    Answered in Slack
+                  </span>
+                )}
+                {isTopQuestion && (
+                  <span className="inline-flex items-center gap-1 bg-indigo-50 text-indigo-600 border border-indigo-200 rounded-full text-[10px] font-semibold tracking-wide uppercase px-2 py-0.5 shrink-0 select-none">
+                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.562.562 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.562.562 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
+                    </svg>
+                    <span className="md:hidden">Top</span>
+                    <span className="hidden md:inline">Top Question</span>
+                  </span>
+                )}
+              </div>
+              {question.created_at && (
+                <span className="text-xs text-slate-400 leading-tight block mt-0.5 select-none">{getRelativeTime(question.created_at)}</span>
               )}
             </div>
-            {question.created_at && (
-              <span className="text-xs text-slate-400 leading-tight">{getRelativeTime(question.created_at)}</span>
+
+            {/* Admin/owner actions — top right of header row */}
+            {!editMode && !confirmDelete && (
+              <div className="shrink-0">
+                <QuestionActionPill
+                  question={question}
+                  isAdmin={isAdmin}
+                  canModify={canModify}
+                  onMarkHandled={handleMarkHandled}
+                  onPushSlack={handlePushSlack}
+                  menuBtnRef={menuBtnRef}
+                  openMenu={openMenu}
+                  menuOpen={menuOpen}
+                  count={count}
+                  voted={voted}
+                  isClosed={isClosed}
+                  isTopQuestion={isTopQuestion}
+                  onVote={handleLike}
+                />
+              </div>
             )}
           </div>
-        </div>
 
-        {/* Admin/owner actions — top right */}
-        {!editMode && !confirmDelete && (
-          <QuestionActionPill
-            question={question}
-            isAdmin={isAdmin}
-            canModify={canModify}
-            onMarkHandled={handleMarkHandled}
-            onPushSlack={handlePushSlack}
-            menuBtnRef={menuBtnRef}
-            openMenu={openMenu}
-            menuOpen={menuOpen}
-            count={count}
-            voted={voted}
-            isClosed={isClosed}
-            isTopQuestion={isTopQuestion}
-            onVote={handleLike}
-          />
-        )}
-      </div>
-
-      {/* Body — full width below header row */}
-      {editMode ? (
-        <div className="mt-1 space-y-2">
-          <textarea
-            ref={editRef}
-            className={textareaCls}
-            rows={1}
-            style={{ maxHeight: '40vh' }}
-            value={editText}
-            onChange={(e) => {
-              setEditText(e.target.value)
-              e.target.style.height = 'auto'
-              e.target.style.height = `${e.target.scrollHeight}px`
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSaveEdit() }
-              if (e.key === 'Escape') { setEditMode(false); setEditText(question.text) }
-            }}
-            maxLength={5000}
-          />
-          <div className="flex gap-2">
-            <Button size="sm" onClick={handleSaveEdit}>Save</Button>
-            <Button size="sm" variant="ghost" onClick={() => { setEditMode(false); setEditText(question.text) }}>Cancel</Button>
-          </div>
-        </div>
-      ) : (
-        <>
-          <p className="mt-1.5 text-[15px] text-slate-800 leading-relaxed whitespace-pre-wrap break-words">{question.text}</p>
-          {confirmDelete && (
-            <div className="mt-2">
-              <InlineConfirm onConfirm={handleDelete} onCancel={() => setConfirmDelete(false)} />
+          {/* Body and composer row - nested inside column 2 so text aligns perfectly under author's name */}
+          {editMode ? (
+            <div className="mt-2 space-y-2">
+              <textarea
+                ref={editRef}
+                className="w-full bg-slate-50/50 hover:bg-slate-50 focus:bg-white rounded-lg border border-slate-200 px-3 py-2 text-[15px] text-slate-800 leading-relaxed resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500/15 focus:border-indigo-400 transition-all duration-150"
+                rows={1}
+                style={{ maxHeight: '40vh' }}
+                value={editText}
+                onChange={(e) => {
+                  setEditText(e.target.value)
+                  e.target.style.height = 'auto'
+                  e.target.style.height = `${e.target.scrollHeight}px`
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSaveEdit() }
+                  if (e.key === 'Escape') { setEditMode(false); setEditText(question.text) }
+                }}
+                maxLength={5000}
+              />
+              <div className="flex items-center gap-2 select-none">
+                <button
+                  onClick={handleSaveEdit}
+                  disabled={!editText.trim()}
+                  className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors duration-150 shadow-sm"
+                >
+                  Save Changes
+                </button>
+                <button
+                  onClick={() => { setEditMode(false); setEditText(question.text) }}
+                  className="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors duration-150"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="mt-1">
+              <p className="text-[15px] text-slate-800 leading-relaxed whitespace-pre-wrap break-words">{question.text}</p>
+              {confirmDelete && (
+                <div className="mt-2.5 select-none">
+                  <InlineConfirm onConfirm={handleDelete} onCancel={() => setConfirmDelete(false)} />
+                </div>
+              )}
             </div>
           )}
-        </>
-      )}
+        </div>
+      </div>
 
       {/* Fixed dropdown menu */}
       {menuOpen && (
         <div
           ref={menuRef}
           style={{ position: 'fixed', top: menuPos.top, right: menuPos.right, zIndex: 9999 }}
-          className="w-48 bg-white border border-slate-200 rounded-xl shadow-lg py-1 overflow-hidden"
+          className="w-48 bg-white border border-slate-200 rounded-xl shadow-lg py-1 overflow-hidden select-none"
         >
           {isAdmin && (
             <div className="md:hidden">
@@ -309,7 +325,6 @@ export function QuestionCard({ qnaId, question, currentUserId, isAdmin, isClosed
           </button>
         </div>
       )}
-    </div>
     </div>
   )
 }
