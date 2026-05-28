@@ -42,54 +42,28 @@ function KpiCard({ label, value, icon, color, loading }) {
   const c = colorMap[color] || colorMap.blue
 
   return (
-    <Surface className="px-6 py-6 shadow-sm hover:shadow-md transition-all duration-200 group">
-      <div className="flex items-start justify-between gap-3">
-        <div>
+    <Surface className="px-4 py-4 sm:px-6 sm:py-6 shadow-sm hover:shadow-md transition-all duration-200 group">
+      <div className="flex items-center gap-4 sm:items-start sm:justify-between">
+        <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl ${c.bg} ${c.icon} flex items-center justify-center shrink-0 ring-4 ${c.ring} group-hover:scale-105 transition-transform duration-200 sm:order-last`}>
+          {icon}
+        </div>
+        <div className="min-w-0">
           <p className="text-xs font-semibold text-slate-600 tracking-wider">{label}</p>
-          <div className="mt-3">
+          <div className="mt-1 sm:mt-3">
             {loading ? (
-              <Skeleton className="h-10 w-20" />
+              <Skeleton className="h-8 w-16 sm:h-10 sm:w-20" />
             ) : (
-              <p className="text-4xl font-bold text-slate-900 tracking-tight tabular-nums">
+              <p className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight tabular-nums">
                 {value ?? '—'}
               </p>
             )}
           </div>
-        </div>
-        <div className={`w-11 h-11 rounded-2xl ${c.bg} ${c.icon} flex items-center justify-center shrink-0 ring-4 ${c.ring} group-hover:scale-105 transition-transform duration-200`}>
-          {icon}
         </div>
       </div>
     </Surface>
   )
 }
 
-function VisibilityBar({ label, count, pct, variant }) {
-  const isPublic = variant === 'public'
-  return (
-    <div className="space-y-2.5">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className={`w-2.5 h-2.5 rounded-full ${isPublic ? 'bg-blue-600' : 'bg-slate-400'}`} />
-          <span className="text-sm font-semibold text-slate-800">{label}</span>
-        </div>
-        <div className="flex items-center gap-2.5 text-sm">
-          <span className="font-semibold text-slate-900 tabular-nums">{count}</span>
-          <span className="text-slate-400 font-medium">Board{count !== 1 ? 's' : ''}</span>
-          <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${isPublic ? 'bg-blue-50 text-blue-700' : 'bg-slate-100 text-slate-600'}`}>
-            {pct}%
-          </span>
-        </div>
-      </div>
-      <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
-        <div
-          className={`h-full rounded-full transition-all duration-700 ease-out ${isPublic ? 'bg-gradient-to-r from-blue-600 to-indigo-500' : 'bg-gradient-to-r from-slate-400 to-slate-500'}`}
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-    </div>
-  )
-}
 
 export default function AnalyticsPage() {
   const [data, setData] = useState(null)
@@ -107,12 +81,6 @@ export default function AnalyticsPage() {
 
   useEffect(() => { load() }, [])
 
-  const totalPosts = data?.total_posts ?? 0
-  const publicCount = data?.visibility?.public ?? 0
-  const privateCount = data?.visibility?.private ?? 0
-  const publicPct = totalPosts > 0 ? Math.round((publicCount / totalPosts) * 100) : 0
-  const privatePct = totalPosts > 0 ? 100 - publicPct : 0
-
   return (
     <DashboardLayout title="Analytics" subtitle="Platform usage and content overview">
       {error ? (
@@ -124,37 +92,6 @@ export default function AnalyticsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <KpiCard label="Total Q&A Boards" value={data?.total_posts} icon={QnaIcon} color="blue" loading={loading} />
             <KpiCard label="Total Questions" value={data?.total_questions} icon={QuestionIcon} color="indigo" loading={loading} />
-          </div>
-
-          {/* Visibility breakdown */}
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <Heading level={2}>Visibility Breakdown</Heading>
-              {!loading && (
-                <span className="text-xs font-semibold text-slate-400 bg-slate-100 px-2.5 py-1 rounded-full">
-                  {totalPosts} total
-                </span>
-              )}
-            </div>
-            <Surface className="px-7 py-6 shadow-sm"><Stack gap={6}>
-              {loading ? (
-                <>
-                  <Stack gap={2}>
-                    <Skeleton className="h-4 w-40" />
-                    <Skeleton className="h-2.5 w-full" />
-                  </Stack>
-                  <Stack gap={2}>
-                    <Skeleton className="h-4 w-36" />
-                    <Skeleton className="h-2.5 w-full" />
-                  </Stack>
-                </>
-              ) : (
-                <>
-                  <VisibilityBar label="Public" count={publicCount} pct={publicPct} variant="public" />
-                  <VisibilityBar label="Private" count={privateCount} pct={privatePct} variant="private" />
-                </>
-              )}
-            </Stack></Surface>
           </div>
 
           {/* Most active Q&A */}

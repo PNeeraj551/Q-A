@@ -1,58 +1,13 @@
 import { useState, useRef, useEffect } from 'react'
+import { format } from 'date-fns'
 import { SearchInput } from '@/components/qna/SearchInput'
-
-const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
-const DAY_NAMES = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
-
-function buildCalendarDays(year, month) {
-  const firstDay = new Date(year, month, 1).getDay()
-  const daysInMonth = new Date(year, month + 1, 0).getDate()
-  const daysInPrev = new Date(year, month, 0).getDate()
-  const cells = []
-  for (let i = firstDay - 1; i >= 0; i--)
-    cells.push({ day: daysInPrev - i, month: month - 1, year: month === 0 ? year - 1 : year, other: true })
-  for (let d = 1; d <= daysInMonth; d++)
-    cells.push({ day: d, month, year, other: false })
-  const remaining = 42 - cells.length
-  for (let d = 1; d <= remaining; d++)
-    cells.push({ day: d, month: month + 1, year: month === 11 ? year + 1 : year, other: true })
-  return cells
-}
-
-function cellISO(cell) {
-  return `${cell.year}-${String(cell.month + 1).padStart(2, '0')}-${String(cell.day).padStart(2, '0')}`
-}
-
-const todayISO = new Date().toISOString().split('T')[0]
-
-const VISIBILITY_OPTIONS = [
-  { value: '', label: 'All' },
-  { value: 'PUBLIC', label: 'Public' },
-  { value: 'PRIVATE', label: 'Private' },
-]
+import { Calendar } from '@/components/ui/calendar'
 
 const DATE_PRESETS = [
   { value: 'last24h', label: 'Last 24 Hours' },
   { value: 'last7', label: 'Last 7 Days' },
   { value: 'thisMonth', label: 'This Month' },
-  { value: 'custom', label: 'Custom Range' },
 ]
-
-function getChipLabel(preset, fromDate, toDate) {
-  if (preset === 'last24h') return 'Last 24 Hours'
-  if (preset === 'last7') return 'Last 7 Days'
-  if (preset === 'last30') return 'Last 30 Days'
-  if (preset === 'thisMonth') return 'This Month'
-  if (preset === 'custom') {
-    const fmt = (d) =>
-      new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-    if (fromDate && toDate) return `${fmt(fromDate)} – ${fmt(toDate)}`
-    if (fromDate) return `From ${fmt(fromDate)}`
-    if (toDate) return `Until ${fmt(toDate)}`
-    return 'Custom Range'
-  }
-  return 'Any Time'
-}
 
 const CalendarIcon = () => (
   <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true">
@@ -69,14 +24,8 @@ const ChevronDownIcon = () => (
   </svg>
 )
 
-const ChevronLeftIcon = () => (
-  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" aria-hidden="true">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-  </svg>
-)
-
 const ChevronRightIcon = () => (
-  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" aria-hidden="true">
+  <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" aria-hidden="true">
     <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
   </svg>
 )
@@ -93,11 +42,23 @@ const CheckIcon = () => (
   </svg>
 )
 
+function getChipLabel(preset, fromDate, toDate) {
+  if (preset === 'last24h') return 'Last 24 Hours'
+  if (preset === 'last7') return 'Last 7 Days'
+  if (preset === 'thisMonth') return 'This Month'
+  if (preset === 'custom') {
+    const fmt = (d) =>
+      new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    if (fromDate && toDate) return `${fmt(fromDate)} – ${fmt(toDate)}`
+    if (fromDate) return `From ${fmt(fromDate)}`
+    return 'Custom Range'
+  }
+  return 'Any Time'
+}
+
 export function QnaFilters({
   search,
   setSearch,
-  visibility = '',
-  setVisibility,
   fromDate = '',
   setFromDate,
   toDate = '',
@@ -106,224 +67,174 @@ export function QnaFilters({
   setDatePreset,
   hasActiveFilters,
   onClearFilters,
-  role,
 }) {
-  const [popoverOpen, setPopoverOpen] = useState(false)
-  const popoverRef = useRef(null)
-
-  const now = new Date()
-  const [calYear, setCalYear] = useState(now.getFullYear())
-  const [calMonth, setCalMonth] = useState(now.getMonth())
-  const [hoverDate, setHoverDate] = useState('')
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
 
   useEffect(() => {
-    if (!popoverOpen) return
+    if (!open) return
     function onClickOutside(e) {
-      if (popoverRef.current && !popoverRef.current.contains(e.target))
-        setPopoverOpen(false)
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false)
     }
     document.addEventListener('mousedown', onClickOutside)
     return () => document.removeEventListener('mousedown', onClickOutside)
-  }, [popoverOpen])
+  }, [open])
 
-  function prevMonth() {
-    if (calMonth === 0) { setCalMonth(11); setCalYear(y => y - 1) }
-    else setCalMonth(m => m - 1)
-  }
-  function nextMonth() {
-    if (calMonth === 11) { setCalMonth(0); setCalYear(y => y + 1) }
-    else setCalMonth(m => m + 1)
+  const rangeSelected = {
+    from: fromDate ? new Date(fromDate + 'T00:00:00') : undefined,
+    to:   toDate   ? new Date(toDate   + 'T00:00:00') : undefined,
   }
 
-  const currentMonthISO = `${calYear}-${String(calMonth + 1).padStart(2, '0')}`
-  const isNextMonthFuture = currentMonthISO >= todayISO.slice(0, 7)
-
-  function handleDayClick(iso) {
-    if (!fromDate || (fromDate && toDate)) {
-      setFromDate(iso)
-      setToDate('')
-    } else {
-      if (iso >= fromDate) { setToDate(iso) }
-      else { setToDate(fromDate); setFromDate(iso) }
-    }
+  function handleRangeSelect(range) {
+    setFromDate(range?.from ? format(range.from, 'yyyy-MM-dd') : '')
+    setToDate(range?.to   ? format(range.to,   'yyyy-MM-dd') : '')
   }
 
-  function getCellStyle(cell) {
-    if (cell.other) return 'text-slate-300 cursor-default pointer-events-none'
-    const iso = cellISO(cell)
-    if (iso > todayISO) return 'text-slate-300 opacity-40 cursor-not-allowed pointer-events-none'
-    const rangeEnd = toDate || hoverDate
-    const isStart = iso === fromDate
-    const isEnd = iso === toDate
-    const isInRange = !!(fromDate && rangeEnd && iso > fromDate && iso < rangeEnd)
-    if (isStart || isEnd)
-      return 'bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer'
-    if (isInRange)
-      return 'bg-blue-50 text-blue-700 cursor-pointer'
-    return 'text-slate-700 hover:bg-slate-100 rounded-lg cursor-pointer'
+  function handleSelectPreset(value) {
+    setDatePreset(value)
+    if (value !== 'custom') setOpen(false)
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-3">
+    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
       <SearchInput
-        className="flex-1 min-w-[200px]"
+        className="w-full sm:flex-1 sm:min-w-0"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         placeholder="Search boards..."
       />
 
-      {/* Visibility toggle */}
-      <div className="flex items-center gap-1 bg-slate-100 rounded-xl px-1 h-10 shrink-0">
-        {VISIBILITY_OPTIONS.map((opt) => (
+      <div className="flex items-center gap-2 sm:gap-3">
+        <div className="relative shrink-0" ref={ref}>
+
+          {/* Trigger chip */}
           <button
-            key={opt.value}
             type="button"
-            onClick={() => setVisibility(opt.value)}
-            className={`px-3 h-8 rounded-lg text-xs font-medium transition-all duration-200 ${visibility === opt.value
-                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm'
-                : 'text-slate-500 hover:text-slate-900 hover:bg-white'
-              }`}
-          >
-            {opt.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Date filter chip + popover */}
-      <div className="relative shrink-0" ref={popoverRef}>
-        <button
-          type="button"
-          onClick={() => setPopoverOpen((o) => !o)}
-          aria-haspopup="listbox"
-          aria-expanded={popoverOpen}
-          className={`inline-flex items-center gap-1.5 h-10 px-3 rounded-lg border text-xs font-medium transition-all duration-200 ${datePreset
-              ? 'border-blue-300 bg-blue-50 text-blue-700 shadow-sm'
-              : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-700'
+            onClick={() => setOpen(o => !o)}
+            aria-haspopup="true"
+            aria-expanded={open}
+            className={`inline-flex items-center gap-1.5 h-10 px-3 rounded-lg border text-xs font-medium transition-all duration-150 ${
+              datePreset
+                ? 'border-blue-300 bg-blue-50 text-blue-700 shadow-sm'
+                : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-700'
             }`}
-        >
-          <CalendarIcon />
-          {datePreset ? getChipLabel(datePreset, fromDate, toDate) : 'Date: Any Time'}
-          {datePreset ? (
-            <span
-              role="button"
-              aria-label="Clear date filter"
-              tabIndex={0}
-              onClick={(e) => { e.stopPropagation(); setDatePreset('') }}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); setDatePreset('') } }}
-              className="ml-0.5 rounded-full hover:bg-blue-100 p-0.5 transition-colors cursor-pointer"
-            >
-              <CloseIcon />
-            </span>
-          ) : (
-            <ChevronDownIcon />
-          )}
-        </button>
-
-        {/* Dropdown popover */}
-        {popoverOpen && (
-          <div
-            role="listbox"
-            aria-label="Date filter options"
-            className={`absolute top-full left-0 mt-1.5 z-50 rounded-xl border border-slate-200 bg-white shadow-lg overflow-hidden ${datePreset === 'custom' ? 'flex' : 'min-w-[190px] py-1'
-              }`}
           >
-            {/* Preset list — always visible */}
-            <div className={datePreset === 'custom' ? 'w-36 py-1 border-r border-slate-100 shrink-0' : 'w-full'}>
-              {DATE_PRESETS.map((opt) => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  role="option"
-                  aria-selected={datePreset === opt.value}
-                  onClick={() => {
-                    setDatePreset(opt.value)
-                    if (opt.value !== 'custom') setPopoverOpen(false)
-                  }}
-                  className={`w-full text-left px-4 py-2 text-sm transition-colors flex items-center justify-between gap-3 ${datePreset === opt.value
-                      ? 'text-blue-600 bg-blue-50 font-medium'
-                      : 'text-slate-700 hover:bg-slate-50'
-                    }`}
-                >
-                  {opt.label}
-                  {datePreset === opt.value && <CheckIcon />}
-                </button>
-              ))}
-            </div>
+            <CalendarIcon />
+            <span>{datePreset ? getChipLabel(datePreset, fromDate, toDate) : 'Date: Any Time'}</span>
+            {datePreset ? (
+              <span
+                role="button"
+                aria-label="Clear date filter"
+                tabIndex={0}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setDatePreset('')
+                  setFromDate('')
+                  setToDate('')
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.stopPropagation()
+                    setDatePreset('')
+                    setFromDate('')
+                    setToDate('')
+                  }
+                }}
+                className="ml-0.5 rounded-full hover:bg-blue-200 p-0.5 transition-colors"
+              >
+                <CloseIcon />
+              </span>
+            ) : (
+              <ChevronDownIcon />
+            )}
+          </button>
 
-            {/* Calendar — only when Custom Range selected */}
-            {datePreset === 'custom' && (
-              <div className="p-3 w-[260px] shrink-0">
-                {/* Month nav header */}
-                <div className="flex items-center justify-between mb-3">
+          {/* Dropdown */}
+          {open && (
+            <div
+              aria-label="Date filter options"
+              style={{ animation: 'fadeSlideIn 140ms ease both' }}
+              className="absolute top-full left-0 sm:left-auto sm:right-0 mt-1.5 z-50 bg-white rounded-xl border border-slate-200 shadow-xl max-w-[calc(100vw-2rem)]"
+            >
+              {datePreset !== 'custom' ? (
+                /* Preset list */
+                <div className="py-2 w-full sm:w-48 shrink-0">
+                  <p className="px-4 pt-1 pb-1.5 text-[10px] font-semibold tracking-wider text-slate-400 uppercase">
+                    Quick filters
+                  </p>
+
+                  {DATE_PRESETS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => handleSelectPreset(opt.value)}
+                      className={`w-full flex items-center justify-between gap-3 px-4 py-2.5 text-sm transition-colors duration-100 ${
+                        datePreset === opt.value
+                          ? 'bg-blue-50 text-blue-700 font-semibold'
+                          : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
+                      }`}
+                    >
+                      <span>{opt.label}</span>
+                      {datePreset === opt.value && <CheckIcon />}
+                    </button>
+                  ))}
+
+                  <div className="mx-3 my-1.5 border-t border-slate-100" />
+
                   <button
                     type="button"
-                    onClick={prevMonth}
-                    className="p-1 rounded-lg hover:bg-slate-100 transition-colors text-slate-500 hover:text-slate-900"
+                    onClick={() => handleSelectPreset('custom')}
+                    className="w-full flex items-center justify-between gap-3 px-4 py-2.5 text-sm transition-colors duration-100 text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700"
                   >
-                    <ChevronLeftIcon />
-                  </button>
-                  <span className="text-sm font-semibold text-slate-900">
-                    {MONTH_NAMES[calMonth]} {calYear}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={nextMonth}
-                    disabled={isNextMonthFuture}
-                    className="p-1 rounded-lg hover:bg-slate-100 transition-colors text-slate-500 hover:text-slate-900 disabled:opacity-30 disabled:cursor-not-allowed"
-                  >
+                    <span>Custom Range</span>
                     <ChevronRightIcon />
                   </button>
                 </div>
-
-                {/* Day-of-week headers */}
-                <div className="grid grid-cols-7 mb-1">
-                  {DAY_NAMES.map((d) => (
-                    <div key={d} className="text-center text-xs font-medium text-slate-400 py-1">{d}</div>
-                  ))}
-                </div>
-
-                {/* Day grid */}
-                <div className="grid grid-cols-7">
-                  {buildCalendarDays(calYear, calMonth).map((cell, i) => (
+              ) : (
+                /* Calendar only — presets hidden */
+                <div className="p-3 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setDatePreset('')}
+                    className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors"
+                  >
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                    </svg>
+                    Custom Range
+                  </button>
+                  <Calendar
+                    mode="range"
+                    selected={rangeSelected}
+                    onSelect={handleRangeSelect}
+                    disabled={{ after: new Date() }}
+                    numberOfMonths={1}
+                    defaultMonth={rangeSelected.from ?? new Date()}
+                  />
+                  {fromDate && toDate && (
                     <button
-                      key={i}
                       type="button"
-                      onClick={() => {
-                        if (!cell.other && cellISO(cell) <= todayISO) handleDayClick(cellISO(cell))
-                      }}
-                      onMouseEnter={() => { if (!cell.other) setHoverDate(cellISO(cell)) }}
-                      onMouseLeave={() => setHoverDate('')}
-                      className={`h-8 w-full text-xs font-medium transition-colors ${getCellStyle(cell)}`}
+                      onClick={() => setOpen(false)}
+                      className="mt-2 w-full h-9 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition-colors"
                     >
-                      {cell.day}
+                      Apply range
                     </button>
-                  ))}
+                  )}
                 </div>
+              )}
+            </div>
+          )}
+        </div>
 
-                {/* Hint */}
-                {fromDate && !toDate && (
-                  <p className="text-xs text-slate-400 mt-2 text-center">Click a second date to complete the range</p>
-                )}
-              </div>
-            )}
-          </div>
+        {hasActiveFilters && (
+          <button
+            type="button"
+            onClick={onClearFilters}
+            className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors whitespace-nowrap shrink-0 px-1"
+          >
+            Clear
+          </button>
         )}
-      </div>
-
-      {/* Clear all filters */}
-      <div
-        className={`overflow-hidden transition-all duration-300 ease-in-out shrink-0 ${hasActiveFilters ? 'max-w-[120px] opacity-100' : 'max-w-0 opacity-0'
-          }`}
-      >
-        <button
-          type="button"
-          onClick={onClearFilters}
-          aria-label="Clear all filters"
-          className="flex items-center gap-1.5 h-10 px-3 rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors duration-200 shadow-sm whitespace-nowrap"
-        >
-          <CloseIcon />
-          Clear
-        </button>
       </div>
     </div>
   )

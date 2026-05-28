@@ -1,13 +1,14 @@
-import { NavLink, Link, useNavigate } from 'react-router-dom'
-import { useState } from 'react'
+import { NavLink, Link, useNavigate, useLocation } from 'react-router-dom'
+import { useState, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import ProfileEditPanel from '../users/ProfileEditPanel'
 
-function SidebarLink({ to, label, icon, end }) {
+function SidebarLink({ to, label, icon, end, onClick }) {
   return (
     <NavLink
       to={to}
       end={end}
+      onClick={onClick}
       className={({ isActive }) =>
         `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${isActive
           ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md'
@@ -48,21 +49,43 @@ const UsersIcon = (
 export default function DashboardLayout({ children, title, subtitle, titleMeta, actions, onBack, bottomBar }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const [profileOpen, setProfileOpen] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const homeRoute = user?.role === 'admin' ? '/admin/qna' : '/user/qna'
+
+  useEffect(() => {
+    setSidebarOpen(false)
+  }, [location.pathname])
 
   async function handleLogout() {
     await logout()
     navigate('/login', { replace: true })
   }
 
+  const closeSidebar = () => setSidebarOpen(false)
+
   return (
     <div className="min-h-screen bg-slate-50 flex">
+
+      {/* Backdrop overlay — mobile only */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-slate-900/50 z-30 md:hidden"
+          onClick={closeSidebar}
+          aria-hidden="true"
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="w-60 bg-white border-r border-slate-200/80 flex flex-col shrink-0 fixed inset-y-0 left-0 z-20 shadow-sm">
+      <aside className={[
+        'fixed inset-y-0 left-0 z-40 w-60 bg-white border-r border-slate-200/80 flex flex-col shrink-0 shadow-sm',
+        'transition-transform duration-300 ease-in-out',
+        sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
+      ].join(' ')}>
         {/* Brand */}
         <div className="px-5 py-5 border-b border-slate-100 shrink-0">
-          <Link to={homeRoute} className="flex items-center gap-3 hover:opacity-80 transition-opacity duration-200">
+          <Link to={homeRoute} onClick={closeSidebar} className="flex items-center gap-3 hover:opacity-80 transition-opacity duration-200">
             <div className="w-9 h-9 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shrink-0 shadow-md">
               <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth="2.25" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -82,17 +105,16 @@ export default function DashboardLayout({ children, title, subtitle, titleMeta, 
               <p className="px-3 pt-1 pb-2.5 text-xs font-semibold tracking-wider text-slate-400">
                 Navigation
               </p>
-              <SidebarLink to="/admin/qna" label="Q&A Boards" icon={QnaIcon} />
-              <SidebarLink to="/admin/users" label="Users" icon={UsersIcon} />
-              <SidebarLink to="/admin/analytics" label="Analytics" icon={AnalyticsIcon} />
-
+              <SidebarLink to="/admin/qna" label="Q&A Boards" icon={QnaIcon} onClick={closeSidebar} />
+              <SidebarLink to="/admin/users" label="Users" icon={UsersIcon} onClick={closeSidebar} />
+              <SidebarLink to="/admin/analytics" label="Analytics" icon={AnalyticsIcon} onClick={closeSidebar} />
             </>
           ) : (
             <>
               <p className="px-3 pt-1 pb-2.5 text-xs font-semibold tracking-wider text-slate-400">
                 Navigation
               </p>
-              <SidebarLink to="/user/qna" label="Q&A Boards" icon={QnaIcon} />
+              <SidebarLink to="/user/qna" label="Q&A Boards" icon={QnaIcon} onClick={closeSidebar} />
             </>
           )}
         </nav>
@@ -100,7 +122,7 @@ export default function DashboardLayout({ children, title, subtitle, titleMeta, 
         {/* User section */}
         <div className="px-3 py-3 border-t border-slate-100 shrink-0 space-y-1">
           <button
-            onClick={() => setProfileOpen(true)}
+            onClick={() => { setProfileOpen(true); closeSidebar() }}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-50 transition-all duration-200 text-left group"
           >
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center font-bold text-xs select-none shrink-0 shadow-sm ring-2 ring-blue-100">
@@ -128,9 +150,50 @@ export default function DashboardLayout({ children, title, subtitle, titleMeta, 
       </aside>
 
       {/* Main content */}
-      <div className="flex-1 ml-60 flex flex-col min-h-screen">
+      <div className="flex-1 ml-0 md:ml-60 flex flex-col min-h-screen">
+
+        {/* Mobile header bar — hamburger only */}
+        <div className="md:hidden sticky top-0 z-20 bg-white border-b border-slate-200 px-4 py-3 flex items-center gap-3 shrink-0">
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(true)}
+            aria-label="Open navigation menu"
+            className="p-2 rounded-lg hover:bg-slate-100 text-slate-600 transition-colors duration-150 shrink-0"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Mobile detail section — Back → Title+badges+Share → subtitle */}
+        {(onBack || title || actions || titleMeta || subtitle) && (
+          <div className="md:hidden bg-white border-b border-slate-100 px-4 pb-3 shrink-0">
+            {onBack && (
+              <button
+                onClick={onBack}
+                className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-slate-700 pt-3 mb-2 transition-colors duration-200"
+              >
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                </svg>
+                Back
+              </button>
+            )}
+            {(title || titleMeta || actions) && (
+              <div className={`flex items-center gap-2 flex-wrap${!onBack ? ' pt-3' : ''}`}>
+                {title && <span className="text-base font-bold text-slate-900 leading-tight">{title}</span>}
+                {titleMeta && <div className="flex items-center gap-1.5">{titleMeta}</div>}
+                {actions && <div className="ml-auto shrink-0">{actions}</div>}
+              </div>
+            )}
+            {subtitle && <p className="text-xs text-slate-500 mt-1 leading-snug">{subtitle}</p>}
+          </div>
+        )}
+
+        {/* Desktop header */}
         {(title || actions) && (
-          <header className="sticky top-0 z-10 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-8 py-5 shrink-0">
+          <header className="hidden md:block sticky top-0 z-10 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-8 py-5 shrink-0">
             <div className="flex items-center justify-between gap-4">
               <div className="min-w-0">
                 {onBack && (
@@ -153,12 +216,12 @@ export default function DashboardLayout({ children, title, subtitle, titleMeta, 
           </header>
         )}
 
-        <main className="flex-1 px-8 py-8 overflow-auto">
+        <main className="flex-1 px-4 py-4 md:px-8 md:py-8 overflow-auto">
           {children}
         </main>
 
         {bottomBar && (
-          <div className="shrink-0 border-t border-slate-200/80 bg-white/95 backdrop-blur-md px-8 py-4">
+          <div className="shrink-0 border-t border-slate-200/80 bg-white/95 backdrop-blur-md px-4 py-3 md:px-8 md:py-4">
             {bottomBar}
           </div>
         )}

@@ -22,7 +22,7 @@ function buildPayload(question) {
         type: 'section',
         text: {
           type: 'mrkdwn',
-          text: `*${question.text}*`,
+          text: question.text,
         },
       },
       { type: 'divider' },

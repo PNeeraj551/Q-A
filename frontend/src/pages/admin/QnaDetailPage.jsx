@@ -147,11 +147,16 @@ export default function QnaDetailPage() {
       .finally(() => setLoading(false))
   }, [id, navigate])
 
+  function sortQuestions(list) {
+    return [...list].sort((a, b) =>
+      b.likes_count - a.likes_count ||
+      new Date(a.created_at) - new Date(b.created_at)
+    )
+  }
+
   const handleUpdate = useCallback((updated) => {
     setQuestions((prev) =>
-      prev
-        .map((q) => (q.id === updated.id ? updated : q))
-        .sort((a, b) => b.likes_count - a.likes_count || new Date(a.created_at) - new Date(b.created_at))
+      sortQuestions(prev.map((q) => (q.id === updated.id ? updated : q)))
     )
   }, [])
 
@@ -163,13 +168,13 @@ export default function QnaDetailPage() {
     setQuestions((prev) => {
       if (prev.some((q) => q.id === question.id)) return prev
       if (prev.some((q) => q._isOptimistic && q.text === question.text && String(q.author_id) === String(question.author_id))) return prev
-      return [...prev, question].sort((a, b) => b.likes_count - a.likes_count || new Date(a.created_at) - new Date(b.created_at))
+      return sortQuestions([...prev, question])
     })
   }, [])
 
   const onQuestionUpdate = useCallback((updated) => {
     setQuestions((prev) =>
-      prev.map((q) => (q.id === updated.id ? { ...q, ...updated } : q))
+      sortQuestions(prev.map((q) => (q.id === updated.id ? { ...q, ...updated } : q)))
     )
   }, [])
 
@@ -179,8 +184,7 @@ export default function QnaDetailPage() {
 
   const onQuestionLike = useCallback(({ question_id, likes_count }) => {
     setQuestions((prev) =>
-      prev.map((q) => (q.id === question_id ? { ...q, likes_count } : q))
-          .sort((a, b) => b.likes_count - a.likes_count || new Date(a.created_at) - new Date(b.created_at))
+      sortQuestions(prev.map((q) => (q.id === question_id ? { ...q, likes_count } : q)))
     )
   }, [])
 
@@ -253,9 +257,7 @@ export default function QnaDetailPage() {
     try {
       const res = await createQuestion(id, text)
       setQuestions((prev) =>
-        prev
-          .map((q) => (q.id === tempId ? res.data.question : q))
-          .sort((a, b) => b.likes_count - a.likes_count || new Date(a.created_at) - new Date(b.created_at))
+        sortQuestions(prev.map((q) => (q.id === tempId ? res.data.question : q)))
       )
     } catch {
       setQuestions((prev) => prev.filter((q) => q.id !== tempId))
@@ -307,6 +309,8 @@ export default function QnaDetailPage() {
   const backRoute = isAdmin ? '/admin/qna' : '/user/qna'
   const isClosed = post.status === 'CLOSED' || autoClosedByTimer || (post.end_at && new Date() >= new Date(post.end_at))
   const shareUrl = post.share_code ? `${window.location.origin}/join/${post.share_code}` : null
+
+  const topQuestionId = questions.find((q) => q.likes_count > 0)?.id ?? null
 
   const questionForm = isClosed ? (
     <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm text-slate-500">
@@ -384,17 +388,17 @@ export default function QnaDetailPage() {
       ) : (
         <div className="space-y-2.5">
           {questions.map((q) => (
-            <div key={q.id} className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-              <QuestionCard
-                qnaId={id}
-                question={q}
-                currentUserId={currentUserId}
-                isAdmin={isAdmin}
-                isClosed={isClosed}
-                onUpdate={handleUpdate}
-                onDelete={handleDelete}
-              />
-            </div>
+            <QuestionCard
+              key={q.id}
+              qnaId={id}
+              question={q}
+              currentUserId={currentUserId}
+              isAdmin={isAdmin}
+              isClosed={isClosed}
+              isTopQuestion={q.id === topQuestionId}
+              onUpdate={handleUpdate}
+              onDelete={handleDelete}
+            />
           ))}
         </div>
       )}

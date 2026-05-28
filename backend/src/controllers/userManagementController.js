@@ -1,7 +1,6 @@
 'use strict';
 const crypto = require('crypto');
 const User = require('../models/User');
-const Otp = require('../models/Otp');
 const { success, error } = require('../utils/responseUtils');
 const logger = require('../utils/logger');
 const { logAction, ACTIONS } = require('../services/auditService');
@@ -81,7 +80,7 @@ const updateUser = async (req, res) => {
   try {
     const user = await User.findById(id);
     if (!user) return error(res, 'User not found', 404);
-    if (user.is_root) return error(res, 'Root user cannot be modified', 403);
+    if (user.is_root && role !== undefined) return error(res, 'Root admin role cannot be changed', 403);
     if (user.status === 'DELETED') return error(res, 'Deleted users cannot be edited', 403);
 
     const updates = {};
@@ -115,42 +114,6 @@ const updateUser = async (req, res) => {
   } catch (err) {
     logger.error('updateUser error', { err: err.message, userId: id });
     return error(res, 'Failed to update user.', 500);
-  }
-};
-
-// POST /admin/users/:id/unlock
-const unlockUser = async (req, res) => {
-  const { id } = req.params;
-
-  try {
-    const user = await User.findById(id);
-    if (!user) return error(res, 'User not found', 404);
-    if (user.status === 'DELETED') return error(res, 'Deleted users cannot be unlocked', 403);
-    if (user.status === 'VERIFIED') return error(res, 'User is not locked', 400);
-
-    const updated = await User.updateById(id, {
-      status: 'VERIFIED',
-      is_active: true,
-      otp_attempts: 0,
-      locked_until: null,
-    });
-
-    // Clear any lingering OTP records for this user
-    try { await Otp.clearByEmail(user.email); } catch (_) {}
-
-    const meta = adminMeta(req);
-    logger.info('user unlocked', { userId: id, unlockedBy: meta.adminId });
-    await logAction({
-      action: ACTIONS.USER_UNLOCKED,
-      targetUserId: user.id,
-      targetUserEmail: user.email,
-      ...meta,
-    });
-
-    return success(res, { user: updated });
-  } catch (err) {
-    logger.error('unlockUser error', { err: err.message, userId: id });
-    return error(res, 'Failed to unlock user.', 500);
   }
 };
 
@@ -188,4 +151,4 @@ const deleteUser = async (req, res) => {
   }
 };
 
-module.exports = { listUsers, createUser, updateUser, unlockUser, deleteUser };
+module.exports = { listUsers, createUser, updateUser, deleteUser };

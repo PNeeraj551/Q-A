@@ -1,7 +1,19 @@
 require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') })
+
+if (process.env.NODE_ENV !== 'development') {
+  console.error('ERROR: seed.js can only run in development. NODE_ENV =', process.env.NODE_ENV || '(not set)')
+  process.exit(1)
+}
+
+const readline = require('readline')
 const db = require('../src/config/supabase')
 
-const ALL_ROWS = { neq: ['id', '00000000-0000-0000-0000-000000000000'] }
+function confirm(question) {
+  return new Promise((resolve) => {
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
+    rl.question(question, (answer) => { rl.close(); resolve(answer.trim()) })
+  })
+}
 
 async function clear(table) {
   const { error } = await db.from(table).delete().neq('id', '00000000-0000-0000-0000-000000000000')
@@ -39,6 +51,17 @@ async function seed() {
   console.log('Done. Admin user neeraj@athivatech.com created.')
 }
 
-seed()
+async function main() {
+  const answer = await confirm(
+    '\n⚠️  WARNING: This will DELETE ALL DATA in the database.\nType "yes" to continue: '
+  )
+  if (answer !== 'yes') {
+    console.log('Aborted.')
+    process.exit(0)
+  }
+  await seed()
+}
+
+main()
   .then(() => process.exit(0))
   .catch((err) => { console.error(err.message); process.exit(1) })

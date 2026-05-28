@@ -6,7 +6,7 @@ const withBoardSession = require('../middlewares/withBoardSession');
 
 const { voteLimiter, deviceTokenLimiter } = require('../middlewares/rateLimitMiddleware');
 const deviceTokenValidator = require('../middlewares/deviceTokenValidator');
-const { listQuestions, createQuestion, updateQuestion, deleteQuestion, toggleLike, markAcceptedReply, trackView, markAnsweredInSlack, pushQuestionToSlack } = require('../controllers/questionController');
+const { listQuestions, createQuestion, updateQuestion, deleteQuestion, toggleLike, markAcceptedReply, trackView, markAnsweredInSlack, pushQuestionToSlack, pinQuestion } = require('../controllers/questionController');
 
 const authenticated = [authMiddleware];
 
@@ -19,5 +19,6 @@ router.patch('/:qId/accept-reply', authenticated, markAcceptedReply);
 router.patch('/:qId/view', withBoardSession, trackView);
 router.patch('/:qId/slack-answer', authMiddleware, roleGuard('admin'), markAnsweredInSlack);
 router.post('/:qId/push-slack', authMiddleware, roleGuard('admin'), pushQuestionToSlack);
+router.patch('/:qId/pin', authMiddleware, roleGuard('admin'), pinQuestion);
 
 module.exports = router;

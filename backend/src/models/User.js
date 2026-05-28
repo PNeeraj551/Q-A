@@ -1,6 +1,6 @@
 const db = require('../config/supabase');
 
-const COLS = 'id, name, email, role, is_active, is_root, status, deleted_at, locked_until, otp_attempts, created_at';
+const COLS = 'id, name, email, role, is_active, is_root, status, deleted_at, login_attempts, created_at';
 
 async function findByEmail(email) {
   const { data, error } = await db

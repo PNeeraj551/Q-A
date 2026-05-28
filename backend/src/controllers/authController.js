@@ -8,7 +8,6 @@ const logger = require('../utils/logger');
 
 const ATHIVA_EMAIL = /^[a-zA-Z0-9._%+-]+@athivatech\.com$/i;
 const OTP_EXPIRY_MS = 10 * 60 * 1000;
-const MAX_OTP_ATTEMPTS = 3;
 const NAME_MAX = 80;
 
 // POST /auth/request-otp
@@ -55,28 +54,22 @@ const verifyOtp = async (req, res) => {
   }
   const normalEmail = email.trim().toLowerCase();
   try {
+    const user = await User.findByEmail(normalEmail);
+    if (!user) return error(res, 'Account not found or inactive.', 401);
+
     const record = await Otp.findActiveByEmail(normalEmail);
 
     if (!record) {
       return error(res, 'Code is invalid or has expired. Please request a new one.', 401);
     }
 
-    if (record.attempts >= MAX_OTP_ATTEMPTS) {
-      await Otp.deleteById(record.id);
-      return error(res, 'Too many failed attempts. Please request a new code.', 429);
-    }
-
     const inputHash = crypto.createHash('sha256').update(otp.trim()).digest('hex');
     if (inputHash !== record.otp_hash) {
       await Otp.updateById(record.id, { attempts: record.attempts + 1 });
-      const remaining = MAX_OTP_ATTEMPTS - (record.attempts + 1);
-      return error(res, `Incorrect code. ${remaining} attempt${remaining !== 1 ? 's' : ''} remaining.`, 401);
+      return error(res, 'Incorrect code. Please try again.', 401);
     }
 
     await Otp.updateById(record.id, { used: true });
-
-    const user = await User.findByEmail(normalEmail);
-    if (!user) return error(res, 'Account not found or inactive.', 401);
 
     logger.info('[verifyOtp] Login success', { userId: user.id });
 

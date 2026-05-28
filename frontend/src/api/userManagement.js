@@ -9,8 +9,5 @@ export const createUser = (data) =>
 export const updateUser = (id, data) =>
   axiosInstance.patch(`/admin/users/${id}`, data)
 
-export const unlockUser = (id) =>
-  axiosInstance.post(`/admin/users/${id}/unlock`)
-
 export const deleteUser = (id) =>
   axiosInstance.delete(`/admin/users/${id}`)

@@ -1,6 +1,6 @@
 const db = require('../config/supabase');
 
-const COLS = 'id, qna_id, text, author_id, author_name, likes_count, reply_count, view_count, accepted_reply_id, answered_in_slack, pushed_to_slack, is_deleted, created_at, updated_at';
+const COLS = 'id, qna_id, text, author_id, author_name, likes_count, reply_count, view_count, accepted_reply_id, answered_in_slack, pushed_to_slack, is_pinned, is_deleted, created_at, updated_at';
 
 async function findById(id) {
   const { data, error } = await db.from('questions').select(COLS).eq('id', id).maybeSingle();
@@ -14,6 +14,7 @@ async function listByQna(qnaId) {
     .select(COLS)
     .eq('qna_id', qnaId)
     .eq('is_deleted', false)
+    .order('is_pinned', { ascending: false })
     .order('likes_count', { ascending: false })
     .order('created_at', { ascending: true })
     .limit(200);

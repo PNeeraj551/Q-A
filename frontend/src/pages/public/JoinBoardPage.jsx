@@ -57,17 +57,25 @@ function BoardView({ board, session, boardId }) {
       .finally(() => setLoading(false))
   }, [boardId])
 
+  function sortQuestions(list) {
+    return [...list].sort((a, b) =>
+      (b.is_pinned ? 1 : 0) - (a.is_pinned ? 1 : 0) ||
+      b.likes_count - a.likes_count ||
+      new Date(a.created_at) - new Date(b.created_at)
+    )
+  }
+
   useQnaRealtime(boardId, {
     onQuestionNew: (q) => {
       setQuestions((prev) => {
         if (prev.some((e) => e.id === q.id)) return prev
-        return [...prev, { ...q, liked_by_me: false, _isNew: true }]
+        return sortQuestions([...prev, { ...q, liked_by_me: false, _isNew: true }])
       })
       if (isScrolledPastRef.current) setNewQuestionCount((c) => c + 1)
     },
     onQuestionUpdate: (updated) => {
       setQuestions((prev) =>
-        prev.map((q) => q.id === updated.id ? { ...q, ...updated, liked_by_me: q.liked_by_me } : q)
+        sortQuestions(prev.map((q) => q.id === updated.id ? { ...q, ...updated, liked_by_me: q.liked_by_me } : q))
       )
     },
     onQuestionDelete: ({ question_id }) => {
@@ -75,7 +83,7 @@ function BoardView({ board, session, boardId }) {
     },
     onQuestionLike: ({ question_id, likes_count }) => {
       setQuestions((prev) =>
-        prev.map((q) => q.id === question_id ? { ...q, likes_count } : q)
+        sortQuestions(prev.map((q) => q.id === question_id ? { ...q, likes_count } : q))
       )
     },
     onQnaUpdate: (payload) => {
@@ -132,7 +140,7 @@ function BoardView({ board, session, boardId }) {
   }
 
   function handleQuestionUpdate(updated) {
-    setQuestions((prev) => prev.map((q) => q.id === updated.id ? updated : q))
+    setQuestions((prev) => sortQuestions(prev.map((q) => q.id === updated.id ? updated : q)))
   }
 
   function handleQuestionDelete(id) {
@@ -147,35 +155,36 @@ function BoardView({ board, session, boardId }) {
   return (
     <div className="flex flex-col flex-1 min-h-0">
 
-      {/* ── Board header ── */}
-      <div className="shrink-0 bg-white border-b border-slate-200">
-        <div className="max-w-5xl mx-auto px-6 py-5 flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <h1 className="text-lg font-bold text-slate-900 leading-tight tracking-tight">{board.title}</h1>
-            {board.description && (
-              <p className="text-sm text-slate-500 mt-0.5 leading-snug">{board.description}</p>
-            )}
-            <p className="text-xs text-slate-400 mt-2">
-              Participating as{' '}
-              <span className="font-semibold text-slate-600">{isAnonymous ? 'Anonymous' : localDisplayName}</span>
-            </p>
-          </div>
-          {!isClosed ? (
-            <span className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 mt-0.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Live
-            </span>
-          ) : (
-            <span className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200 mt-0.5">
-              Closed
-            </span>
-          )}
-        </div>
-      </div>
-
       {/* ── Questions feed ── */}
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-5xl mx-auto px-6 py-5">
+
+          {/* Board info — inside scroll area */}
+          <div className="mb-5">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <h1 className="text-lg font-bold text-slate-900 leading-tight tracking-tight">{board.title}</h1>
+                {board.description && (
+                  <p className="text-sm text-slate-500 mt-0.5 leading-snug">{board.description}</p>
+                )}
+                <p className="text-xs text-slate-400 mt-2">
+                  Participating as{' '}
+                  <span className="font-semibold text-slate-600">{isAnonymous ? 'Anonymous' : localDisplayName}</span>
+                </p>
+              </div>
+              {!isClosed ? (
+                <span className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 mt-0.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  Live
+                </span>
+              ) : (
+                <span className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200 mt-0.5">
+                  Closed
+                </span>
+              )}
+            </div>
+          </div>
+
           <div ref={listTopRef} />
 
           {loading ? (
@@ -186,6 +195,7 @@ function BoardView({ board, session, boardId }) {
                 </div>
               ))}
             </div>
+
           ) : questions.length === 0 ? (
             <div className="py-16 text-center">
               <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
@@ -198,19 +208,22 @@ function BoardView({ board, session, boardId }) {
             </div>
           ) : (
             <div className="space-y-2.5">
-              {questions.map((q) => (
-                <div key={q.id} className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+              {(() => {
+                const topId = questions.find((q) => !q.is_pinned && q.likes_count > 0)?.id ?? null
+                return questions.map((q) => (
                   <PublicQuestionCard
+                    key={q.id}
                     question={q}
                     boardId={boardId}
                     isClosed={isClosed}
                     session={session}
                     isNew={!!q._isNew}
+                    isTopQuestion={q.id === topId}
                     onUpdate={handleQuestionUpdate}
                     onDelete={handleQuestionDelete}
                   />
-                </div>
-              ))}
+                ))
+              })()}
             </div>
           )}
 

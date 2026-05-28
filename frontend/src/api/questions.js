@@ -26,3 +26,6 @@ export const markAnsweredInSlack = (qnaId, qId) =>
 
 export const pushToSlack = (qnaId, qId) =>
   axiosInstance.post(`/qna/${qnaId}/questions/${qId}/push-slack`)
+
+export const pinQuestion = (qnaId, qId) =>
+  axiosInstance.patch(`/qna/${qnaId}/questions/${qId}/pin`)

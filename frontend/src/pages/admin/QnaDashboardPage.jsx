@@ -28,7 +28,6 @@ export default function QnaDashboardPage() {
   const [confirmId, setConfirmId] = useState(null)
 
   const [search, setSearch] = useState('')
-  const [visibility, setVisibility] = useState('')
   const [fromDate, setFromDate] = useState('')
   const [toDate, setToDate] = useState('')
   const [datePreset, setDatePreset] = useState('')
@@ -39,7 +38,7 @@ export default function QnaDashboardPage() {
   const debouncedSearch = useDebounce(search, 800)
   const hasActiveSearch = debouncedSearch.trim().length >= 1
   const isSearchClearing = search.trim().length < 1 && hasActiveSearch
-  const hasActiveFilters = hasActiveSearch || !!visibility || !!datePreset
+  const hasActiveFilters = hasActiveSearch || !!datePreset
   const pageRef = useRef(page)
   useEffect(() => { pageRef.current = page }, [page])
 
@@ -95,11 +94,10 @@ export default function QnaDashboardPage() {
   useEffect(() => {
     const params = { page, limit: LIMIT }
     if (debouncedSearch.trim().length >= 1) params.search = debouncedSearch.trim()
-    if (visibility) params.visibility = visibility
     if (fromDate) params.fromDate = fromDate
     if (toDate) params.toDate = toDate
     fetchPosts(params)
-  }, [debouncedSearch, visibility, fromDate, toDate, page, fetchPosts])
+  }, [debouncedSearch, fromDate, toDate, page, fetchPosts])
 
   function toISO(d) { return d.toISOString().split('T')[0] }
 
@@ -125,10 +123,9 @@ export default function QnaDashboardPage() {
   }
 
   function handleSetSearch(v) { setSearch(v); setPage(1) }
-  function handleSetVisibility(v) { setVisibility(v); setPage(1) }
   function handleSetFromDate(v) { setFromDate(v); if (toDate && v > toDate) setToDate(''); setPage(1) }
   function handleSetToDate(v) { setToDate(v); setPage(1) }
-  function handleClearFilters() { setSearch(''); setVisibility(''); setFromDate(''); setToDate(''); setDatePreset(''); setPage(1) }
+  function handleClearFilters() { setSearch(''); setFromDate(''); setToDate(''); setDatePreset(''); setPage(1) }
 
   async function handleDelete(id) {
     if (deletingRef.current.has(id)) return
@@ -161,13 +158,11 @@ export default function QnaDashboardPage() {
           {/* Search + filter bar */}
           <QnaFilters
             search={search} setSearch={handleSetSearch}
-            visibility={visibility} setVisibility={handleSetVisibility}
             fromDate={fromDate} setFromDate={handleSetFromDate}
             toDate={toDate} setToDate={handleSetToDate}
             datePreset={datePreset} setDatePreset={handleSetDatePreset}
             hasActiveFilters={hasActiveFilters}
             onClearFilters={handleClearFilters}
-            role="admin"
           />
 
           {/* Results count */}
@@ -182,7 +177,7 @@ export default function QnaDashboardPage() {
           {loading || isSearchClearing ? (
             <Stack gap={2}>
               {[...Array(5)].map((_, i) => (
-                <Surface key={i} className="px-5 py-4 flex items-center justify-between gap-4">
+                <Surface key={i} className="px-4 py-3.5 flex items-center justify-between gap-4">
                   <Stack gap={2} className="flex-1">
                     <Skeleton className="h-4 w-48" />
                     <Skeleton className="h-3 w-32" />
@@ -202,7 +197,7 @@ export default function QnaDashboardPage() {
           ) : posts.length === 0 ? (
             hasActiveFilters ? (
               <EmptyState
-                heading="No boards found"
+                heading={debouncedSearch ? 'No boards match your search' : 'No boards found'}
                 description="Try adjusting your search or filters."
                 action={{ label: 'Clear filters', onClick: handleClearFilters }}
               />
@@ -219,46 +214,50 @@ export default function QnaDashboardPage() {
                 {posts.map((post) => (
                   <Surface
                     key={post.id}
-                    className="px-5 py-4 flex items-center justify-between gap-4 hover:border-slate-300 hover:shadow-md transition-all duration-200"
+                    className="px-4 py-3.5 hover:border-slate-300 hover:shadow-md transition-all duration-200"
                   >
+                    {/* Clickable info: title + badges + description */}
                     <div
-                      className="flex-1 min-w-0 cursor-pointer"
+                      className="cursor-pointer mb-2"
                       onClick={() => navigate(`/admin/qna/${post.id}`)}
                     >
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-sm font-semibold text-slate-900 truncate">{post.title}</span>
+                      <div className="flex items-start gap-x-2 gap-y-1 flex-wrap mb-1">
+                        <span className="text-sm font-semibold text-slate-900 leading-snug">{post.title}</span>
                         <VisibilityBadge visibility={post.visibility} />
                         <StatusBadge isClosed={post.status === 'CLOSED' || (post.end_at && new Date() >= new Date(post.end_at))} />
                       </div>
                       {post.description && (
-                        <Text size="xs" className="truncate mb-1.5">{post.description}</Text>
+                        <Text size="xs" className="line-clamp-1">{post.description}</Text>
                       )}
-                      <Text size="xs" color="muted">
+                    </div>
+
+                    {/* Bottom row: meta info + action buttons — never overlap */}
+                    <div className="flex items-center gap-2">
+                      <Text size="xs" color="muted" className="flex-1 min-w-0 truncate">
                         {post.question_count || 0} Question{post.question_count !== 1 ? 's' : ''}
                         <span className="mx-1.5">·</span>
                         {new Date(post.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                       </Text>
-                    </div>
-
-                    <div className="flex items-center gap-2 shrink-0">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => navigate(`/admin/qna/${post.id}/edit`)}
-                      >
-                        Edit
-                      </Button>
-                      {confirmId === post.id ? (
-                        <InlineConfirm onConfirm={() => handleDelete(post.id)} onCancel={() => setConfirmId(null)} />
-                      ) : (
+                      <div className="flex items-center gap-1.5 shrink-0">
                         <Button
-                          variant="destructive"
+                          variant="outline"
                           size="sm"
-                          onClick={() => setConfirmId(post.id)}
+                          onClick={() => navigate(`/admin/qna/${post.id}/edit`)}
                         >
-                          Delete
+                          Edit
                         </Button>
-                      )}
+                        {confirmId === post.id ? (
+                          <InlineConfirm onConfirm={() => handleDelete(post.id)} onCancel={() => setConfirmId(null)} />
+                        ) : (
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => setConfirmId(post.id)}
+                          >
+                            Delete
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </Surface>
                 ))}

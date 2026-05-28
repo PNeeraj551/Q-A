@@ -124,7 +124,7 @@ const updateQuestion = async (req, res) => {
       return error(res, 'Not authorized', 403);
     }
 
-    const updated = await Question.updateById(qId, { text: sanitized });
+    const updated = await Question.updateById(qId, { text: sanitized, pushed_to_slack: false });
     const liked_by_me = await Question.isLikedByUser(qId, actorId);
     const result = { ...updated, liked_by_me };
 
@@ -279,6 +279,22 @@ const markAnsweredInSlack = async (req, res) => {
   }
 };
 
+// PATCH /api/qna/:qnaId/questions/:qId/pin  (admin only)
+const pinQuestion = async (req, res) => {
+  const { qId, qnaId } = req.params;
+  try {
+    const question = await Question.findById(qId);
+    if (!question || question.is_deleted) return error(res, 'Question not found', 404);
+    const updated = await Question.updateById(qId, { is_pinned: !question.is_pinned });
+    await broadcastToChannel(`qna_${qnaId}`, 'question:update', updated);
+    logger.info('question pin toggled', { questionId: qId, is_pinned: updated.is_pinned });
+    return success(res, { question: updated });
+  } catch (err) {
+    logger.error('pinQuestion error', { err: err.message, qId });
+    return error(res, 'Failed to pin question.', 500);
+  }
+};
+
 // POST /api/qna/:qnaId/questions/:qId/push-slack  (admin only)
 const pushQuestionToSlack = async (req, res) => {
   const { qId, qnaId } = req.params;
@@ -298,4 +314,4 @@ const pushQuestionToSlack = async (req, res) => {
   }
 };
 
-module.exports = { listQuestions, createQuestion, updateQuestion, deleteQuestion, toggleLike, markAcceptedReply, trackView, markAnsweredInSlack, pushQuestionToSlack };
+module.exports = { listQuestions, createQuestion, updateQuestion, deleteQuestion, toggleLike, markAcceptedReply, trackView, markAnsweredInSlack, pushQuestionToSlack, pinQuestion };
