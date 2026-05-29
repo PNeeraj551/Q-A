@@ -34,6 +34,10 @@ const requestOtp = async (req, res) => {
       expires_at: new Date(Date.now() + OTP_EXPIRY_MS).toISOString(),
     });
 
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`\n[DEV] OTP for ${normalEmail}: ${otp}\n`);
+    }
+
     await sendOtpEmail(normalEmail, otp);
 
     return success(res, { message: 'Login code sent to your email.' });
