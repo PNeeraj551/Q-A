@@ -179,7 +179,6 @@ export default function QnaListPage() {
                         <span className="text-sm font-semibold text-slate-900 group-hover:text-blue-600 transition-colors duration-200 truncate">
                           {post.title}
                         </span>
-                        <VisibilityBadge visibility={post.visibility} />
                         <StatusBadge isClosed={post.status === 'CLOSED' || (post.end_at && new Date() >= new Date(post.end_at))} />
                       </div>
                       {post.description && (

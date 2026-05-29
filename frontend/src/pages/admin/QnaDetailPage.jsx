@@ -363,7 +363,6 @@ export default function QnaDetailPage() {
       titleMeta={
         <div className="flex items-center gap-1.5">
           <StatusBadge isClosed={isClosed} />
-          <VisibilityBadge visibility={post.visibility} />
         </div>
       }
       actions={

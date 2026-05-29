@@ -223,7 +223,6 @@ export default function QnaDashboardPage() {
                     >
                       <div className="flex items-start gap-x-2 gap-y-1 flex-wrap mb-1">
                         <span className="text-sm font-semibold text-slate-900 leading-snug">{post.title}</span>
-                        <VisibilityBadge visibility={post.visibility} />
                         <StatusBadge isClosed={post.status === 'CLOSED' || (post.end_at && new Date() >= new Date(post.end_at))} />
                       </div>
                       {post.description && (

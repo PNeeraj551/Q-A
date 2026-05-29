@@ -238,7 +238,7 @@ export default function QnaDetailPage() {
       title={post.title}
       subtitle={post.description || undefined}
       onBack={() => navigate('/user/qna')}
-      actions={<><StatusBadge isClosed={isClosed} /><VisibilityBadge visibility={post.visibility} /></>}
+      actions={<StatusBadge isClosed={isClosed} />}
       bottomBar={questionForm}
     >
       {questions.length === 0 ? (
