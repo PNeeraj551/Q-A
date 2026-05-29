@@ -121,6 +121,7 @@ function BoardView({ board, session, boardId }) {
     setQuestions((prev) => [...prev, optimistic])
     setQuestionText('')
     if (composerRef.current) composerRef.current.style.height = 'auto'
+    setTimeout(() => listBottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
 
     try {
       const displayName = isAnonymous ? null : localDisplayName
