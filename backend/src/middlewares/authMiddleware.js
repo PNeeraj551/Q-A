@@ -5,12 +5,12 @@ const logger = require('../utils/logger');
 
 const authMiddleware = async (req, res, next) => {
   const authHeader = req.headers['authorization'];
+  const token = req.cookies?.token ||
+    (authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : null);
 
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return error(res, 'Authorization header required', 401);
+  if (!token) {
+    return error(res, 'Authentication required', 401);
   }
-
-  const token = authHeader.split(' ')[1];
 
   let decoded;
   try {

@@ -5,6 +5,15 @@ const { signToken } = require('../utils/jwtUtils');
 const { success, error } = require('../utils/responseUtils');
 const { sendOtpEmail } = require('../services/emailService');
 const logger = require('../utils/logger');
+const { NODE_ENV } = require('../config/env');
+
+const COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: NODE_ENV === 'production',
+  sameSite: NODE_ENV === 'production' ? 'strict' : 'lax',
+  maxAge: 8 * 60 * 60 * 1000,
+  path: '/',
+};
 
 const ATHIVA_EMAIL = /^[a-zA-Z0-9._%+-]+@athivatech\.com$/i;
 const OTP_EXPIRY_MS = 10 * 60 * 1000;
@@ -87,8 +96,9 @@ const verifyOtp = async (req, res) => {
       status: user.status || 'VERIFIED',
     });
 
+    res.cookie('token', token, COOKIE_OPTIONS);
+
     return success(res, {
-      token,
       user: { id: user.id, name: user.name, email: user.email, role: user.role },
     });
   } catch (err) {
@@ -118,7 +128,10 @@ const me = async (req, res) => {
 };
 
 // POST /auth/logout
-const logout = (req, res) => success(res, { message: 'Logged out' });
+const logout = (req, res) => {
+  res.clearCookie('token', { path: '/' });
+  return success(res, { message: 'Logged out' });
+};
 
 // PATCH /auth/me  — name only; email is immutable
 const updateMe = async (req, res) => {

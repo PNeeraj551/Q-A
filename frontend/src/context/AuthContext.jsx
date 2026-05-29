@@ -19,28 +19,15 @@ export function AuthProvider({ children }) {
   }, [navigate])
 
   useEffect(() => {
-    const token = localStorage.getItem('jwt')
-    if (!token) {
-      setLoading(false)
-      return
-    }
     getMe()
-      .then((res) => {
-        setUser(res.data)
-      })
-      .catch(() => {
-        localStorage.removeItem('jwt')
-        setUser(null)
-      })
-      .finally(() => {
-        setLoading(false)
-      })
+      .then((res) => setUser(res.data))
+      .catch(() => setUser(null))
+      .finally(() => setLoading(false))
   }, [])
 
   async function verifyOtp(email, otp) {
     const res = await verifyOtpApi(email, otp)
-    const { token, user: userData } = res.data
-    localStorage.setItem('jwt', token)
+    const { user: userData } = res.data
     setUser(userData)
     return userData
   }
@@ -49,9 +36,8 @@ export function AuthProvider({ children }) {
     try {
       await logoutApi()
     } catch {
-      // stateless logout — clear regardless
+      // cookie cleared by backend
     }
-    localStorage.removeItem('jwt')
     setUser(null)
   }
 
