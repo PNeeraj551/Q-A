@@ -20,7 +20,7 @@ const requestOtp = async (req, res) => {
   try {
     const user = await User.findByEmail(normalEmail);
     if (!user || user.role !== 'admin') {
-      return success(res, { message: 'If this email is registered, a login code has been sent.' });
+      return error(res, 'No admin account found for this email.', 404);
     }
 
     await Otp.clearByEmail(normalEmail);

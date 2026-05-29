@@ -187,12 +187,13 @@ export default function DashboardLayout({ children, title, subtitle, titleMeta, 
                 {actions && <div className="shrink-0">{actions}</div>}
               </div>
             )}
-            {titleMeta && (
-              <div className="flex items-center gap-1.5 mt-2">
+            {(titleMeta || subtitle) && (
+              <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                 {titleMeta}
+                {titleMeta && subtitle && <span className="text-slate-300 text-xs select-none">·</span>}
+                {subtitle && <p className="text-xs text-slate-500 leading-snug">{subtitle}</p>}
               </div>
             )}
-            {subtitle && <p className="text-xs text-slate-500 mt-1 leading-snug">{subtitle}</p>}
           </div>
         )}
 
@@ -212,8 +213,10 @@ export default function DashboardLayout({ children, title, subtitle, titleMeta, 
                     Back
                   </button>
                 )}
-                {title && <h1 className="text-2xl font-bold text-slate-900 leading-tight tracking-tight">{title}</h1>}
-                {titleMeta && <div className="mt-1.5">{titleMeta}</div>}
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  {title && <h1 className="text-2xl font-bold text-slate-900 leading-tight tracking-tight">{title}</h1>}
+                  {titleMeta && <div className="shrink-0">{titleMeta}</div>}
+                </div>
                 {subtitle && <p className="text-sm text-slate-500 mt-1 leading-relaxed">{subtitle}</p>}
               </div>
               {actions && <div className="flex items-center gap-2 shrink-0">{actions}</div>}
