@@ -386,7 +386,7 @@ export default function QnaDetailPage() {
           description="Be the first to ask a question below."
         />
       ) : (
-        <div className="space-y-2.5">
+        <div className="space-y-3">
           {questions.map((q) => (
             <QuestionCard
               key={q.id}

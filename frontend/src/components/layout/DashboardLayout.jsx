@@ -66,7 +66,7 @@ export default function DashboardLayout({ children, title, subtitle, titleMeta, 
   const closeSidebar = () => setSidebarOpen(false)
 
   return (
-    <div className="min-h-screen bg-slate-50 flex">
+    <div className="min-h-screen bg-slate-100 flex">
 
       {/* Backdrop overlay — mobile only */}
       {sidebarOpen && (
@@ -120,7 +120,8 @@ export default function DashboardLayout({ children, title, subtitle, titleMeta, 
         </nav>
 
         {/* User section */}
-        <div className="px-3 py-3 border-t border-slate-100 shrink-0 space-y-1">
+        <div className="relative px-3 py-3 border-t border-slate-100 shrink-0 space-y-1">
+          {profileOpen && <ProfileEditPanel onClose={() => setProfileOpen(false)} />}
           <button
             onClick={() => { setProfileOpen(true); closeSidebar() }}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-50 transition-all duration-200 text-left group"
@@ -231,7 +232,6 @@ export default function DashboardLayout({ children, title, subtitle, titleMeta, 
         )}
       </div>
 
-      {profileOpen && <ProfileEditPanel onClose={() => setProfileOpen(false)} />}
     </div>
   )
 }
