@@ -10,13 +10,14 @@ const { NODE_ENV } = require('../config/env');
 const COOKIE_OPTIONS = {
   httpOnly: true,
   secure: NODE_ENV === 'production',
-  sameSite: NODE_ENV === 'production' ? 'lax' : 'lax',
+  sameSite: NODE_ENV === 'production' ? 'none' : 'lax',
   maxAge: 8 * 60 * 60 * 1000,
   path: '/',
 };
 
 const ATHIVA_EMAIL = /^[a-zA-Z0-9._%+-]+@athivatech\.com$/i;
 const OTP_EXPIRY_MS = 10 * 60 * 1000;
+const MAX_OTP_ATTEMPTS = 5;
 const NAME_MAX = 80;
 
 // POST /auth/request-otp
@@ -28,28 +29,26 @@ const requestOtp = async (req, res) => {
   const normalEmail = email.trim().toLowerCase();
   try {
     const user = await User.findByEmail(normalEmail);
-    if (!user || user.role !== 'admin') {
-      return error(res, 'No admin account found for this email.', 404);
+    if (user && user.role === 'admin') {
+      await Otp.clearByEmail(normalEmail);
+
+      const otp = crypto.randomInt(100000, 1000000).toString();
+      const otp_hash = crypto.createHash('sha256').update(otp).digest('hex');
+
+      await Otp.create({
+        email: normalEmail,
+        otp_hash,
+        expires_at: new Date(Date.now() + OTP_EXPIRY_MS).toISOString(),
+      });
+
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`\n[DEV] OTP for ${normalEmail}: ${otp}\n`);
+      }
+
+      await sendOtpEmail(normalEmail, otp);
     }
 
-    await Otp.clearByEmail(normalEmail);
-
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const otp_hash = crypto.createHash('sha256').update(otp).digest('hex');
-
-    await Otp.create({
-      email: normalEmail,
-      otp_hash,
-      expires_at: new Date(Date.now() + OTP_EXPIRY_MS).toISOString(),
-    });
-
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`\n[DEV] OTP for ${normalEmail}: ${otp}\n`);
-    }
-
-    await sendOtpEmail(normalEmail, otp);
-
-    return success(res, { message: 'Login code sent to your email.' });
+    return success(res, { message: 'If an eligible account exists, a login code has been sent.' });
   } catch (err) {
     logger.error('[requestOtp] ERROR', { message: err.message, code: err.code });
     return error(res, 'Failed to send login code. Please try again.', 500);
@@ -68,18 +67,24 @@ const verifyOtp = async (req, res) => {
   const normalEmail = email.trim().toLowerCase();
   try {
     const user = await User.findByEmail(normalEmail);
-    if (!user) return error(res, 'Account not found or inactive.', 401);
+    const record = user ? await Otp.findActiveByEmail(normalEmail) : null;
 
-    const record = await Otp.findActiveByEmail(normalEmail);
+    if (!user || !record) {
+      return error(res, 'Invalid email or code.', 401);
+    }
 
-    if (!record) {
-      return error(res, 'Code is invalid or has expired. Please request a new one.', 401);
+    if (record.attempts >= MAX_OTP_ATTEMPTS) {
+      await Otp.updateById(record.id, { used: true });
+      return error(res, 'Too many incorrect attempts. Please request a new code.', 429);
     }
 
     const inputHash = crypto.createHash('sha256').update(otp.trim()).digest('hex');
-    if (inputHash !== record.otp_hash) {
+    const inputBuf = Buffer.from(inputHash, 'hex');
+    const storedBuf = Buffer.from(record.otp_hash, 'hex');
+    const match = inputBuf.length === storedBuf.length && crypto.timingSafeEqual(inputBuf, storedBuf);
+    if (!match) {
       await Otp.updateById(record.id, { attempts: record.attempts + 1 });
-      return error(res, 'Incorrect code. Please try again.', 401);
+      return error(res, 'Invalid email or code.', 401);
     }
 
     await Otp.updateById(record.id, { used: true });
@@ -99,6 +104,7 @@ const verifyOtp = async (req, res) => {
     res.cookie('token', token, COOKIE_OPTIONS);
 
     return success(res, {
+      token,
       user: { id: user.id, name: user.name, email: user.email, role: user.role },
     });
   } catch (err) {
@@ -129,12 +135,8 @@ const me = async (req, res) => {
 
 // POST /auth/logout
 const logout = (req, res) => {
-  res.clearCookie('token', {
-    httpOnly: true,
-    secure: NODE_ENV === 'production',
-    sameSite: NODE_ENV === 'production' ? 'none' : 'lax',
-    path: '/',
-  });
+  const { maxAge, ...clearOptions } = COOKIE_OPTIONS;
+  res.clearCookie('token', clearOptions);
   return success(res, { message: 'Logged out' });
 };
 

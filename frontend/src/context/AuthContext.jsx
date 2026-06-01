@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { verifyOtp as verifyOtpApi, getMe, logout as logoutApi } from '../api/auth'
+import { setAuthToken } from '../api/axiosInstance'
 
 const AuthContext = createContext(null)
 
@@ -11,6 +12,7 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     function handleUnauthorized() {
+      setAuthToken(null)
       setUser(null)
       navigate('/login', { replace: true })
     }
@@ -27,7 +29,8 @@ export function AuthProvider({ children }) {
 
   async function verifyOtp(email, otp) {
     const res = await verifyOtpApi(email, otp)
-    const { user: userData } = res.data
+    const { token, user: userData } = res.data
+    setAuthToken(token)
     setUser(userData)
     return userData
   }
@@ -38,6 +41,7 @@ export function AuthProvider({ children }) {
     } catch {
       // cookie cleared by backend
     }
+    setAuthToken(null)
     setUser(null)
   }
 
