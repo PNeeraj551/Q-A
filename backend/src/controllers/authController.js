@@ -10,7 +10,7 @@ const { NODE_ENV } = require('../config/env');
 const COOKIE_OPTIONS = {
   httpOnly: true,
   secure: NODE_ENV === 'production',
-  sameSite: NODE_ENV === 'production' ? 'strict' : 'lax',
+  sameSite: NODE_ENV === 'production' ? 'lax' : 'lax',
   maxAge: 8 * 60 * 60 * 1000,
   path: '/',
 };
@@ -129,7 +129,12 @@ const me = async (req, res) => {
 
 // POST /auth/logout
 const logout = (req, res) => {
-  res.clearCookie('token', { path: '/' });
+  res.clearCookie('token', {
+    httpOnly: true,
+    secure: NODE_ENV === 'production',
+    sameSite: NODE_ENV === 'production' ? 'none' : 'lax',
+    path: '/',
+  });
   return success(res, { message: 'Logged out' });
 };
 
