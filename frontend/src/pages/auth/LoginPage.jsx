@@ -60,6 +60,7 @@ export default function LoginPage() {
     setEmailError('')
     if (loadingRef.current) return
     loadingRef.current = true
+    setLoading(true)
     try {
       await requestOtp(email.trim())
       setStep('otp')
@@ -75,6 +76,7 @@ export default function LoginPage() {
       }
     } finally {
       loadingRef.current = false
+      setLoading(false)
     }
   }
 
